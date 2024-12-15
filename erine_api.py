@@ -3,7 +3,6 @@ import requests
 import qianfan
 import time
 import json
-import launcher
 
 API_KEY=launcher.get_AK()
 SECRET_KEY=launcher.get_SK()
