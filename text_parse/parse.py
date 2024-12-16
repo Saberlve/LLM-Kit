@@ -8,7 +8,7 @@ def text_parse(file_path,save_path):
         data = f.readlines()
     print(f"Parsing text file and saving results to {save_path}")
     file_name=file_path.split('/')[-1]
-    with open(os.path.join(save_path,file_name),'w',encoding='utf-8') as f:
+    with open(os.path.join(save_path,file_name.spilt('.')+'.txt'),'w',encoding='utf-8') as f:
         for line in data:
             f.write(line)
 
@@ -33,5 +33,3 @@ def parse(hparams: HyperParams) -> str:
         raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
 
     return save_path
-hparam=HyperParams.from_hparams('../hyparams/config.yaml')
-parse(hparam)
