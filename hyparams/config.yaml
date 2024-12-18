@@ -1,7 +1,7 @@
 file_path: ceshi.txt
-save_path: text_parse/
-SK: [faga,gsdgas,gsfd]
-AK: [fsfds,ffsdf,sdfsd]
+save_path: result/
+AK: [nNgmVkQ22wuaVu4h2OimBvYM,NDodQ4HrnTA0pV9nCf5cipaU]
+SK: [AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x,cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr]
 model_name: Erine
 save_steps: 100
 parallel_num: 1

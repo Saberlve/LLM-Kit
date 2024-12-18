@@ -1,7 +1,7 @@
 import os
 
 from text_parse.parse import parse
-from to_tex.multi_convert import convert2latex
+from text_parse.to_tex import LatexConverter
 from utils.hyparams import HyperParams
 
 hparams=HyperParams.from_hparams('hyparams/config.yaml')
@@ -17,10 +17,10 @@ elif os.path.isfile(hparams.file_path):
     
 for file in file_list:
     print('Start iterative optimization of ' + os.path.basename(file))
-
     parsed_file_path=parse(hparams)  #对原始材料进行解析，返回解析后文本数据
+    latex_converter=LatexConverter(parsed_file_path, hparams)
     if file.split('.')[-1]!='tex' and hparams.convert_to_tex==True:
-        convert2latex(parsed_file_path,hparams)
+        latex_converter.convert_to_latex()
     else:
         pass
         #将文件复制到目录下

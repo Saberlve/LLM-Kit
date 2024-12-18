@@ -12,8 +12,7 @@ def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
     Returns:
         list: 分割后的文本块列表，每块不超过 max_tokens 个 token。
     """
-    # 初始化 tiktoken 编码器（根据实际使用的模型选择编码器，例如 gpt-3.5-turbo 或 gpt-4）
-    enc = tiktoken.get_encoding("gpt-3.5-turbo")
+    enc = tiktoken.get_encoding("o200k_base")
 
     # 按行分割文本
     lines = chunk.splitlines()

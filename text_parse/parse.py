@@ -13,7 +13,7 @@ def text_parse(file_path,save_path):
     # 获取文件名并构造保存路径
     file_name = file_path.split('/')[-1]  # 提取文件名
     base_name = file_name.split('.')[0]  # 提取不带扩展名的部分
-    save_file_path = os.path.join(save_path, base_name + '.txt')  # 拼接完整路径
+    save_file_path = os.path.join(save_path, base_name + '.txt').replace('\\', '/') # 拼接完整路径
 
     # 确保保存路径的目录存在
     os.makedirs(save_path, exist_ok=True)
