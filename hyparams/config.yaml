@@ -1,8 +1,8 @@
-file_path:
-save_path: ../text_parse
-SK: faga,gsdgas,gsfd
-AK: fsfds,ffsdf,sdfsd
+file_path: ceshi.txt
+save_path: text_parse/
+SK: [faga,gsdgas,gsfd]
+AK: [fsfds,ffsdf,sdfsd]
 model_name: Erine
 save_steps: 100
-parallel_num: 1   #单个文件的并行数量，要与SK,AK长度相等
-convert_to_tex: true  #是否先将源文本转成latex格式，有利于提升问答对质量
+parallel_num: 1
+convert_to_tex: true
