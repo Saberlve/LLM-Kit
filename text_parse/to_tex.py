@@ -1,11 +1,10 @@
-import json
 import os
-import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from tqdm import tqdm  # 用于显示进度条
 
 from model_api.erine.erine import generate
-from utils.helper import split_chunk_by_tokens
+from utils.helper import split_chunk_by_tokens, split_text_into_chunks
 from utils.hyparams import HyperParams
 
 class LatexConverter:
@@ -19,37 +18,6 @@ class LatexConverter:
 
         assert len(self.ak_list) == len(self.sk_list), 'AKs and SKs must have the same length!'
         assert len(self.ak_list) >= self.parallel_num, 'Please add enough AK and SK!'
-
-    def split_text_into_chunks(self, text: str) -> list:
-        """
-        将文本按换行符切分为指定数量的部分，尽量保持每部分长度均匀。
-
-        Args:
-            text (str): 输入的完整文本。
-
-        Returns:
-            list: 切分后的文本块列表，每一块为一个字符串。
-        """
-        lines = text.splitlines()
-        total_lines = len(lines)
-        chunk_size = math.ceil(total_lines / self.parallel_num)
-
-        text_chunks = []
-        current_chunk = []
-        current_length = 0
-
-        for line in lines:
-            current_chunk.append(line)
-            current_length += 1
-            if current_length >= chunk_size and len(text_chunks) < self.parallel_num - 1:
-                text_chunks.append("\n".join(current_chunk))
-                current_chunk = []
-                current_length = 0
-
-        if current_chunk:
-            text_chunks.append("\n".join(current_chunk))
-
-        return text_chunks
 
     def process_chunk_with_api(self, chunk: str, ak: str, sk: str, max_tokens: int = 650) -> list:
         """
@@ -67,7 +35,7 @@ class LatexConverter:
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
-        for sub_chunk in sub_chunks:
+        for sub_chunk in tqdm(sub_chunks,desc='Processing chunk'):
             print(f"调用 API：\nAK: {ak}, SK: {sk}\n处理文本块: {sub_chunk[:30]}...")  # 显示前30字符
             for attempt in range(3):  # 尝试3次处理
                 try:
@@ -98,7 +66,8 @@ class LatexConverter:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         # 切分文本
-        text_chunks = self.split_text_into_chunks(text)
+        text_chunks = split_text_into_chunks(self.parallel_num, text)
+
         print(f"文本被分为 {len(text_chunks)} 段，每段大小接近均匀")
 
         # 并行处理文本块
@@ -140,13 +109,11 @@ class LatexConverter:
         """
         # 尝试找到起始位置
         start_index = max(
-            text.find('latex') + 5 if 'latex' in text else -1,
-            text.find('：') if '：' in text else -1,
-            text.find(':') if ':' in text else -1,
+            text.find('```') + 3 if '```' in text else -1,
             0  # 默认从头开始
         )
         # 尝试找到结束位置
-        end_index = text.rfind('\n')
+        end_index = text.rfind('```')
         # 提取并返回清理后的文本
         return text[start_index:end_index].strip()
 

@@ -3,7 +3,6 @@ import os
 import argparse
 from Levenshtein import ratio
 import re
-from erine_api import reprocess_qa
 from judge_qa import is_explicit, is_medical
 
 prompts = {

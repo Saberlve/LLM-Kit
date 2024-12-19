@@ -1,3 +1,5 @@
+import math
+
 import tiktoken
 
 
@@ -40,3 +42,27 @@ def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
         sub_chunks.append("\n".join(current_chunk))
 
     return sub_chunks
+
+
+def split_text_into_chunks(parallel_num, text: str) -> list:
+#将文本拆分为段，每段由一组AK处理
+    lines = text.splitlines()
+    length = len(text)
+    chunk_size = math.ceil(length / parallel_num)
+
+    text_chunks = []
+    current_chunk = []
+    current_length = 0
+
+    for line in lines:
+        current_chunk.append(line)
+        current_length += len(line)
+        if current_length >= chunk_size and len(text_chunks) < parallel_num - 1:
+            text_chunks.append("\n".join(current_chunk))
+            current_chunk = []
+            current_length = 0
+
+    if current_chunk:
+        text_chunks.append("\n".join(current_chunk))
+
+    return text_chunks

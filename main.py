@@ -21,8 +21,13 @@ for file in file_list:
     latex_converter=LatexConverter(parsed_file_path, hparams)
     if file.split('.')[-1]!='tex' and hparams.convert_to_tex==True:
         latex_converter.convert_to_latex()
-    else:
+    elif file.split('.')[-1]=='tex':
         pass
+        # 仍然将文本拆分成chunk，搞到json中
+    
+
+
+
         #将文件复制到目录下
 
 
