@@ -15,7 +15,7 @@ class LatexConverter:
         self.sk_list = hparams.SK
         self.parallel_num = hparams.parallel_num
         self.parsed_file_path = parsed_file_path
-
+        self.save_path=None
         assert len(self.ak_list) == len(self.sk_list), 'AKs and SKs must have the same length!'
         assert len(self.ak_list) >= self.parallel_num, 'Please add enough AK and SK!'
 
@@ -63,6 +63,7 @@ class LatexConverter:
         save_path = os.path.join(
             self.hparams.save_path, 'tex_files', file_name.split('.')[0] + '.json'
         )
+        self.save_path=save_path
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         # 切分文本

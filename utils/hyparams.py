@@ -9,7 +9,7 @@ class HyperParams:
     AK: list[str]
     parallel_num: int  # 单个文件的并行数量，要与SK,AK长度相等
     convert_to_tex: bool=True# 是否先将源文本转成latex格式，有利于提升问答对质量
-    model_name: str="Erine"  #调用的模型名字
+    model_name: str="erine"  #调用的模型名字
     save_steps: int=100 #生成100个问答对保存一次
 
 

@@ -1,5 +1,6 @@
 import os
 
+from generate_qas.qa_generator import QAGenerator
 from text_parse.parse import parse
 from text_parse.to_tex import LatexConverter
 from utils.hyparams import HyperParams
@@ -24,9 +25,9 @@ for file in file_list:
     elif file.split('.')[-1]=='tex':
         pass
         # 仍然将文本拆分成chunk，搞到json中
-    
 
-
+    qa_generator=QAGenerator(latex_converter.save_path, hparams)
+    qa_generator.convert_tex_to_qas()
 
         #将文件复制到目录下
 

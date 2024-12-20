@@ -2,7 +2,7 @@ file_path: ceshi.txt
 save_path: result/
 AK: [nNgmVkQ22wuaVu4h2OimBvYM,NDodQ4HrnTA0pV9nCf5cipaU]
 SK: [AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x,cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr]
-model_name: Erine
+model_name: erine
 save_steps: 100
 parallel_num: 2
 convert_to_tex: true

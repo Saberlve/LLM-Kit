@@ -1,4 +1,4 @@
 PROMPT_DICT={
     'ToTex':"""Please divide the <text> according to logic and content and output it in LaTeX format layout, without losing any content.<text>:{}""",
-
+    'ToQA':"""1, please create some <question> closely consistent with the provided <text>. Make sure that <question> is expressed in Chinese and does not explicitly cite the text. You can include a specific scenario or context in <question>, but make sure that <text> can be used as a comprehensive and accurate answer to the question.\n2. Then, you play the role of a doctor, who has in-depth knowledge in medicine. Your task is to answer the user's <question> directly in Chinese. In forming your response, you must use references to the <text> thoughtfully, ensuring that <answer> comes from text and do not add other unnecessary content. Please be careful to avoid including anything that may raise ethical issues.\n3. Output standard json format {{"question":<question>, "answer":<answer>}}<text>:{answer}"""
 }
