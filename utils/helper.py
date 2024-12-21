@@ -1,3 +1,4 @@
+import json
 import math
 
 import tiktoken
@@ -72,3 +73,17 @@ def split_text_into_chunks(parallel_num, text: str) -> list:
         text_chunks.append("\n".join(current_chunk))
 
     return text_chunks
+
+
+def extract_qa(response):
+    start_i = response.find('{')
+    end_i = response.find('}') + 1
+    qa_pairs = []
+    while end_i != 0:
+        try:
+            qa_pairs.append(json.loads(response[start_i:end_i]))
+        except:
+            print("error")
+        start_i = response.find('{', end_i)
+        end_i = response.find('}', end_i) + 1
+    return qa_pairs

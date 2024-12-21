@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from tqdm import tqdm
 
 from model_api.erine.erine import generate
-from utils.helper import API_DICT
+from utils.helper import API_DICT, extract_qa
 from utils.hyparams import HyperParams
 
 @dataclass
@@ -98,6 +98,7 @@ class QAGenerator:
         
         return not any(condition(text) for condition in invalid_conditions)
 
+
     def process_chunk_with_api(self, text: str, ak: str, sk: str) -> List[Dict[str, Any]]:
         """处理单个文本块并生成问答对"""
         qa_pairs = []
@@ -105,15 +106,13 @@ class QAGenerator:
         
         for attempt in range(max_retries):
             try:
-                qa = API_DICT[self.hparams.model_name](text, ak, sk, 'ToQA')
-                if isinstance(qa, dict):
-                    qa["text"] = text
-                    qa_pairs.append(qa)
-                elif isinstance(qa, list):
-                    for qa_pair in qa:
-                        qa_pair["text"] = text
-                        qa_pairs.append(qa_pair)
+                response = API_DICT[self.hparams.model_name](text, ak, sk, 'ToQA')
+                qas=extract_qa(response)
+                for qa_pair in qas:
+                    qa_pair["text"] = text
+                    qa_pairs.append(qa_pair)
                 break
+
             except Exception as e:
                 print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
                 if attempt == max_retries - 1:
