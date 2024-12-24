@@ -76,7 +76,7 @@ class QAGenerator:
         return latex.strip()
 
     def get_text_between_titles(self, start: int, latex: str) -> Tuple[int, str]:
-        """获取标题之间的文本"""
+        """获取标题之间的文本，即latex两级标题间文本"""
         end = len(latex)
         for title_cmd in self.title_commands:
             pos = latex.find(title_cmd, start + 1)
@@ -85,7 +85,7 @@ class QAGenerator:
         return end, latex[start:end]
 
     def filter_text(self, text: str) -> bool:
-        """过滤无效文本"""
+        """过滤无效文本，待添加规则"""
         if not text.strip():
             return False
             
@@ -100,7 +100,13 @@ class QAGenerator:
 
 
     def process_chunk_with_api(self, text: str, ak: str, sk: str) -> List[Dict[str, Any]]:
-        """处理单个文本块并生成问答对"""
+        """
+        具体调用api，process_latex_chunk的子函数，为了多线程设置的
+        :param text:
+        :param ak:
+        :param sk:
+        :return:
+        """
         qa_pairs = []
         max_retries = 5
         
@@ -121,7 +127,11 @@ class QAGenerator:
         return qa_pairs
 
     def process_latex_chunk(self, latex: str) -> List[Dict[str, Any]]:
-        """处理单个 LaTeX 块并生成问答对"""
+        """
+        处理LaTeX 块并生成问答对
+        :param latex: latex文本
+        :return: 列表，问答对
+        """
         text_chunks = []
         start = 0
         
@@ -153,7 +163,7 @@ class QAGenerator:
 
         return qa_pairs
 
-    def convert_tex_to_qas(self) -> None:
+    def convert_tex_to_qas(self) -> str:
         """将 LaTeX 文件转换为问答对并保存"""
         try:
             with open(self.chunks_path, "r", encoding='utf-8') as f:
@@ -181,6 +191,7 @@ class QAGenerator:
             print(f"结果已保存至: {save_file_path}")
         except Exception as e:
             print(f"保存结果失败: {str(e)}")
+        return save_file_path
 
     
 

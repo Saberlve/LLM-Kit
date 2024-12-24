@@ -1,13 +1,14 @@
 import os
 
 from generate_qas.qa_generator import QAGenerator
+from quality_control.quality_control import QAQualityGenerator
 from text_parse.parse import parse
 from text_parse.to_tex import LatexConverter
 from utils.hyparams import HyperParams
 
 hparams=HyperParams.from_hparams('hyparams/config.yaml')
 
-file_list=[]  #待处理文件路径
+file_list=[]  #待处理文件列表
 if os.path.isdir(hparams.file_path):
     files=os.listdir(hparams.file_path)
     for file in files:
@@ -27,7 +28,11 @@ for file in file_list:
         # 仍然将文本拆分成chunk，搞到json中
 
     qa_generator=QAGenerator(latex_converter.save_path, hparams)
-    qa_generator.convert_tex_to_qas()
+    qa_path=qa_generator.convert_tex_to_qas()
+    
+    # 质量控制
+    quality_control=QAQualityGenerator(qa_path, hparams)
+    quality_control.iterate_optim_qa()
 
         #将文件复制到目录下
 

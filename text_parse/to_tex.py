@@ -49,7 +49,7 @@ class LatexConverter:
 
     def convert_to_latex(self):
         """
-        将解析后的文件内容转为 LaTeX 格式。
+        将解析后的文件内容转为 LaTeX 格式，并保存
 
         Args:
             parsed_file_path (str): 待处理文件路径。

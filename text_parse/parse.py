@@ -4,6 +4,13 @@ import os
 from utils.hyparams import HyperParams
 
 def text_parse(file_path,save_path):
+    """
+    文本文档的解析，其实就是将文件复制一份
+    :param file_path: 文件原始路径
+    :param save_path: 解析后文件路径
+    :return: 解析后文件路径
+    """
+
     # 读取文件内容
     with open(file_path, 'r', encoding='utf-8') as f:
         data = f.readlines()
@@ -24,11 +31,22 @@ def text_parse(file_path,save_path):
     return save_file_path
 
 def ocr_parse(file_path,save_path):
+    """
+    图片类文档解析
+    :param file_path: 文件原始路径
+    :param save_path: 解析后文件路径
+    :return: 解析后文件路径
+    """
     # Example implementation for OCR parsing
     print(f"Performing OCR on PDF and saving results to {save_path}")
     # Actual OCR logic would go here
 
 def parse(hparams: HyperParams) :
+    """
+    文件解析函数，通过调用不同类型的解析，以统一到解析位置，传递给下一个模块
+    :param hparams: 超参数
+    :return: 解析后文件路径
+    """
     assert os.path.exists(hparams.file_path), "File does not exist. Please check the file_path_or_name."
     file_type = hparams.file_path.split('.')[-1].lower()
     # Define save path

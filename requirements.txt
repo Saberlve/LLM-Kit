@@ -1,1 +1,11 @@
-tiktoken
+tiktoken~=0.8.0
+yaml~=0.2.5
+pyyaml~=6.0.1
+tqdm~=4.67.0
+requests~=2.32.3
+torch~=2.3.0
+transformers~=4.46.3
+pillow~=10.3.0
+numpy~=1.26.4
+pandas~=2.2.2
+torchvision~=0.18.0

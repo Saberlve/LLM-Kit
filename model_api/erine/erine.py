@@ -6,6 +6,14 @@ from model_api.prompts import PROMPT_DICT
 
 
 def generate(text, API_KEY, SECRET_KEY,prompt_choice):
+    """
+    根据提示词和ak、sk，调用模型
+    :param text: 输入文本
+    :param API_KEY: ak
+    :param SECRET_KEY:sk
+    :param prompt_choice: 提示词选项
+    :return:
+    """
     # 定义prompt模板，并插入用户提供的标题组
 
     time.sleep(0.3)
