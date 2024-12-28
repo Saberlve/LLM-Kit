@@ -35,7 +35,7 @@ class LatexConverter:
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
-        for sub_chunk in tqdm(sub_chunks,desc='Processing chunk'):
+        for sub_chunk in sub_chunks:
             print(f"调用 API：\nAK: {ak}, SK: {sk}\n处理文本块: {sub_chunk[:30]}...")  # 显示前30字符
             for attempt in range(3):  # 尝试3次处理
                 try:
@@ -53,6 +53,7 @@ class LatexConverter:
 
         Args:
             parsed_file_path (str): 待处理文件路径。
+
         """
         with open(self.parsed_file_path, "r", encoding="utf-8") as f:
             text = f.read()
@@ -60,10 +61,14 @@ class LatexConverter:
         file_name = os.path.basename(self.parsed_file_path)
         print(f"开始转成latex格式：{file_name}")
 
+
         save_path = os.path.join(
             self.hparams.save_path, 'tex_files', file_name.split('.')[0] + '.json'
         )
         self.save_path=save_path
+        if os.path.exists(self.save_path):   #不重复生成
+            return save_path
+
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         # 切分文本

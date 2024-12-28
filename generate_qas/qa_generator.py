@@ -156,14 +156,14 @@ class QAGenerator:
                 for i, text in enumerate(text_chunks)
             ]
 
-            with tqdm(total=len(futures), desc="生成问答对") as pbar:
-                for future in as_completed(futures):
-                    qa_pairs.extend(future.result())
-                    pbar.update(1)
+
+            for future in as_completed(futures):
+                qa_pairs.extend(future.result())
+
 
         return qa_pairs
 
-    def convert_tex_to_qas(self) -> str:
+    def convert_tex_to_qas(self) :
         """将 LaTeX 文件转换为问答对并保存"""
         try:
             with open(self.chunks_path, "r", encoding='utf-8') as f:
@@ -172,18 +172,23 @@ class QAGenerator:
             print(f"读取文件失败: {str(e)}")
             return
 
-        print(f"开始处理文件: {os.path.basename(self.chunks_path)}")
-        qa_result = []
-        
-        for chunk in tqdm(chunks, desc="处理文档块"):
-            qas = self.process_latex_chunk(chunk.get("chunk", ""))
-            qa_result.extend(qas)
-
-        # 保存结果
+            # 保存结果
         save_file_path = os.path.join(
             self.save_dir_path,
             os.path.basename(self.chunks_path)
         )
+        if os.path.exists(save_file_path):
+            return save_file_path  #不重复生成
+
+
+        print(f"开始处理文件: {os.path.basename(self.chunks_path)}")
+        qa_result = []
+        
+        for chunk in tqdm(chunks, desc="生成问答对"):
+            qas = self.process_latex_chunk(chunk.get("chunk", ""))
+            qa_result.extend(qas)
+
+
         
         try:
             with open(save_file_path, "w", encoding="utf-8") as f:

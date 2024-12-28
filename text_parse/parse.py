@@ -47,6 +47,7 @@ def parse(hparams: HyperParams) :
     :param hparams: 超参数
     :return: 解析后文件路径
     """
+
     assert os.path.exists(hparams.file_path), "File does not exist. Please check the file_path_or_name."
     file_type = hparams.file_path.split('.')[-1].lower()
     # Define save path

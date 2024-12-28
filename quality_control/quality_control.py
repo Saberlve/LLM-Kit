@@ -8,6 +8,7 @@ from Levenshtein import ratio
 from tqdm import tqdm
 
 from model_api.erine.erine import generate
+from utils.helper import extract_qa
 from utils.hyparams import HyperParams
 
 class QAQualityGenerator:
@@ -92,10 +93,11 @@ class QAQualityGenerator:
     def regenerate_qa(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
         """重新生成问答对"""
         try:
-            response = generate(qa['text'], ak, sk,'TOQA')
+            response = generate(qa['text'], ak, sk,'ToQA')
             #由于API返回的可能有多个问答对，显然不能再用和之前问答对一样的了，所以要重新找一个和他相似度比较低的替换
             if response:
-                selected_qa = self.find_suitable_qa(response, nearby_qas) if len(response) > 1 else response[0]
+                new_qa=extract_qa(response)
+                selected_qa = self.find_suitable_qa(new_qa, nearby_qas) if len(new_qa) > 1 else new_qa[0]
                 selected_qa['text'] = qa['text']
                 return selected_qa
             
@@ -112,7 +114,7 @@ class QAQualityGenerator:
         :param sk:
         :return: 新生成的问答底
         """
-        max_attempts = 10
+        max_attempts = 1
         for attempt in range(max_attempts):
             try:
                 # 检查答案与文本相似度
@@ -130,7 +132,7 @@ class QAQualityGenerator:
                    not is_explicit or not is_medical:
                     qa = self.regenerate_qa(qa, nearby_qas, ak, sk)
                     if not qa:
-                        return None
+                        return {}
                     continue
                 return qa
 
@@ -170,9 +172,10 @@ class QAQualityGenerator:
                         sk,
                     )
                 )
-
-            for future in tqdm(as_completed(futures), total=len(futures), desc="生成并质量控制问答对"):
-                qa_result.extend(future.result())
+            with tqdm(total=len(futures), desc="质量控制问答对") as pbar:
+                for future in as_completed(futures):
+                    qa_result.extend(future.result())
+                    pbar.update(1)  # 更新进度条
 
         # 保存结果
         save_file_path = os.path.join(
