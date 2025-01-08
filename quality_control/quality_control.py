@@ -143,8 +143,33 @@ class QAQualityGenerator:
         return None
 
 
-    def iterate_optim_qa(self):
-        def get_nearby_qas(qas, i):
+    def iterate_optim_qa(self) -> None:
+        """并行处理文件中的问答对，对每个问答对进行质量评估和优化。
+
+        该函数从指定路径读取JSON格式的问答对数据，使用线程池并行处理每个问答对。
+        对于每个问答对，会进行质量评估，如果不满足质量要求则重新生成。
+        最终将优化后的问答对保存到指定目录。
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Raises:
+            json.JSONDecodeError: 如果输入文件不是有效的JSON格式
+            IOError: 如果文件读写出现错误
+        """
+        def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:
+            """获取给定索引周围的问答对。
+
+            Args:
+                qas: 问答对列表
+                i: 当前问答对的索引
+
+            Returns:
+                List[Dict]: 包含当前索引前后3个问答对的列表
+            """
             start_index = max(0, i - 3)
             end_index = min(len(qas), i + 3)
             return qas[start_index:end_index]
