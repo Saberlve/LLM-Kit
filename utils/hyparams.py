@@ -22,3 +22,16 @@ class HyperParams:
         with open(hparams_name_or_path, "r") as stream:
             config = yaml.safe_load(stream)
         return cls(**config)
+    
+@dataclass
+class OCRParams:
+    model_name: str
+    image_file: str
+    conv_mode: str
+    multi_page: bool
+    render: bool
+    @classmethod
+    def from_hparams(cls, hparams_name_or_path: str):
+        with open(hparams_name_or_path, "r") as stream:
+            config = yaml.safe_load(stream)
+        return cls(**config)
