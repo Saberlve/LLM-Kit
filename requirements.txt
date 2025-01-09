@@ -10,3 +10,4 @@ numpy~=1.26.4
 pandas~=2.2.2
 torchvision~=0.18.0
 PyMuPDF
+fitz
