@@ -6,7 +6,7 @@ from typing import List, Dict, Union, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from Levenshtein import ratio
 from tqdm import tqdm
-
+import tiktoken
 from model_api.erine.erine import generate
 from utils.helper import extract_qa
 from utils.hyparams import HyperParams
@@ -26,8 +26,9 @@ class QAQualityGenerator:
         self._validate_keys()
         
         # 质量控制参数
-        self.similarity_rate = 0.8
-        self.coverage_rate = 0.9
+        self.similarity_rate = hparams.similarity_rate
+        self.coverage_rate = hparams.coverage_rate
+        self.max_attempts = hparams.max_attempts
         
 
     def _validate_keys(self):
@@ -45,6 +46,22 @@ class QAQualityGenerator:
             text = str(text)
         pattern = re.compile(r'[^\u4e00-\u9fa5]')
         return re.sub(pattern, '', text)
+
+    def calculate_coverage(self, qa: Dict, nearby_qas: List[Dict]) -> float:
+        """计算覆盖率"""
+        #这个chunk包含m1个token，你把chunk中出现的answer都去掉，剩下m2个token。m2/m1就是这个chunk的覆盖率）
+        # 1. 计算文本的token数量
+        tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        text_tokens = tokenizer.encode(qa['text'])
+        answer_tokens = []
+        for nearby_qa in nearby_qas:
+            answer_tokens.extend(tokenizer.encode(nearby_qa['answer']))
+        answer_tokens = set(answer_tokens)
+        text_tokens = set(text_tokens)
+        # 2. 计算覆盖率
+        remaining_tokens = text_tokens - answer_tokens
+        coverage = 1- len(remaining_tokens) / len(text_tokens)
+        return coverage
 
     def calculate_similarity(self, str1: str, str2: str) -> float:
         """计算两个字符串的相似度"""
@@ -105,6 +122,22 @@ class QAQualityGenerator:
             print(f'重新生成问答对时出错: {e}')
         return None
 
+    def generate_more_qas(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
+        """
+        生成更多问答对
+        """
+        for i in range(self.max_attempts):
+            try:
+                response = generate(qa['text'], ak, sk,prompt_choice='MORE_QA')
+                if response:
+                    new_qa=extract_qa(response)
+                    return new_qa
+            except Exception as e:
+                print(f'生成更多问答对时出错: {e}')
+        return None
+        
+        
+
     def evaluate_qa_and_regenerate(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
         """
         评估当前qa，并且新生成
@@ -114,8 +147,7 @@ class QAQualityGenerator:
         :param sk:
         :return: 新生成的问答底
         """
-        max_attempts = 1
-        for attempt in range(max_attempts):
+        for attempt in range(self.max_attempts):
             try:
                 # 检查答案与文本相似度
                 answer_list = qa['answer'].split('。')
@@ -132,16 +164,24 @@ class QAQualityGenerator:
                    not is_explicit or not is_medical:
                     qa = self.regenerate_qa(qa, nearby_qas, ak, sk)
                     if not qa:
-                        return {}
+                        return None
                     continue
-                return qa
-
+            
+                    
             except Exception as e:
                 print(f'质量检查时出错: {e}')
                 attempt += 1
 
-        return None
+        return qa
 
+    def check_coverage_and_regenerate(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) :
+        """检查覆盖率"""
+        coverage_rate = self.calculate_coverage(qa, nearby_qas)
+        if coverage_rate < self.coverage_rate:
+            new_qas = self.generate_more_qas(qa, nearby_qas, ak, sk)
+            if new_qas:
+                return new_qas
+        return qa
 
     def iterate_optim_qa(self) -> None:
         """并行处理文件中的问答对，对每个问答对进行质量评估和优化。
@@ -160,20 +200,35 @@ class QAQualityGenerator:
             json.JSONDecodeError: 如果输入文件不是有效的JSON格式
             IOError: 如果文件读写出现错误
         """
+        from typing import List, Dict
+
         def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:
-            """获取给定索引周围的问答对。
+            """
+            获取与 qas[i] 文本相似的附近问答对（处理连续相同 text 的情况）。
 
             Args:
-                qas: 问答对列表
-                i: 当前问答对的索引
+                qas: 问答对列表，每个问答对是一个字典，包含 'text' 字段。
+                i: 当前问答对的索引。
 
             Returns:
-                List[Dict]: 包含当前索引前后3个问答对的列表
+                包含相似文本的附近问答对列表。
             """
-            start_index = max(0, i - 3)
-            end_index = min(len(qas), i + 3)
-            return qas[start_index:end_index]
-
+            target_text = qas[i]['text']
+            nearby_qas = []
+            nearby_qas.append(qas[i])
+            # 向前检查
+            j = i - 1
+            while j >= 0 and target_text in qas[j]['text']:
+                nearby_qas.append(qas[j])
+                j -= 1
+            # 向后检查
+            j = i + 1
+            while j < len(qas) and target_text in qas[j]['text']:
+                nearby_qas.append(qas[j])
+                j += 1
+            return nearby_qas
+        
+        
         """读取文件中的问答对，并行进行迭代"""
         with open(self.qa_path, "r", encoding='utf-8') as f:
             qas = json.load(f)
@@ -187,10 +242,13 @@ class QAQualityGenerator:
             for i, qa in enumerate(qas):
                 ak = self.ak_list[i % len(self.ak_list)]
                 sk = self.sk_list[i % len(self.sk_list)]
-                nearby_qas= get_nearby_qas(qas, i)
+                nearby_qas = get_nearby_qas(qas, i)
                 futures.append(
                     executor.submit(
-                        self.evaluate_qa_and_regenerate,
+                        lambda q, n, a, s: self.check_coverage_and_regenerate(
+                            self.evaluate_qa_and_regenerate(q, n, a, s),
+                            n, a, s
+                        ),
                         qa,
                         nearby_qas,
                         ak,
@@ -199,8 +257,12 @@ class QAQualityGenerator:
                 )
             with tqdm(total=len(futures), desc="质量控制问答对") as pbar:
                 for future in as_completed(futures):
-                    qa_result.extend(future.result())
-                    pbar.update(1)  # 更新进度条
+                    result = future.result()
+                    if isinstance(result, list):
+                        qa_result.extend(result)
+                    elif result:
+                        qa_result.append(result)
+                    pbar.update(1)
 
         # 保存结果
         save_file_path = os.path.join(

@@ -11,7 +11,9 @@ class HyperParams:
     convert_to_tex: bool=True# 是否先将源文本转成latex格式，有利于提升问答对质量
     model_name: str="erine"  #调用的模型名字
     save_steps: int=100 #生成100个问答对保存一次
-
+    similarity_rate: float=0.8 #相似度阈值
+    coverage_rate: float=0.9 #覆盖率阈值
+    max_attempts: int=3
 
 
     @classmethod
@@ -23,15 +25,3 @@ class HyperParams:
             config = yaml.safe_load(stream)
         return cls(**config)
     
-@dataclass
-class OCRParams:
-    model_name: str
-    image_file: str
-    conv_mode: str
-    multi_page: bool
-    render: bool
-    @classmethod
-    def from_hparams(cls, hparams_name_or_path: str):
-        with open(hparams_name_or_path, "r") as stream:
-            config = yaml.safe_load(stream)
-        return cls(**config)

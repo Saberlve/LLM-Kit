@@ -7,4 +7,7 @@ PROMPT_DICT = {
     'MEDICAL': """Please determine whether the given question <question> is likely to appear in a clinical setting. Based on the following two conditions, provide <reply>: If it is likely, <reply> should be 1; if it is unlikely, <reply> should be 0.
                 <question>: {}
                 <reply>:""",
+    'MORE_QA': """Please generate more questions and answers based on the provided <text>. Ensure that the generated questions are diverse and cover various aspects of the content. The generated questions should be in Chinese and not explicitly cite the text. You can include a specific scenario or context in the questions, but make sure that the <text> can be used as a comprehensive and accurate answer to the question.
+                <text>: {}
+                <questions>:""",
 }

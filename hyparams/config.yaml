@@ -6,3 +6,6 @@ model_name: erine
 save_steps: 100
 parallel_num: 2
 convert_to_tex: true
+similarity_rate: 0.8
+coverage_rate: 0.8
+max_attempts: 1
