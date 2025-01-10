@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from Levenshtein import ratio
 from tqdm import tqdm
 import tiktoken
-from model_api.erine.erine import generate
+from model_api.erine.erine import generate_erine
 from utils.helper import extract_qa
 from utils.hyparams import HyperParams
 
@@ -18,7 +18,7 @@ class QAQualityGenerator:
         self.qa_path = qa_path
         self.save_dir_path = os.path.join('result', 'qas_iterated', f"qa_iteratedfor_{os.path.basename(qa_path).split('.')[0]}")
         os.makedirs(self.save_dir_path, exist_ok=True)
-        
+        self.model_name = hparams.model_name
         # API 相关
         self.ak_list = hparams.AK
         self.sk_list = hparams.SK
@@ -75,7 +75,7 @@ class QAQualityGenerator:
         :param sk:
         :return: true or false
         """
-        response = generate(question, ak, sk,prompt_choice='MEDICAL')
+        response = generate_erine(question, ak, sk,prompt_choice='MEDICAL')
         if response.count('0')>response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
@@ -89,7 +89,7 @@ class QAQualityGenerator:
         :param sk:
         :return: true or false
         """
-        response = generate(question, ak, sk,prompt_choice='EXPLICIT')
+        response = generate_erine(question, ak, sk,prompt_choice='EXPLICIT')
         if response.count('0')>response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
@@ -110,7 +110,7 @@ class QAQualityGenerator:
     def regenerate_qa(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
         """重新生成问答对"""
         try:
-            response = generate(qa['text'], ak, sk,'ToQA')
+            response = generate_erine(qa['text'], ak, sk,'ToQA')
             #由于API返回的可能有多个问答对，显然不能再用和之前问答对一样的了，所以要重新找一个和他相似度比较低的替换
             if response:
                 new_qa=extract_qa(response)
@@ -128,7 +128,7 @@ class QAQualityGenerator:
         """
         for i in range(self.max_attempts):
             try:
-                response = generate(qa['text'], ak, sk,prompt_choice='MORE_QA')
+                response = generate_erine(qa['text'], ak, sk,prompt_choice='MORE_QA')
                 if response:
                     new_qa=extract_qa(response)
                     return new_qa

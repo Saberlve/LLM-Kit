@@ -5,7 +5,7 @@ import json
 from model_api.prompts import PROMPT_DICT
 
 
-def generate(text, API_KEY, SECRET_KEY,prompt_choice):
+def generate_erine(text, API_KEY, SECRET_KEY,prompt_choice):
     """
     根据提示词和ak、sk，调用模型
     :param text: 输入文本

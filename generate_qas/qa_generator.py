@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from tqdm import tqdm
 
-from model_api.erine.erine import generate
+from model_api.erine.erine import generate_erine
 from utils.helper import API_DICT, extract_qa
 from utils.hyparams import HyperParams
 
