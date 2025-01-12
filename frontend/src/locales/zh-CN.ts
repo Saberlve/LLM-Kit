@@ -2,6 +2,14 @@ export default {
     root: {
         title: "LLM-Kit"
     },
+    sidebar: {
+        data_manager: "数据管理",
+        dataset_construct: "数据集构建",
+        quality_eval: "质量评估",
+        deployment_manager: "部署管理",
+        error_log: "错误记录",
+        settings: "设置",
+    },
     components: {
         model_card: {
             adapters: "Adapters",

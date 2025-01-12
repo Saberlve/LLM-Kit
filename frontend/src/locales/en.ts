@@ -2,6 +2,14 @@ export default {
     root: {
         title: "LLM-Kit"
     },
+    sidebar: {
+        data_manager: "Data Manage",
+        dataset_construct: "Dataset Construction",
+        quality_eval: "Quality Evaluation",
+        deployment_manager: "Deployment",
+        error_log: "Error Logs",
+        settings: "Settings",
+    },
     components: {
         model_card: {
             adapters: "Adapters",
