@@ -1,0 +1,160 @@
+export default {
+    root: {
+        title: "LLM-Kit"
+    },
+    components: {
+        model_card: {
+            adapters: "Adapters",
+            id: "ID",
+            name_and_description: "Name & Description",
+            action: "Action",
+        },
+        go_back: "Go back",
+        visibility_button: {
+            hide: "Private",
+            publicize: "Public",
+        },
+        data: {
+            data_pool_selector: "data pool:",
+            data_pool_des: "select a data pool",
+            data_set_selector: "data set:",
+            data_set_des: "select a dataset from the above data pool"
+        },
+        eval_metrics_description: {
+            acc_des: "Number of correctly predicted samples/total number of samples",
+            recall_des: "Judging the similarity between two sentences based on recall rate",
+            f1score_des: "Harmony between Accuracy and Recall",
+            pre_des: "Evaluate the proportion of content that matches the reference text in the generated text",
+            bleu_des: "Judging the similarity between two sentences based on accuracy",
+            distinct_des: "Reflecting the diversity of text generation"
+        },
+        device: {
+            // GPU_utilization: "GPU utilization:",
+            // memory_utilization: "Memory utilization:",
+            GPU_utilization: "GPU Utilization:",
+            memory_utilization: "GPU Memory:",
+        },
+        deployment_params: {
+            title: "Deployment Parameters",
+            subtitle: "Quantization Parameters",
+            subsubtitle: "Quantization Deployment Parameters",
+            bits_and_bytes: "Whether to use bits_and_bytes",
+            use_flash_attention: "Whether to use flash attention",
+            use_deepspeed: "Whether to use deepspeed",
+            use_vllm: "Whether to use vllm",
+            description: "Deployment Parameters"
+        }
+    },
+    data: {
+        title: "Data Management",
+        description: "Create and manage data pools, upload datasets to data pools",
+        create_pool: "Create Data Pool",
+        no_dataset: "No dataset in the data pool",
+        detail: {
+            title: "Details",
+            detail: "Data Pool Details",
+            delete: "Delete this data pool",
+            filter: "Selecting",
+            create_on: "Creation Time:",
+            size: "Data Volume:",
+            title_1: "Confirm Deletion?",
+            p1: "Are you sure you want to delete it?",
+            p2: "Data will",
+            p3: "not",
+            p4: "be recoverable.",
+            yes: "Yes",
+            no: "No",
+            title_2: "There are still unsubmitted data in the staging area",
+            p5: "Are you sure you want to go back? There are still unsubmitted data in the staging area.",
+            p6: "The data in the staging area will",
+            p7: "not",
+            p8: "be saved.",
+        },
+        table: {
+            col_name: "Name",
+            col_time: "Creation Time",
+            col_size: "Data Volume",
+            col_format: "Format",
+            col_des: "Description"
+        },
+        delete: {
+            title: "Confirm Deletion",
+            data: "Delete Data",
+            p1: "Are you sure you want to delete this dataset?",
+            p2: "The data will not be recoverable after deletion.",
+            yes: "Delete",
+            no: "No"
+        },
+        uploader: {
+            col_filename: "Filename",
+            col_datasetname: "Dataset Name",
+            col_des: "Description",
+            col_option: "Operation",
+            datapool_detail: "Data Pool Details",
+            zone: "Staging Area",
+            format: "Format",
+            submit: "Submit all files in the staging area",
+            no_file: "No uploaded files in the staging area",
+            enter_name: "Enter dataset name",
+            enter_des: "Enter dataset description",
+            move: "Move out of staging area",
+            click: "Click ",
+            or: "or",
+            p1: " Drag and drop ",
+            p2: "to upload files to the staging area"
+        },
+        task: {
+            steps: {
+                infor: "Basic Information",
+                upload: "Upload Data",
+                infor_des: "Fill in the basic information of the created data pool",
+                upload_des: "Select the data to be uploaded"
+            },
+            p1: "Are you sure you have finished creating? There are still unsubmitted data in the staging area.",
+            p2: "The data in the staging area will",
+            p3: "not",
+            p4: "be saved.",
+            yes: "Yes",
+            no: "No",
+            title: "Create Data Pool",
+            description: "Create a data pool according to the prompted steps",
+            complete: "Complete",
+            name: "Data Pool Name",
+            enter_name: "Please enter the data pool name",
+            des: "Data Pool Description",
+            enter_des: "Please enter the data pool description"
+        },
+        filter: {
+            title: "Data Selection",
+            p1: "Original Dataset:",
+            p2: "Retention Ratio:",
+            name: "New Dataset Name:",
+            des: "New Dataset Description:",
+            begin: "Start Selecting"
+        }
+    },
+    fault: {
+        title: "Error log",
+        description: "View logs of errors in tasks and processes",
+        message: "Message",
+        source: "Source",
+        time: "Time",
+        code: "Code",
+        action: "Action",
+        view_logs: "View logs",
+        download_logs: "Download logs",
+        search_placeholder: "Enter the tags separated by commas",
+        search: "Search",
+        management: "Fine-tuning Management",
+        finetune: "Fine-tuning",
+        create_task: "Create Fine-tuning Task",
+        wordcloud: "WordCloud",
+        close: "close"
+    },
+    config: {
+        log_out: "Log out",
+        model_list: "Model list",
+        title: "Settings",
+        description: "Configure system parameters"
+    }
+};
