@@ -9,6 +9,7 @@ export default {
         deployment_manager: "Deployment",
         error_log: "Error Logs",
         settings: "Settings",
+        deduplication: "Dataset Deduplication"
     },
     components: {
         model_card: {

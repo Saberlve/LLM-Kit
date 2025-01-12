@@ -9,6 +9,7 @@ export default {
         deployment_manager: "部署管理",
         error_log: "错误记录",
         settings: "设置",
+        deduplication: "数据集去重"
     },
     components: {
         model_card: {
