@@ -26,7 +26,7 @@ def main():
             latex_converter.convert_to_latex()
         elif file.split('.')[-1]=='tex':
             pass
-            # 仍然将文本拆分成chunk，搞到json中
+            # 仍然
         
         qa_generator=QAGenerator(latex_converter.save_path, hparams)
         qa_path=qa_generator.convert_tex_to_qas()
