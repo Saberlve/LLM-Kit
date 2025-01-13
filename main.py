@@ -35,7 +35,7 @@ def main():
         quality_control=QAQualityGenerator(qa_path, hparams)
         quality_control.iterate_optim_qa()
 
-            #将文件复制到目录下
+            
 
 if __name__=='__main__':
     main()
