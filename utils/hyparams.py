@@ -14,7 +14,7 @@ class HyperParams:
     similarity_rate: float=0.8 #相似度阈值
     coverage_rate: float=0.9 #覆盖率阈值
     max_attempts: int=3
-
+    domain: str="medical" #领域
 
     @classmethod
     def from_hparams(cls, hparams_name_or_path: str):

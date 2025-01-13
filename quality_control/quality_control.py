@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from Levenshtein import ratio
 from tqdm import tqdm
 import tiktoken
-from model_api.erine.erine import generate_erine
+from utils.helper import generate
 from utils.helper import extract_qa
 from utils.hyparams import HyperParams
 
@@ -67,15 +67,15 @@ class QAQualityGenerator:
         """计算两个字符串的相似度"""
         return ratio(self.remove_non_chinese(str1), self.remove_non_chinese(str2))
 
-    def is_medical(self, question: str, ak: str, sk: str) -> bool:
+    def is_relative(self, question: str, ak: str, sk: str) -> bool:
         """
-        问题是否与医学相关
+        问题是否与领域相关
         :param question:
         :param ak:
         :param sk:
         :return: true or false
         """
-        response = generate_erine(question, ak, sk,prompt_choice='MEDICAL')
+        response = generate(question, self.model_name, 'RELATIVE', ak, sk)
         if response.count('0')>response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
@@ -89,7 +89,7 @@ class QAQualityGenerator:
         :param sk:
         :return: true or false
         """
-        response = generate_erine(question, ak, sk,prompt_choice='EXPLICIT')
+        response = generate(question, self.model_name, 'EXPLICIT', ak, sk)
         if response.count('0')>response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
@@ -110,7 +110,7 @@ class QAQualityGenerator:
     def regenerate_qa(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
         """重新生成问答对"""
         try:
-            response = generate_erine(qa['text'], ak, sk,'ToQA')
+            response = generate(qa['text'], self.model_name, 'ToQA', ak, sk)
             #由于API返回的可能有多个问答对，显然不能再用和之前问答对一样的了，所以要重新找一个和他相似度比较低的替换
             if response:
                 new_qa=extract_qa(response)
@@ -128,7 +128,7 @@ class QAQualityGenerator:
         """
         for i in range(self.max_attempts):
             try:
-                response = generate_erine(qa['text'], ak, sk,prompt_choice='MORE_QA')
+                response = generate(qa['text'], self.model_name, 'MORE_QA', ak, sk)
                 if response:
                     new_qa=extract_qa(response)
                     return new_qa
@@ -157,7 +157,7 @@ class QAQualityGenerator:
 
                 #检查问题质量，从明确性和医学相关性两个维度
                 is_explicit = self.is_explicit(qa['question'], ak, sk)
-                is_medical = self.is_medical(qa['question'], ak, sk)
+                is_medical = self.is_relative(qa['question'], ak, sk)
 
                 #如果相似度低于阈值，或者问题不明确或不医学相关，则重新生成
                 if qa['ratio'] < self.similarity_rate or \

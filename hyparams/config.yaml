@@ -9,3 +9,4 @@ convert_to_tex: true
 similarity_rate: 0.8
 coverage_rate: 0.8
 max_attempts: 1
+domain: harbin institute of technology

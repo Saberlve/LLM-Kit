@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm  # 用于显示进度条
 
-from model_api.erine.erine import generate
+from utils.helper import generate
 from utils.helper import split_chunk_by_tokens, split_text_into_chunks
 from utils.hyparams import HyperParams
 
@@ -39,7 +39,7 @@ class LatexConverter:
             print(f"调用 API：\nAK: {ak}, SK: {sk}\n处理文本块: {sub_chunk[:30]}...")  # 显示前30字符
             for attempt in range(3):  # 尝试3次处理
                 try:
-                    tex_text = generate(sub_chunk, ak, sk, 'ToTex')
+                    tex_text = generate(sub_chunk, self.hparams.model_name, 'ToTex', ak, sk)
                     results.append(self.clean_result(tex_text))
                     break
                 except Exception as e:

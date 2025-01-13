@@ -2,14 +2,13 @@ import json
 import math
 
 import tiktoken
-
+from model_api.erine.erine import generate_erine
+from model_api.flash.flash import generate_flash
+from model_api.lite.lite import generate_lite
+from model_api.Qwen.Qwen import generate_Qwen
 from model_api.erine.erine import generate_erine
 
-PROMPT_DICT={
-    'ToTex':"""Please divide the <text> according to logic and content and output it in LaTeX format layout, without losing any content.<text>:{}""",
-    'ToQA':"""1, please create some <question> closely consistent with the provided <text>. Make sure that <question> is expressed in Chinese and does not explicitly cite the text. You can include a specific scenario or context in <question>, but make sure that <text> can be used as a comprehensive and accurate answer to the question.\n2. Then, you play the role of a doctor, who has in-depth knowledge in medicine. Your task is to answer the user's <question> directly in Chinese. In forming your response, you must use references to the <text> thoughtfully, ensuring that <answer> comes from text and do not add other unnecessary content. Please be careful to avoid including anything that may raise ethical issues.\n3. Output standard json format {{"question":<question>, "answer":<answer>}}<text>:{answer}"""
-}
-API_DICT={"erine":generate_erine}
+
 def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
     """
     将文本块按 token 限制分割成多个部分，尽量从换行符处分割。
@@ -87,3 +86,19 @@ def extract_qa(response):
         start_i = response.find('{', end_i)
         end_i = response.find('}', end_i) + 1
     return qa_pairs
+
+
+def generate(text, Model_Name,  prompt_choice, API_KEY, SECRET_KEY=None):
+
+    Model_Name.lower()
+
+    if Model_Name == "erine":
+        return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+    elif Model_Name == "flash":
+        return generate_flash(text, API_KEY, prompt_choice)
+    elif Model_Name == "lite":
+        return generate_lite(text, API_KEY, prompt_choice)
+    elif Model_Name == "qwen":
+        return generate_Qwen(text, API_KEY, prompt_choice)
+    else:
+        print("您输入的模型名字有误！请重新输入。")

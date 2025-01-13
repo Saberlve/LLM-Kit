@@ -54,8 +54,6 @@ def pdf_parse(file_path,save_path):
     :param save_path: 解析后文件路径
     :return: 解析后文件路径
     """
- 
-    
     # 获取文件名并构造保存路径
     file_name = file_path.split('/')[-1]  # 提取文件名
     base_name = file_name.split('.')[0]  # 提取不带扩展名的部分
@@ -103,12 +101,7 @@ def pdf_parse(file_path,save_path):
     return save_file_path
     
     
-    
-    
-    
-    # Example implementation for OCR parsing
-    print(f"Performing OCR on PDF and saving results to {save_path}")
-    # Actual OCR logic would go here
+   
 
 def parse(hparams: HyperParams) :
     """
@@ -126,7 +119,7 @@ def parse(hparams: HyperParams) :
     if file_type in {'tex', 'txt', 'json'}:
         return text_parse(hparams.file_path,save_path)
     elif file_type == 'pdf':
-        return ocr_parse(hparams.file_path,save_path)
+        return single_ocr(hparams.file_path,save_path)
     else:
         raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
 
