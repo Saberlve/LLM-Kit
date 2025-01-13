@@ -1,10 +1,16 @@
 import os
 
+from deduplication.qa_deduplication import QADeduplication
 from generate_qas.qa_generator import QAGenerator
 from quality_control.quality_control import QAQualityGenerator
 from text_parse.parse import parse
 from text_parse.to_tex import LatexConverter
-from utils.hyparams import HyperParams
+from utils.hparams import DedupParams, HyperParams
+
+def dedup():
+    hparams=DedupParams.from_dedup_yaml('hparams/dedup.yaml')
+    qa_dedup=QADeduplication(hparams)
+    qa_dedup.process_qa_file(hparams)
 
 def main():
     hparams=HyperParams.from_hparams('hyparams/config.yaml')
@@ -33,7 +39,9 @@ def main():
 
         # 质量控制
         quality_control=QAQualityGenerator(qa_path, hparams)
-        quality_control.iterate_optim_qa()
+        it_path=quality_control.iterate_optim_qa()
+        
+        
 
             
 

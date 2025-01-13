@@ -10,7 +10,7 @@ from tqdm import tqdm
 from utils.helper import generate
 from model_api.prompts import PROMPT_DICT
 from utils.helper import  extract_qa
-from utils.hyparams import HyperParams
+from utils.hparams import HyperParams
 
 @dataclass
 class QAGenerator:

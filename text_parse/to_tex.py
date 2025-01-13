@@ -5,7 +5,7 @@ from tqdm import tqdm  # 用于显示进度条
 
 from utils.helper import generate
 from utils.helper import split_chunk_by_tokens, split_text_into_chunks
-from utils.hyparams import HyperParams
+from utils.hparams import HyperParams
 
 class LatexConverter:
     def __init__(self,parsed_file_path, hparams: HyperParams):

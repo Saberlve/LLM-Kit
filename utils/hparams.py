@@ -15,6 +15,7 @@ class HyperParams:
     coverage_rate: float=0.9 #覆盖率阈值
     max_attempts: int=3
     domain: str="medical" #领域
+    
 
     @classmethod
     def from_hparams(cls, hparams_name_or_path: str):
@@ -25,3 +26,19 @@ class HyperParams:
             config = yaml.safe_load(stream)
         return cls(**config)
     
+@dataclass
+class DedupParams:
+    input_file: str
+    output_file: str
+    dedup_by_answer: bool
+    min_answer_length: int
+    deleted_pairs_file: str
+    priority_dict: dict
+    dedup_threshold: float=0.8  # 去重阈值
+    dedup_num_perm: int=128
+
+    @classmethod
+    def from_dedup_yaml(cls, dedup_yaml_path: str):
+        with open(dedup_yaml_path, "r") as stream:
+            config = yaml.safe_load(stream)
+        return cls(**config)

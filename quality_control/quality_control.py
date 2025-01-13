@@ -9,7 +9,7 @@ from tqdm import tqdm
 import tiktoken
 from utils.helper import generate
 from utils.helper import extract_qa
-from utils.hyparams import HyperParams
+from utils.hparams import HyperParams
 
 class QAQualityGenerator:
     def __init__(self, qa_path: str, hparams: HyperParams):
@@ -183,7 +183,7 @@ class QAQualityGenerator:
                 return new_qas
         return qa
 
-    def iterate_optim_qa(self) -> None:
+    def iterate_optim_qa(self):
         """并行处理文件中的问答对，对每个问答对进行质量评估和优化。
 
         该函数从指定路径读取JSON格式的问答对数据，使用线程池并行处理每个问答对。
@@ -271,3 +271,4 @@ class QAQualityGenerator:
         )
         with open(save_file_path, "w", encoding="utf-8") as f:
             json.dump(qa_result, f, ensure_ascii=False, indent=4)
+        return save_file_path

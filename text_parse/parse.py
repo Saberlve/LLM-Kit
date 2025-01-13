@@ -5,7 +5,7 @@ import io
 import sys
 import os
 
-from utils.hyparams import HyperParams
+from utils.hparams import HyperParams
 
 def single_ocr(file_path):
     from modelscope import AutoModel, AutoTokenizer
