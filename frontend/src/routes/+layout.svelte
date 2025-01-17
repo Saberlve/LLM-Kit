@@ -5,8 +5,6 @@
   import Sidebar from "./Sidebar.svelte";
   import axios from "axios";
   import getI18nStore from "../locales/index";
-  import Login from "./Login.svelte";
-  import Signup from "./Signup.svelte";
   import { Button } from "flowbite-svelte";
 
   const i18n = getI18nStore();
