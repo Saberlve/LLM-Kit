@@ -6,6 +6,7 @@ export default {
     data_manager: "Data Manage",
     dataset_construct: "Dataset Construction",
     quality_eval: "Quality Evaluation",
+    deduplication: "Deduplication",
     deployment_manager: "Deployment",
     error_log: "Error Logs",
     settings: "Settings",
@@ -164,5 +165,38 @@ export default {
     model_list: "Model list",
     title: "Settings",
     description: "Configure system parameters"
+  },
+  deduplication: {
+    title: "Deduplication",
+    description: "Deduplicate the dataset to ensure the quality of the dataset",
+    create_task: "Create Deduplication Task",
+    task_list: "Deduplication Task List",
+    task_name: "Task Name",
+    task_status: "Task Status",
+    task_time: "Task Time",
+    action: "Action",
+    view_logs: "View logs",
+    download_logs: "Download logs",
+    search_placeholder: "Enter the tags separated by commas",
+    search: "Search",
+    wordcloud: "WordCloud",
+    close: "close",
+    task_detail: {
+      title: "Task Details",
+      task_name: "Task Name",
+      task_status: "Task Status",
+      task_time: "Task Time",
+      task_description: "Task Description",
+      task_input: "Task Input",
+      task_output: "Task Output",
+      task_logs: "Task Logs",
+      task_message: "Task Message",
+      task_source: "Task Source",
+      task_code: "Task Code",
+      task_action: "Task Action",
+      view_logs: "View logs",
+      download_logs: "Download logs",
+      close: "close"
+    }
   }
 };

@@ -40,8 +40,8 @@
           class="text-blue-600 hover:underline">{t("data.detail.title")}</a
         >
         <a
-          href={`/data/filter?pool_id=${pool.id}`}
-          class="text-blue-600 hover:underline">{t("data.detail.filter")}</a
+          href={`/data/details?pool_id=${pool.id}`}
+          class="text-blue-600 hover:underline">{t("data.detail.title")}</a
         >
         <VisbilityButton
           id={pool.id.toString()}
