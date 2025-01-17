@@ -6,6 +6,7 @@ export default {
     data_manager: "数据管理",
     dataset_construct: "数据集构建",
     quality_eval: "质量评估",
+    dedupulication: "数据集去重",
     deployment_manager: "部署管理",
     error_log: "错误记录",
     settings: "设置",
@@ -159,6 +160,39 @@ export default {
       name: "新数据集名称：",
       des: "新数据集描述：",
       begin: "开始筛选"
+    }
+  },
+  deduplication: {
+    title: "数据集去重",
+    description: "对数据集进行去重操作以保证数据集质量",
+    create_task: "Create Deduplication Task",
+    task_list: "Deduplication Task List",
+    task_name: "Task Name",
+    task_status: "Task Status",
+    task_time: "Task Time",
+    action: "Action",
+    view_logs: "View logs",
+    download_logs: "Download logs",
+    search_placeholder: "Enter the tags separated by commas",
+    search: "Search",
+    wordcloud: "WordCloud",
+    close: "close",
+    task_detail: {
+      title: "Task Details",
+      task_name: "Task Name",
+      task_status: "Task Status",
+      task_time: "Task Time",
+      task_description: "Task Description",
+      task_input: "Task Input",
+      task_output: "Task Output",
+      task_logs: "Task Logs",
+      task_message: "Task Message",
+      task_source: "Task Source",
+      task_code: "Task Code",
+      task_action: "Task Action",
+      view_logs: "View logs",
+      download_logs: "Download logs",
+      close: "close"
     }
   }
 };
