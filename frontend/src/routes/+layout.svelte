@@ -21,43 +21,18 @@
   onMount(() => {
     // 可以在此处添加一些初始化操作，但不再依赖登录状态
   });
-
-  let switch_to_signup = false;
+  
 </script>
 
 <Header />
-
 {#if loaded}
   <div class="w-full h-screen pt-2 flex flex-row">
     <!-- 始终显示侧边栏 -->
     <div>
       <Sidebar />
     </div>
-
     <div class="w-full p-2">
       <slot />
     </div>
-
-    <!-- 移除登录和注册的逻辑 -->
-    <!--
-    {#if logged_in}
-      <div class="w-full p-2">
-        <slot />
-      </div>
-    {:else if switch_to_signup}
-      <Signup
-        on:switch={() => {
-          switch_to_signup = false;
-        }}
-      />
-    {:else}
-      <Login
-        bind:logged_in
-        on:switch={() => {
-          switch_to_signup = true;
-        }}
-      />
-    {/if}
-    -->
   </div>
 {/if}
