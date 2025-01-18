@@ -181,6 +181,14 @@ export default {
     search: "Search",
     wordcloud: "WordCloud",
     close: "close",
+    dedup_process: {
+      upload_files:"upload_files",
+      select_models:"select_models",
+      start:"start",
+      progress:"progress",
+      remain_time: "remain_time",
+      wait:"wait"
+    },
     task_detail: {
       title: "Task Details",
       task_name: "Task Name",
