@@ -177,6 +177,14 @@ export default {
     search: "Search",
     wordcloud: "WordCloud",
     close: "close",
+    dedup_process: {
+      upload_files:"上传文件",
+      select_models:"选择模型",
+      start:"开始",
+      progress:"进度",
+      remain_time: "剩余时间",
+      wait:"等待"
+    },
     task_detail: {
       title: "Task Details",
       task_name: "Task Name",
