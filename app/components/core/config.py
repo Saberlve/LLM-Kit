@@ -1,35 +1,41 @@
-from pydantic_settings import BaseSettings
-from typing import Dict, Any
+from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "LLM-Kit API"
+    # MongoDB配置
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "llm_kit"
 
-    # 添加集合名称配置
-    COLLECTIONS: Dict[str, str] = {
+    # 集合名称配置
+    COLLECTIONS = {
+        # 1. 解析模块
         "parse_records": "parse_records",
+
+        # 2. LaTeX转换模块
         "tex_records": "tex_records",
+
+        # 3. 问答生成模块
         "qa_generations": "qa_generations",
         "qa_pairs": "qa_pairs",
+
+        # 4. 质量控制模块
         "quality_generations": "quality_generations",
         "quality_records": "quality_records",
+
+        # 5. 去重模块
         "dedup_records": "dedup_records",
-        "deleted_pairs": "deleted_pairs",
         "kept_pairs": "kept_pairs"
     }
 
-    # 添加索引配置
-    INDEXES: Dict[str, list] = {
-        "parse_records": [("created_at", -1), ("status", 1)],
-        "tex_records": [("created_at", -1), ("status", 1)],
-        "qa_generations": [("start_time", -1), ("status", 1)],
+    # 索引配置
+    INDEXES = {
+        "parse_records": [("created_at", -1)],
+        "tex_records": [("created_at", -1)],
+        "qa_generations": [("created_at", -1)],
         "qa_pairs": [("generation_id", 1)],
-        "quality_generations": [("start_time", -1), ("status", 1)],
-        "quality_records": [("generation_id", 1), ("status", 1)],
-        "dedup_records": [("start_time", -1), ("status", 1)],
-        "deleted_pairs": [("dedup_id", 1)],
+        "quality_generations": [("created_at", -1)],
+        "quality_records": [("generation_id", 1)],
+        "dedup_records": [("created_at", -1)],
         "kept_pairs": [("dedup_id", 1)]
     }
 
