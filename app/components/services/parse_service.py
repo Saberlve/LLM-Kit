@@ -4,6 +4,7 @@ from text_parse import parse
 from utils.hparams import HyperParams
 from app.components.models.mongodb import ParseRecord
 import os
+from typing import List
 
 
 class ParseService:
@@ -11,48 +12,45 @@ class ParseService:
         self.db = db
         self.parse_records = db.llm_kit.parse_records
 
-    async def parse_file(self, file_path: str, save_path: str):
+    async def parse_file(self, file_path: str, save_path: str, SK: List[str], AK: List[str], parallel_num: int = 4):
         try:
-            # 创建记录
-            record = ParseRecord(
-                input_file=file_path,
-                file_type=file_path.split('.')[-1].lower(),
-                save_path=save_path,
-                status="processing",
-            )
+            # 获取文件类型
+            file_type = os.path.splitext(file_path)[1].lower().replace('.', '')
 
-            result = await self.parse_records.insert_one(record.dict(by_alias=True))
-            record_id = result.inserted_id
-
-            # 解析文件
+            # 按照 HyperParams 的要求传入所有必需参数
             hparams = HyperParams(
+                SK=SK,
+                AK=AK,
+                parallel_num=parallel_num,
                 file_path=file_path,
                 save_path=save_path
             )
 
-            parsed_file_path = parse(hparams)
+            # 读取并解析文件
+            parsed_file_path = parse.parse(hparams)
 
-            # 读取解析后的内容
+            # 读取解析后的文件内容
             with open(parsed_file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # 更新记录
-            await self.parse_records.update_one(
-                {"_id": record_id},
-                {
-                    "$set": {
-                        "status": "completed",
-                        "parsed_file_path": parsed_file_path,
-                        "content": content
-                    }
-                }
+            # 创建记录时包含所有必需字段
+            parse_record = ParseRecord(
+                input_file=file_path,
+                content=content,  # 存储解析后的文件内容
+                parsed_file_path=parsed_file_path,  # 使用实际的解析文件路径
+                status="processing",
+                file_type=file_type,
+                save_path=save_path
+            )
+
+            result = await self.parse_records.insert_one(
+                parse_record.dict(by_alias=True)
             )
 
             return {
-                "record_id": str(record_id),
-                "content": content[:200] + "..." if len(content) > 200 else content
+                "record_id": str(result.inserted_id),
+                "content": content
             }
-
         except Exception as e:
             raise Exception(f"Parse failed: {str(e)}")
 

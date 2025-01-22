@@ -28,7 +28,8 @@ async def convert_to_latex(
             data=result
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = f"LaTeX conversion failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_message)
 
 @router.get("/to_tex/history")
 async def get_tex_history(
@@ -44,4 +45,5 @@ async def get_tex_history(
             data={"records": records}
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = f"Failed to retrieve LaTeX conversion history: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_message)

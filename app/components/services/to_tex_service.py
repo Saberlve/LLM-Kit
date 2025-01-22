@@ -3,6 +3,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from text_parse.to_tex import LatexConverter
 from utils.hparams import HyperParams
 from app.components.models.mongodb import TexConversionRecord
+import os
+from typing import List
 
 
 class ToTexService:
@@ -14,56 +16,79 @@ class ToTexService:
             self,
             parsed_file_path: str,
             save_path: str,
-            SK: list,
-            AK: list,
+            SK: List[str],
+            AK: List[str],
             parallel_num: int,
             model_name: str
     ):
         try:
-            # 创建记录
+            # 验证输入文件是否存在
+            if not os.path.exists(parsed_file_path):
+                raise FileNotFoundError(f"Input file not found: {parsed_file_path}")
+
+            # 确保保存路径存在
+            os.makedirs(save_path, exist_ok=True)
+
+            # 1. 创建初始记录
             record = TexConversionRecord(
                 input_file=parsed_file_path,
-                file_type="tex",
-                status="processing"
+                status="processing",
+                model_name=model_name,
+                save_path=save_path  # 添加初始保存路径
             )
-
             result = await self.tex_records.insert_one(record.dict(by_alias=True))
             record_id = result.inserted_id
 
-            # 转换为LaTeX
-            hparams = HyperParams(
-                file_path=parsed_file_path,
-                save_path=save_path,
-                SK=SK,
-                AK=AK,
-                parallel_num=parallel_num,
-                model_name=model_name
-            )
+            try:
+                # 2. 配置转换参数
+                hparams = HyperParams(
+                    file_path=parsed_file_path,
+                    save_path=save_path,
+                    SK=SK,
+                    AK=AK,
+                    parallel_num=parallel_num,
+                    model_name=model_name
+                )
 
-            converter = LatexConverter(parsed_file_path, hparams)
-            save_path = converter.convert_to_latex()
+                # 3. 执行转换
+                converter = LatexConverter(parsed_file_path, hparams)
+                tex_file_path = converter.convert_to_latex()
 
-            # 读取转换结果
-            with open(save_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                if not tex_file_path or not os.path.exists(tex_file_path):
+                    raise FileNotFoundError("LaTeX conversion failed: output file not created")
 
-            # 更新记录，包含保存路径和内容
-            await self.tex_records.update_one(
-                {"_id": record_id},
-                {
-                    "$set": {
-                        "status": "completed",
-                        "content": content,
-                        "save_path": save_path  # 添加保存路径
+                # 4. 读取转换结果
+                with open(tex_file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # 5. 更新记录
+                await self.tex_records.update_one(
+                    {"_id": record_id},
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "content": content,
+                            "save_path": tex_file_path
+                        }
                     }
-                }
-            )
+                )
 
-            return {
-                "record_id": str(record_id),
-                "save_path": save_path,
-                "content": content  # 返回转换后的内容
-            }
+                return {
+                    "record_id": str(record_id),
+                    "save_path": tex_file_path,
+                    "content": content
+                }
+
+            except Exception as e:
+                # 6. 更新失败状态
+                await self.tex_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
+                )
+                raise e
 
         except Exception as e:
             raise Exception(f"Conversion failed: {str(e)}")

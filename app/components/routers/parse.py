@@ -6,7 +6,7 @@ from app.components.services.parse_service import ParseService
 
 router = APIRouter()
 
-@router.post("/parse", response_model=APIResponse)
+@router.post("/parse")
 async def parse_file(
     request: ParseRequest,
     db: AsyncIOMotorClient = Depends(get_database)
@@ -16,7 +16,10 @@ async def parse_file(
         service = ParseService(db)
         result = await service.parse_file(
             file_path=request.file_path,
-            save_path=request.save_path
+            save_path=request.save_path,
+            SK=request.SK,
+            AK=request.AK,
+            parallel_num=request.parallel_num
         )
         return APIResponse(
             status="success",

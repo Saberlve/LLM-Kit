@@ -29,20 +29,21 @@ class MongoBaseModel(BaseModel):
 class ParseRecord(MongoBaseModel):
     """解析记录"""
     input_file: str
+    content: Optional[str] = None
+    parsed_file_path: Optional[str] = None
+    status: str = "processing"
     file_type: str
     save_path: str
-    status: str = "processing"
-    content: Optional[str]
-    parsed_file_path: Optional[str]
 
 # 2. LaTeX转换模块
 class TexConversionRecord(MongoBaseModel):
     """LaTeX转换记录"""
-    input_file: str
-    file_type: str = "tex"
+    input_file: str  # 输入文件路径
+    content: Optional[str] = None  # 转换后的内容
+    save_path: Optional[str] = None  # 保存路径
     status: str = "processing"
-    content: Optional[str]
-    save_path: Optional[str]
+    file_type: str = "tex"  # 固定为tex
+    model_name: str  # 使用的模型名称
 
 # 3. 问答生成模块
 class QAGeneration(MongoBaseModel):

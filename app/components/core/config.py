@@ -1,4 +1,5 @@
-from pydantic import BaseSettings
+from typing import Dict, List, ClassVar
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -6,8 +7,8 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "llm_kit"
 
-    # 集合名称配置
-    COLLECTIONS = {
+    # 使用 ClassVar 标注静态配置
+    COLLECTIONS: ClassVar[Dict[str, str]] = {
         # 1. 解析模块
         "parse_records": "parse_records",
 
@@ -27,8 +28,7 @@ class Settings(BaseSettings):
         "kept_pairs": "kept_pairs"
     }
 
-    # 索引配置
-    INDEXES = {
+    INDEXES: ClassVar[Dict[str, List[tuple]]] = {
         "parse_records": [("created_at", -1)],
         "tex_records": [("created_at", -1)],
         "qa_generations": [("created_at", -1)],
