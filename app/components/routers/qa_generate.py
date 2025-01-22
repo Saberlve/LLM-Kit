@@ -1,0 +1,48 @@
+from fastapi import APIRouter, HTTPException, Depends
+from motor.motor_asyncio import AsyncIOMotorClient
+from app.components.core.database import get_database
+from app.components.models.schemas import QAGenerateRequest, APIResponse
+from app.components.services.qa_generate_service import QAGenerateService
+
+router = APIRouter()
+
+@router.post("/generate_qa")
+async def generate_qa_pairs(
+    request: QAGenerateRequest,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """生成问答对"""
+    try:
+        service = QAGenerateService(db)
+        result = await service.generate_qa_pairs(
+            chunks_path=request.chunks_path,
+            save_path=request.save_path,
+            SK=request.SK,
+            AK=request.AK,
+            parallel_num=request.parallel_num,
+            model_name=request.model_name,
+            domain=request.domain
+        )
+        return APIResponse(
+            status="success",
+            message="QA pairs generated successfully",
+            data=result
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/generate_qa/history")
+async def get_qa_history(
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取问答对生成历史记录"""
+    try:
+        service = QAGenerateService(db)
+        records = await service.get_qa_records()
+        return APIResponse(
+            status="success",
+            message="Records retrieved successfully",
+            data={"records": records}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
