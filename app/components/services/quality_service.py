@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from quality_control.quality_control import QAQualityGenerator
 from utils.hparams import HyperParams
-from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration
-from typing import List
+from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration, PyObjectId
+import json
 
 
 class QualityService:
@@ -22,8 +22,10 @@ class QualityService:
             model_name: str,
             similarity_rate: float,
             coverage_rate: float,
-            max_attempts: int
+            max_attempts: int,
+            domain: str
     ):
+        generation_id = None
         try:
             # 读取源文本
             with open(qa_path, 'r', encoding='utf-8') as f:
@@ -50,29 +52,46 @@ class QualityService:
                 model_name=model_name,
                 similarity_rate=similarity_rate,
                 coverage_rate=coverage_rate,
-                max_attempts=max_attempts
+                max_attempts=max_attempts,
+                domain=domain
             )
 
             generator = QAQualityGenerator(qa_path, hparams)
-            qa_pairs = generator.iterate_optim_qa()
+            qa_pairs_path = generator.iterate_optim_qa()  # 这里返回的是文件路径
 
-            # 保存到数据库
-            quality_records = []
+            if not qa_pairs_path:
+                raise Exception("QA pairs path is empty or None")
+
+            # 加载优化后的问答对
+            try:
+                with open(qa_pairs_path, 'r', encoding='utf-8') as f:
+                    qa_pairs = json.load(f)
+            except Exception as e:
+                raise Exception(f"Failed to load optimized QA pairs from {qa_pairs_path}: {str(e)}")
+
+            if not qa_pairs:
+                raise Exception("No QA pairs after optimization")
+
+            # 保存问答对到数据库
+            qa_records = []
             for qa in qa_pairs:
-                record = QAQualityRecord(
-                    generation_id=generation_id,
-                    question=qa['question'],
-                    answer=qa['answer'],
-                    similarity_score=qa.get('ratio', 0.0),
-                    is_explicit=True,
-                    is_domain_relative=True,
-                    coverage_rate=coverage_rate,
-                    status='passed'
-                )
-                quality_records.append(record.dict(by_alias=True))
+                if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
+                    raise Exception(f"Invalid QA pair format: {qa}")
 
-            if quality_records:
-                await self.quality_records.insert_many(quality_records)
+                qa_record = QAQualityRecord(
+                    generation_id=PyObjectId(generation_id),
+                    question=qa["question"],
+                    answer=qa["answer"],
+                    similarity_score=qa.get("similarity_score", 0.0),
+                    is_explicit=qa.get("is_explicit", False),
+                    is_domain_relative=qa.get("is_domain_relative", False),
+                    coverage_rate=qa.get("coverage_rate", 0.0),
+                    status="passed"
+                )
+                qa_records.append(qa_record.dict(by_alias=True))
+
+            if qa_records:
+                await self.quality_records.insert_many(qa_records)
 
             # 更新状态
             await self.quality_generations.update_one(

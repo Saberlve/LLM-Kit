@@ -10,7 +10,7 @@ import tiktoken
 from utils.helper import generate
 from utils.helper import extract_qa
 from utils.hparams import HyperParams
-
+from model_api.prompts import PROMPT_DICT
 class QAQualityGenerator:
     def __init__(self, qa_path: str, hparams: HyperParams):
         # 基础配置
@@ -24,6 +24,8 @@ class QAQualityGenerator:
         self.sk_list = hparams.SK
         self.parallel_num = hparams.parallel_num
         self._validate_keys()
+        PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace("'domain'",self.hparams.domain)
+        PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace("'domain'",self.hparams.domain)
         
         # 质量控制参数
         self.similarity_rate = hparams.similarity_rate
@@ -184,22 +186,7 @@ class QAQualityGenerator:
         return qa
 
     def iterate_optim_qa(self):
-        """并行处理文件中的问答对，对每个问答对进行质量评估和优化。
-
-        该函数从指定路径读取JSON格式的问答对数据，使用线程池并行处理每个问答对。
-        对于每个问答对，会进行质量评估，如果不满足质量要求则重新生成。
-        最终将优化后的问答对保存到指定目录。
-
-        Args:
-            None
-
-        Returns:
-            None
-
-        Raises:
-            json.JSONDecodeError: 如果输入文件不是有效的JSON格式
-            IOError: 如果文件读写出现错误
-        """
+        
         from typing import List, Dict
 
         def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:

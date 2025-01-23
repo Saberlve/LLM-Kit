@@ -23,7 +23,8 @@ async def evaluate_and_optimize_qa(
             model_name=request.model_name,
             similarity_rate=request.similarity_rate,
             coverage_rate=request.coverage_rate,
-            max_attempts=request.max_attempts
+            max_attempts=request.max_attempts,
+            domain=request.domain
         )
         return APIResponse(
             status="success",

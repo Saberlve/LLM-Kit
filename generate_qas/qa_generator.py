@@ -176,8 +176,8 @@ class QAGenerator:
             print(f"读取文件失败: {str(e)}")
             return
        
-        PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace('{domain}',self.hparams.domain)
-        PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace('{domain}',self.hparams.domain)
+        PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace("'domain'",self.hparams.domain)
+        PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace("'domain'",self.hparams.domain)
             # 保存结果
         
         save_file_path = os.path.join(

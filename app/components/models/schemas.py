@@ -28,6 +28,7 @@ class QualityControlRequest(BaseRequest):
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8
     max_attempts: int = 3
+    domain: str
 
 class ParseRequest(BaseRequest):
     file_path: str
