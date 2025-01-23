@@ -38,6 +38,7 @@ class QAGenerator:
         self.sk_list = self.hparams.SK
         self.parallel_num = self.hparams.parallel_num
         self._validate_keys()
+        
 
     def _validate_keys(self) -> None:
         """验证 API 密钥配置"""
@@ -174,16 +175,18 @@ class QAGenerator:
         except Exception as e:
             print(f"读取文件失败: {str(e)}")
             return
+       
         PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace('{domain}',self.hparams.domain)
         PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace('{domain}',self.hparams.domain)
             # 保存结果
+        
         save_file_path = os.path.join(
             self.save_dir_path,
             os.path.basename(self.chunks_path)
         )
         if os.path.exists(save_file_path):
             return save_file_path  #不重复生成
-
+        
 
         print(f"开始处理文件: {os.path.basename(self.chunks_path)}")
         qa_result = []

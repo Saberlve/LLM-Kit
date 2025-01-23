@@ -64,7 +64,7 @@ class ParseService:
                     "record_id": str(record["_id"]),
                     "input_file": record["input_file"],
                     "status": record["status"],
-                    "content": record.get("content", "")[:200] + "..." if record.get("content", "") else "",
+                    "content": record.get("content", "")[:1200] + "..." if record.get("content", "") else "",
                 })
             return records
         except Exception as e:

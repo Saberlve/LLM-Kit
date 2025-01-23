@@ -1,5 +1,5 @@
 import os
-import fitz  # PyMuPDF
+
 from PIL import Image
 import io
 import sys
@@ -48,6 +48,7 @@ def text_parse(file_path,save_path):
     return save_file_path
 
 def pdf_parse(file_path,save_path):
+    import fitz
     """
     图片类文档解析
     :param file_path: 文件原始路径

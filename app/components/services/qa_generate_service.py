@@ -1,8 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from generate_qas.qa_generator import QAGenerator
 from utils.hparams import HyperParams
-from app.components.models.mongodb import QAGeneration, QAPairDB
+from app.components.models.mongodb import QAGeneration, QAPairDB, PyObjectId
+import json
+from bson import ObjectId
 
 
 class QAGenerateService:
@@ -21,10 +23,14 @@ class QAGenerateService:
             model_name: str,
             domain: str
     ):
+        generation_id = None
         try:
             # 读取源文本
-            with open(chunks_path, 'r', encoding='utf-8') as f:
-                source_text = f.read()
+            try:
+                with open(chunks_path, 'r', encoding='utf-8') as f:
+                    source_text = f.read()
+            except Exception as e:
+                raise Exception(f"Failed to read source file: {str(e)}")
 
             # 创建生成记录
             generation = QAGeneration(
@@ -33,7 +39,7 @@ class QAGenerateService:
                 model_name=model_name,
                 domain=domain,
                 status="processing",
-                source_text=source_text  # 保存源文本
+                source_text=source_text
             )
             result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
@@ -48,19 +54,34 @@ class QAGenerateService:
                 model_name=model_name,
                 domain=domain
             )
-
+           
             generator = QAGenerator(chunks_path, hparams)
-            qa_pairs = generator.convert_tex_to_qas()
+            qa_pairs_path = generator.convert_tex_to_qas()  # 这里返回的是文件路径
+
+            if not qa_pairs_path:
+                raise Exception("QA pairs path is empty or None")
+                
+            try:
+                with open(qa_pairs_path, 'r', encoding='utf-8') as f:
+                    qa_pairs = json.load(f)
+            except Exception as e:
+                raise Exception(f"Failed to load generated QA pairs from {qa_pairs_path}: {str(e)}")
+
+            if not qa_pairs:
+                raise Exception("No QA pairs generated")
 
             # 保存问答对到数据库
             qa_records = []
             for qa in qa_pairs:
+                if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
+                    raise Exception(f"Invalid QA pair format: {qa}")
+                
                 qa_record = QAPairDB(
-                    generation_id=generation_id,
+                    generation_id=PyObjectId(generation_id),
                     question=qa["question"],
                     answer=qa["answer"]
-                    # 不再存储source_text
                 )
+                
                 qa_records.append(qa_record.dict(by_alias=True))
 
             if qa_records:
@@ -79,7 +100,20 @@ class QAGenerateService:
             }
 
         except Exception as e:
-            raise Exception(f"Generation failed: {str(e)}")
+            # 如果生成过程中出现错误，更新状态为failed
+            if generation_id:
+                try:
+                    await self.qa_generations.update_one(
+                        {"_id": generation_id},
+                        {"$set": {
+                            "status": "failed",
+                            "error_message": str(e)
+                        }}
+                    )
+                except Exception as db_error:
+                    # 记录数据库更新失败，但仍然抛出原始异常
+                    print(f"Failed to update generation status: {str(db_error)}")
+            raise  # 直接重新抛出原始异常，保留完整的堆栈信息
 
     async def get_qa_records(self):
         """获取问答对生成历史记录"""
