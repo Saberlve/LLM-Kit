@@ -206,5 +206,19 @@ export default {
       download_logs: "Download logs",
       close: "close"
     }
+  },
+  eval: {
+    title: "Quality Control",
+    subtitle: "Improve the quality of your datasets",
+    create_task: "Create Evaluation Task",
+    next_step: "Next Step",
+    previous_step: "Previous Step",
+  },
+  construct: {
+    title: "Dataset Construction",
+    subtitle: "Construct a question-answer pair data set",
+    create_task: "Create Constrcut Task",
+    next_step: "Next Step",
+    previous_step: "Previous Step",
   }
 };

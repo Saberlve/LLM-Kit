@@ -202,5 +202,19 @@ export default {
       download_logs: "Download logs",
       close: "close"
     }
+  },
+  eval: {
+    title: "数据集质控",
+    subtitle: "评估数据集的质量优良",
+    create_task: "创建评估任务",
+    next_step: "下一步",
+    previous_step: "上一步",
+  },
+  construct: {
+    title: "数据集构建",
+    subtitle: "构建一个问答对数据集",
+    create_task: "创建一个构建任务",
+    next_step: "下一步",
+    previous_step: "上一步",
   }
 };
