@@ -2,3 +2,5 @@
 .idea
 result
 .history
+test*
+test*/

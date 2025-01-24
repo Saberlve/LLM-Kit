@@ -33,7 +33,6 @@ class DedupParams:
     dedup_by_answer: bool
     min_answer_length: int
     deleted_pairs_file: str
-    priority_dict: dict
     dedup_threshold: float=0.8  # 去重阈值
     dedup_num_perm: int=128
 

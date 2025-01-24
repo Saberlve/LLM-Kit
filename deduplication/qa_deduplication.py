@@ -14,7 +14,7 @@ class QADeduplication:
         self.priority_dict = {}
         
     def _load_stopwords(self):
-        input_file_name = './hit_stopwords.txt'
+        input_file_name = './deduplication/hit_stopwords.txt'
         with open(input_file_name, 'r', encoding='utf-8') as f:
             return f.read().splitlines()
     
@@ -23,18 +23,39 @@ class QADeduplication:
         words = list(jieba.cut(sentence))
         return [word for word in words if word not in self.stopwords]
     
-    def get_qa_pairs(self, file_path):
+    def get_qa_pairs(self, file_paths):
+        """
+        从多个文件中获取QA对
+        
+        Args:
+            file_paths (str or list): 单个文件路径或文件路径列表
+        """
         qa_pairs = []
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data_list = json.load(f)
-            for data in data_list:
-                qa_pairs.append({
-                    'question': data.get('question', ''),
-                    'answer': data.get('answer', ''),
-                    'id': data.get('id', '')
-                })
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+            
+        for file_path in file_paths:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data_list = json.load(f)
+                for data in data_list:
+                    # 在id中添加源文件信息
+                    file_name = file_path.split('/')[-1]
+                    data_id = data.get('id', '')
+                    if not data_id:
+                        data_id = f"{file_name}_{len(qa_pairs)}"
+                    elif not data_id.startswith(file_name):
+                        data_id = f"{file_name}_{data_id}"
+                        
+                    qa_pairs.append({
+                        'question': data.get('question', ''),
+                        'answer': data.get('answer', ''),
+                        'id': data_id
+                    })
+                    
         print(f"Total data processed: {len(qa_pairs)}")
         return qa_pairs
+
+    
     
     def set_priority_order(self, filenames):
         """
@@ -188,27 +209,37 @@ class QADeduplication:
     
     def process_qa_file(self, hparams:DedupParams):
         """
-        处理QA文件的完整流程：加载、去重、保存
+        处理多个QA文件的完整流程：加载、去重、保存
         
         Args:
-            input_file (str): 输入文件路径
-            output_file (str): 输出文件路径
-            dedup_by_answer (bool): 是否按答案去重，默认按问题去重
-            min_answer_length (int): 按答案去重时的最小答案长度
-            deleted_pairs_file (str): 存储被删除问答对的文件路径（仅在按问题去重时可用）
+            hparams (DedupParams): 包含处理参数的对象
+                - input_file: 输入文件路径或路径列表
+                - output_file: 输出文件路径
+                - dedup_by_answer: 是否按答案去重
+                - min_answer_length: 按答案去重时的最小答案长度
+                - deleted_pairs_file: 存储被删除问答对的文件路径
         
         Returns:
             list: 去重后的问答对列表
         """
+        # 自动设置文件优先级
+        if isinstance(hparams.input_file, list):
+            self.set_priority_order([f.split('/')[-1] for f in hparams.input_file])
+            
         if hparams.dedup_by_answer:
             return self.deduplicate_by_answer(
-            input_file=hparams.input_file,
-            output_file=hparams.output_file,
-            min_answer_length=hparams.min_answer_length
-        )
+                input_file=hparams.input_file,
+                output_file=hparams.output_file,
+                min_answer_length=hparams.min_answer_length
+            )
         else:
             return self.deduplicate_by_question(
-            input_file=hparams.input_file,
-            output_file=hparams.output_file,
+                input_file=hparams.input_file,
+                output_file=hparams.output_file,
                 deleted_pairs_file=hparams.deleted_pairs_file
-        ) 
+            )
+            
+            
+            
+            
+    

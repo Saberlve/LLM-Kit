@@ -14,6 +14,7 @@ app.add_middleware(
 )
 
 
+
 async def clear_all_collections():
     """清空所有集合的数据"""
     db = await get_database()

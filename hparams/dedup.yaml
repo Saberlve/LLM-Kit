@@ -1,9 +1,9 @@
-input_file:
-output_file:
-dedup_by_answer:
-min_answer_length:
-deleted_pairs_file:
-dedup_threshold:
-dedup_num_perm:
-priority_dict:
+input_file: [result/qas_iterated/qa_iteratedfor_ceshi/ceshi.json,result/qas_iterated/qa_iteratedfor_ceshi/ceshi-copy.json]
+output_file: output.json
+dedup_by_answer: false
+min_answer_length: 10
+deleted_pairs_file: deleted.json
+dedup_threshold: 0.8
+dedup_num_perm: 128
+
 
