@@ -43,16 +43,6 @@ export default {
       GPU_utilization: "GPU Utilization:",
       memory_utilization: "GPU Memory:",
     },
-    deployment_params: {
-      title: "Deployment Parameters",
-      subtitle: "Quantization Parameters",
-      subsubtitle: "Quantization Deployment Parameters",
-      bits_and_bytes: "Whether to use bits_and_bytes",
-      use_flash_attention: "Whether to use flash attention",
-      use_deepspeed: "Whether to use deepspeed",
-      use_vllm: "Whether to use vllm",
-      description: "Deployment Parameters"
-    }
   },
   data: {
     title: "Data Management",
@@ -181,6 +171,14 @@ export default {
     search: "Search",
     wordcloud: "WordCloud",
     close: "close",
+    dedup_process: {
+      upload_files:"upload_files",
+      select_models:"select_models",
+      start:"start",
+      progress:"progress",
+      remain_time: "remain_time",
+      wait:"wait"
+    },
     task_detail: {
       title: "Task Details",
       task_name: "Task Name",

@@ -6,7 +6,7 @@ export default {
     data_manager: "数据管理",
     dataset_construct: "数据集构建",
     quality_eval: "质量评估",
-    dedupulication: "数据集去重",
+    deduplication: "数据集去重",
     deployment_manager: "部署管理",
     error_log: "错误记录",
     settings: "设置",
@@ -40,16 +40,6 @@ export default {
     device: {
       GPU_utilization: "GPU利用率：",
       memory_utilization: "显存利用率：",
-    },
-    deployment_params: {
-      title: "部署参数",
-      subtitle: "量化参数",
-      subsubtitle: "量化部署参数",
-      bits_and_bytes: "是否使用bits_and_bytes",
-      use_flash_attention: "是否使用flash attention",
-      use_deepspeed: "是否使用deepspeed",
-      use_vllm: "是否使用vllm",
-      description: "部署参数"
     }
   },
   fault: {
@@ -177,6 +167,14 @@ export default {
     search: "Search",
     wordcloud: "WordCloud",
     close: "close",
+    dedup_process: {
+      upload_files:"上传文件",
+      select_models:"选择模型",
+      start:"开始",
+      progress:"进度",
+      remain_time: "剩余时间",
+      wait:"等待"
+    },
     task_detail: {
       title: "Task Details",
       task_name: "Task Name",
