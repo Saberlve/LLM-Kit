@@ -4,6 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.models.mongodb import DedupRecord, KeptQAPair
 import json
 from typing import List
+from datetime import datetime
 
 
 class QADedupService:
@@ -11,6 +12,16 @@ class QADedupService:
         self.db = db
         self.dedup_records = db.llm_kit.dedup_records
         self.kept_pairs = db.llm_kit.kept_pairs
+        self.error_logs = db.llm_kit.error_logs
+
+    async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
+        error_log = {
+            "timestamp": datetime.utcnow(),
+            "error_message": error_message,
+            "source": source,
+            "stack_trace": stack_trace
+        }
+        await self.error_logs.insert_one(error_log)
 
     async def deduplicate_qa(
             self,
@@ -96,6 +107,8 @@ class QADedupService:
             }
 
         except Exception as e:
+            import traceback
+            await self._log_error(str(e), "deduplicate_qa", traceback.format_exc())
             raise Exception(f"Deduplication failed: {str(e)}")
 
     async def get_dedup_records(self):

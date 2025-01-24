@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
@@ -5,6 +6,7 @@ from app.components.models.schemas import QualityControlRequest, APIResponse
 from app.components.services.quality_service import QualityService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/quality")
 async def evaluate_and_optimize_qa(
@@ -32,6 +34,7 @@ async def evaluate_and_optimize_qa(
             data=result
         )
     except Exception as e:
+        logger.error(f"问答对质量评估优化失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/quality/history")

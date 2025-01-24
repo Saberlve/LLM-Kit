@@ -12,13 +12,14 @@ def single_ocr(file_path):
 
     tokenizer = AutoTokenizer.from_pretrained('AI-ModelScope/GOT-OCR2_0', trust_remote_code=True)
     model = AutoModel.from_pretrained('AI-ModelScope/GOT-OCR2_0', trust_remote_code=True, low_cpu_mem_usage=True, device_map='cuda', use_safetensors=True, pad_token_id=tokenizer.eos_token_id)
-    model = model.eval().cuda()
+    model = model.eval()
 
 
-    image_file = '/data/shuxun/Snipaste_2025-01-08_19-43-07.png'
+    image_file = file_path
 
     res = model.chat(tokenizer, image_file, ocr_type='format')
-    return res
+    # 确保返回的是字符串类型
+    return str(res) if res is not None else ""
 
 def text_parse(file_path,save_path):
     """
@@ -120,7 +121,7 @@ def parse(hparams: HyperParams) :
     if file_type in {'tex', 'txt', 'json'}:
         return text_parse(hparams.file_path,save_path)
     elif file_type == 'pdf':
-        return single_ocr(hparams.file_path,save_path)
+        return pdf_parse(hparams.file_path,save_path)
     else:
         raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
 

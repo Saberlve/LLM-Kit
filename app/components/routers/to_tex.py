@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
@@ -5,6 +6,7 @@ from app.components.models.schemas import ToTexRequest, APIResponse
 from app.components.services.to_tex_service import ToTexService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/to_tex")
 async def convert_to_latex(
@@ -28,7 +30,8 @@ async def convert_to_latex(
             data=result
         )
     except Exception as e:
-        error_message = f"LaTeX conversion failed: {str(e)}"
+        error_message = f"LaTeX转换失败: {str(e)}"
+        logger.error(error_message, exc_info=True)
         raise HTTPException(status_code=500, detail=error_message)
 
 @router.get("/to_tex/history")

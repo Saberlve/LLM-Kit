@@ -25,7 +25,8 @@ class Settings(BaseSettings):
 
         # 5. 去重模块
         "dedup_records": "dedup_records",
-        "kept_pairs": "kept_pairs"
+        "kept_pairs": "kept_pairs",
+        "error_logs": "error_logs"
     }
 
     INDEXES: ClassVar[Dict[str, List[tuple]]] = {
@@ -36,7 +37,8 @@ class Settings(BaseSettings):
         "quality_generations": [("created_at", -1)],
         "quality_records": [("generation_id", 1)],
         "dedup_records": [("created_at", -1)],
-        "kept_pairs": [("dedup_id", 1)]
+        "kept_pairs": [("dedup_id", 1)],
+        "error_logs": [("timestamp", -1)]
     }
 
     class Config:

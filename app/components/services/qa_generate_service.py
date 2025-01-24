@@ -12,6 +12,16 @@ class QAGenerateService:
         self.db = db
         self.qa_generations = db.llm_kit.qa_generations
         self.qa_pairs = db.llm_kit.qa_pairs
+        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+
+    async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
+        error_log = {
+            "timestamp": datetime.utcnow(),
+            "error_message": error_message,
+            "source": source,
+            "stack_trace": stack_trace
+        }
+        await self.error_logs.insert_one(error_log)
 
     async def generate_qa_pairs(
             self,
@@ -100,6 +110,8 @@ class QAGenerateService:
             }
 
         except Exception as e:
+            import traceback
+            await self._log_error(str(e), "generate_qa_pairs", traceback.format_exc())
             # 如果生成过程中出现错误，更新状态为failed
             if generation_id:
                 try:

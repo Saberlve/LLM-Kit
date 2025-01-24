@@ -11,6 +11,16 @@ class ToTexService:
     def __init__(self, db: AsyncIOMotorClient):
         self.db = db
         self.tex_records = db.llm_kit.tex_records
+        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+
+    async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
+        error_log = {
+            "timestamp": datetime.utcnow(),
+            "error_message": error_message,
+            "source": source,
+            "stack_trace": stack_trace
+        }
+        await self.error_logs.insert_one(error_log)
 
     async def convert_to_latex(
             self,
@@ -91,6 +101,8 @@ class ToTexService:
                 raise e
 
         except Exception as e:
+            import traceback
+            await self._log_error(str(e), "convert_to_latex", traceback.format_exc())
             raise Exception(f"Conversion failed: {str(e)}")
 
     async def get_tex_records(self):

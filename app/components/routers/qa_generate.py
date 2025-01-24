@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
@@ -5,6 +6,7 @@ from app.components.models.schemas import QAGenerateRequest, APIResponse
 from app.components.services.qa_generate_service import QAGenerateService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/generate_qa")
 async def generate_qa_pairs(
@@ -29,6 +31,7 @@ async def generate_qa_pairs(
             data=result
         )
     except Exception as e:
+        logger.error(f"生成问答对失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/generate_qa/history")

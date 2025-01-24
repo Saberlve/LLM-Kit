@@ -11,6 +11,16 @@ class QualityService:
         self.db = db
         self.quality_generations = db.llm_kit.quality_generations
         self.quality_records = db.llm_kit.quality_records
+        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+
+    async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
+        error_log = {
+            "timestamp": datetime.utcnow(),
+            "error_message": error_message,
+            "source": source,
+            "stack_trace": stack_trace
+        }
+        await self.error_logs.insert_one(error_log)
 
     async def evaluate_and_optimize_qa(
             self,
@@ -106,6 +116,8 @@ class QualityService:
             }
 
         except Exception as e:
+            import traceback
+            await self._log_error(str(e), "evaluate_and_optimize_qa", traceback.format_exc())
             raise Exception(f"Quality control failed: {str(e)}")
 
     async def get_quality_records(self):

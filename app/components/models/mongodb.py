@@ -101,3 +101,31 @@ class KeptQAPair(MongoBaseModel):
     qa_id: str
     question: str
     answer: str
+
+class ErrorLog(MongoBaseModel):
+    """错误日志模型"""
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    error_message: str
+    source: str
+    stack_trace: Optional[str] = None
+    request_path: Optional[str] = None
+    request_method: Optional[str] = None
+    status_code: int = Field(default=500)
+    request_headers: Optional[dict] = None
+    request_query_params: Optional[dict] = None
+    request_body: Optional[str] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "error_message": "Division by zero",
+                "source": "/api/calculate",
+                "stack_trace": "Traceback (most recent call last)...",
+                "request_path": "/api/calculate",
+                "request_method": "POST",
+                "status_code": 500,
+                "request_headers": {"content-type": "application/json"},
+                "request_query_params": {"param1": "value1"},
+                "request_body": '{"value": 42}'
+            }
+        }

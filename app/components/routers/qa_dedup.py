@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
@@ -5,6 +6,7 @@ from app.components.models.schemas import DedupRequest, APIResponse
 from app.components.services.qa_dedup_service import QADedupService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/deduplicate_qa")
 async def deduplicate_qa(
@@ -28,6 +30,7 @@ async def deduplicate_qa(
             data=result
         )
     except Exception as e:
+        logger.error(f"问答对去重失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/deduplicate_qa/history")
