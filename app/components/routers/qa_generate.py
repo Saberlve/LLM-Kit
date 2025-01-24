@@ -15,6 +15,20 @@ async def generate_qa_pairs(
 ):
     """生成问答对"""
     try:
+        # 验证 AK 和 SK 数量是否匹配
+        if len(request.AK) != len(request.SK):
+            raise HTTPException(
+                status_code=400,
+                detail="AK 和 SK 的数量必须相同"
+            )
+            
+        # 验证并行数量是否合理
+        if request.parallel_num > len(request.AK):
+            raise HTTPException(
+                status_code=400,
+                detail="并行数量不能大于 API 密钥对数量"
+            )
+            
         service = QAGenerateService(db)
         result = await service.generate_qa_pairs(
             chunks_path=request.chunks_path,
@@ -25,6 +39,7 @@ async def generate_qa_pairs(
             model_name=request.model_name,
             domain=request.domain
         )
+        
         return APIResponse(
             status="success",
             message="QA pairs generated successfully",

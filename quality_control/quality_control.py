@@ -186,50 +186,19 @@ class QAQualityGenerator:
         return qa
 
     def iterate_optim_qa(self):
-        
-        from typing import List, Dict
-
-        def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:
-            """
-            获取与 qas[i] 文本相似的附近问答对（处理连续相同 text 的情况）。
-
-            Args:
-                qas: 问答对列表，每个问答对是一个字典，包含 'text' 字段。
-                i: 当前问答对的索引。
-
-            Returns:
-                包含相似文本的附近问答对列表。
-            """
-            target_text = qas[i]['text']
-            nearby_qas = []
-            nearby_qas.append(qas[i])
-            # 向前检查
-            j = i - 1
-            while j >= 0 and target_text in qas[j]['text']:
-                nearby_qas.append(qas[j])
-                j -= 1
-            # 向后检查
-            j = i + 1
-            while j < len(qas) and target_text in qas[j]['text']:
-                nearby_qas.append(qas[j])
-                j += 1
-            return nearby_qas
-        
-        
-        """读取文件中的问答对，并行进行迭代"""
+        """读取文件中的问答对，进行迭代"""
         with open(self.qa_path, "r", encoding='utf-8') as f:
             qas = json.load(f)
 
         print(f"开始处理 {os.path.basename(self.qa_path)}")
         qa_result = []
 
-        #每对ak，sk循环使用
-        with ThreadPoolExecutor(max_workers=self.parallel_num) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:  # 改为单线程处理
             futures = []
             for i, qa in enumerate(qas):
-                ak = self.ak_list[i % len(self.ak_list)]
-                sk = self.sk_list[i % len(self.sk_list)]
-                nearby_qas = get_nearby_qas(qas, i)
+                ak = self.ak_list[0]  # 只使用第一个AK
+                sk = self.sk_list[0]  # 只使用第一个SK
+                nearby_qas = self.get_nearby_qas(qas, i)
                 futures.append(
                     executor.submit(
                         lambda q, n, a, s: self.check_coverage_and_regenerate(
@@ -259,3 +228,21 @@ class QAQualityGenerator:
         with open(save_file_path, "w", encoding="utf-8") as f:
             json.dump(qa_result, f, ensure_ascii=False, indent=4)
         return save_file_path
+
+    @staticmethod
+    def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:
+        """获取与 qas[i] 文本相似的附近问答对"""
+        target_text = qas[i]['text']
+        nearby_qas = []
+        nearby_qas.append(qas[i])
+        # 向前检查
+        j = i - 1
+        while j >= 0 and target_text in qas[j]['text']:
+            nearby_qas.append(qas[j])
+            j -= 1
+        # 向后检查
+        j = i + 1
+        while j < len(qas) and target_text in qas[j]['text']:
+            nearby_qas.append(qas[j])
+            j += 1
+        return nearby_qas

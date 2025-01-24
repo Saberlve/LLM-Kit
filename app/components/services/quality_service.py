@@ -4,6 +4,7 @@ from quality_control.quality_control import QAQualityGenerator
 from utils.hparams import HyperParams
 from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration, PyObjectId
 import json
+import os
 
 
 class QualityService:
@@ -40,6 +41,7 @@ class QualityService:
             # 读取源文本
             with open(qa_path, 'r', encoding='utf-8') as f:
                 source_text = f.read()
+                qa_pairs = json.loads(source_text)
 
             # 创建生成记录
             generation = QualityControlGeneration(
@@ -47,44 +49,81 @@ class QualityService:
                 save_path=save_path,
                 model_name=model_name,
                 status="processing",
-                source_text=source_text  # 保存源文本
+                source_text=source_text
             )
             result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
 
-            # 生成高质量问答对
-            hparams = HyperParams(
-                file_path=qa_path,
-                save_path=save_path,
-                SK=SK,
-                AK=AK,
-                parallel_num=parallel_num,
-                model_name=model_name,
-                similarity_rate=similarity_rate,
-                coverage_rate=coverage_rate,
-                max_attempts=max_attempts,
-                domain=domain
-            )
+            # 创建保存目录
+            os.makedirs(save_path, exist_ok=True)
+            
+            # 将问答对分成parallel_num份进行并行处理
+            chunk_size = len(qa_pairs) // parallel_num
+            if chunk_size == 0:
+                chunk_size = 1
+            qa_chunks = [qa_pairs[i:i + chunk_size] for i in range(0, len(qa_pairs), chunk_size)]
 
-            generator = QAQualityGenerator(qa_path, hparams)
-            qa_pairs_path = generator.iterate_optim_qa()  # 这里返回的是文件路径
+            # 为每个chunk创建参数
+            tasks = []
+            chunk_paths = []
+            for i, chunk in enumerate(qa_chunks):
+                # 创建临时文件路径
+                chunk_path = os.path.join(save_path, f"temp_chunk_{i}.json")
+                chunk_paths.append(chunk_path)
+                
+                # 保存chunk到临时文件
+                with open(chunk_path, 'w', encoding='utf-8') as f:
+                    json.dump(chunk, f, ensure_ascii=False, indent=4)
+                
+                hparams = HyperParams(
+                    file_path=chunk_path,
+                    save_path=save_path,
+                    SK=[SK[i % len(SK)]],  # 为每个chunk分配一个SK
+                    AK=[AK[i % len(AK)]],  # 为每个chunk分配一个AK
+                    parallel_num=1,  # 每个子任务使用单线程
+                    model_name=model_name,
+                    similarity_rate=similarity_rate,
+                    coverage_rate=coverage_rate,
+                    max_attempts=max_attempts,
+                    domain=domain
+                )
+                
+                generator = QAQualityGenerator(chunk_path, hparams)
+                tasks.append(generator.iterate_optim_qa())
 
-            if not qa_pairs_path:
-                raise Exception("QA pairs path is empty or None")
+            # 等待所有任务完成并合并结果
+            all_qa_pairs = []
+            for qa_pairs_path in tasks:
+                try:
+                    with open(qa_pairs_path, 'r', encoding='utf-8') as f:
+                        chunk_qa_pairs = json.load(f)
+                        all_qa_pairs.extend(chunk_qa_pairs)
+                except Exception as e:
+                    raise Exception(f"Failed to load optimized QA pairs from {qa_pairs_path}: {str(e)}")
 
-            # 加载优化后的问答对
-            try:
-                with open(qa_pairs_path, 'r', encoding='utf-8') as f:
-                    qa_pairs = json.load(f)
-            except Exception as e:
-                raise Exception(f"Failed to load optimized QA pairs from {qa_pairs_path}: {str(e)}")
+            # 清理临时文件
+            for temp_path in chunk_paths:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                # 同时删除QAQualityGenerator生成的结果文件
+                result_path = os.path.join(
+                    'result', 
+                    'qas_iterated', 
+                    f"qa_iteratedfor_{os.path.basename(temp_path).split('.')[0]}", 
+                    os.path.basename(temp_path)
+                )
+                if os.path.exists(result_path):
+                    os.remove(result_path)
 
-            if not qa_pairs:
-                raise Exception("No QA pairs after optimization")
+            # 保存最终结果
+            final_filename = f"quality_control_{os.path.basename(qa_path)}"
+            final_path = os.path.join(save_path, final_filename)
+            with open(final_path, 'w', encoding='utf-8') as f:
+                json.dump(all_qa_pairs, f, ensure_ascii=False, indent=4)
 
             # 保存问答对到数据库
             qa_records = []
-            for qa in qa_pairs:
+            for qa in all_qa_pairs:
                 if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
                     raise Exception(f"Invalid QA pair format: {qa}")
 
@@ -106,18 +145,28 @@ class QualityService:
             # 更新状态
             await self.quality_generations.update_one(
                 {"_id": generation_id},
-                {"$set": {"status": "completed"}}
+                {"$set": {
+                    "status": "completed",
+                    "output_file": final_path  # 添加输出文件路径
+                }}
             )
 
             return {
                 "generation_id": str(generation_id),
-                "qa_pairs": qa_pairs,
-                "source_text": source_text
+                "qa_pairs": all_qa_pairs,
+                "source_text": source_text,
+                "output_file": final_path  # 在返回结果中也包含输出文件路径
             }
 
         except Exception as e:
             import traceback
             await self._log_error(str(e), "evaluate_and_optimize_qa", traceback.format_exc())
+            # 如果发生错误，更新状态为失败
+            if generation_id:
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"status": "failed"}}
+                )
             raise Exception(f"Quality control failed: {str(e)}")
 
     async def get_quality_records(self):

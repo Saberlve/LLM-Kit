@@ -3,7 +3,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from generate_qas.qa_generator import QAGenerator
 from utils.hparams import HyperParams
 from app.components.models.mongodb import QAGeneration, QAPairDB, PyObjectId
+from utils.helper import generate, extract_qa
 import json
+import os
 from bson import ObjectId
 
 
@@ -22,6 +24,66 @@ class QAGenerateService:
             "stack_trace": stack_trace
         }
         await self.error_logs.insert_one(error_log)
+
+    async def process_chunk_with_api(self, text: str, ak: str, sk: str, model_name: str, domain: str):
+        """处理单个文本块并生成问答对"""
+        qa_pairs = []
+        max_retries = 5
+        
+        for attempt in range(max_retries):
+            try:
+                response = generate(text, model_name, 'ToQA', ak, sk)
+                qas = extract_qa(response)
+                for qa_pair in qas:
+                    qa_pair["text"] = text
+                    qa_pairs.append(qa_pair)
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    # 改为同步记录错误
+                    print(f"处理文本块失败: {str(e)}")
+        return qa_pairs
+
+    async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list, 
+                                    parallel_num: int, model_name: str, domain: str):
+        """并行处理多个文本块"""
+        import asyncio
+        
+        qa_pairs = []
+        tasks = set()
+        
+        async def process_single_chunk(chunk, ak, sk):
+            return await self.process_chunk_with_api(chunk, ak, sk, model_name, domain)
+
+        for i, chunk in enumerate(chunks):
+            ak = ak_list[i % len(ak_list)]
+            sk = sk_list[i % len(sk_list)]
+            
+            if len(tasks) >= parallel_num:
+                # 等待一个任务完成后再添加新任务
+                done, pending = await asyncio.wait(
+                    tasks, 
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                for task in done:
+                    result = await task
+                    if result:
+                        qa_pairs.extend(result)
+                tasks = pending
+            
+            task = asyncio.create_task(process_single_chunk(chunk, ak, sk))
+            tasks.add(task)
+        
+        # 等待所有剩余任务完成
+        if tasks:
+            done, _ = await asyncio.wait(tasks)
+            for task in done:
+                result = await task
+                if result:
+                    qa_pairs.extend(result)
+                    
+        return qa_pairs
 
     async def generate_qa_pairs(
             self,
@@ -54,44 +116,54 @@ class QAGenerateService:
             result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
 
-            # 生成问答对
-            hparams = HyperParams(
-                file_path=chunks_path,
-                save_path=save_path,
-                SK=SK,
-                AK=AK,
-                parallel_num=parallel_num,
-                model_name=model_name,
-                domain=domain
+            # 读取并处理文本块
+            with open(chunks_path, 'r', encoding='utf-8') as f:
+                chunks = json.load(f)
+            
+            # 并行处理所有文本块
+            qa_pairs = await self.process_chunks_parallel(
+                [chunk.get("chunk", "") for chunk in chunks],
+                AK,
+                SK,
+                parallel_num,
+                model_name,
+                domain
             )
-           
-            generator = QAGenerator(chunks_path, hparams)
-            qa_pairs_path = generator.convert_tex_to_qas()  # 这里返回的是文件路径
-
-            if not qa_pairs_path:
-                raise Exception("QA pairs path is empty or None")
-                
-            try:
-                with open(qa_pairs_path, 'r', encoding='utf-8') as f:
-                    qa_pairs = json.load(f)
-            except Exception as e:
-                raise Exception(f"Failed to load generated QA pairs from {qa_pairs_path}: {str(e)}")
 
             if not qa_pairs:
                 raise Exception("No QA pairs generated")
 
+            # 构建保存路径
+            save_dir_path = os.path.join('result', 'qas', f"qa_for_{os.path.basename(chunks_path).split('.')[0]}")
+            os.makedirs(save_dir_path, exist_ok=True)
+            
+            # 使用原始文件名作为保存文件名
+            final_save_path = os.path.join(
+                save_dir_path,
+                os.path.basename(chunks_path)
+            )
+
+            # 保存问答对到文件
+            try:
+                with open(final_save_path, 'w', encoding='utf-8') as f:
+                    json.dump(qa_pairs, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                raise Exception(f"Failed to save QA pairs to file: {str(e)}")
+
+            # 更新保存路径
+            await self.qa_generations.update_one(
+                {"_id": generation_id},
+                {"$set": {"save_path": final_save_path}}
+            )
+
             # 保存问答对到数据库
             qa_records = []
             for qa in qa_pairs:
-                if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
-                    raise Exception(f"Invalid QA pair format: {qa}")
-                
                 qa_record = QAPairDB(
                     generation_id=PyObjectId(generation_id),
                     question=qa["question"],
                     answer=qa["answer"]
                 )
-                
                 qa_records.append(qa_record.dict(by_alias=True))
 
             if qa_records:
