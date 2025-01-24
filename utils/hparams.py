@@ -28,7 +28,7 @@ class HyperParams:
     
 @dataclass
 class DedupParams:
-    input_file: str
+    input_file: list[str]
     output_file: str
     dedup_by_answer: bool
     min_answer_length: int

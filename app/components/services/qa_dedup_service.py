@@ -3,6 +3,7 @@ from utils.hparams import DedupParams
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.models.mongodb import DedupRecord, KeptQAPair
 import json
+from typing import List
 
 
 class QADedupService:
@@ -13,26 +14,35 @@ class QADedupService:
 
     async def deduplicate_qa(
             self,
-            input_file: str,
+            input_file: List[str],
             output_file: str,
             dedup_by_answer: bool,
             dedup_threshold: float,
-            parallel_num: int
+            min_answer_length: int = 10,
+            deleted_pairs_file: str = "deleted.json",
     ):
         try:
-            # 读取源文本
-            with open(input_file, 'r', encoding='utf-8') as f:
-                source_text = f.read()
-                original_pairs = json.load(f)
-
+            # 读取所有源文件的内容
+            original_pairs = []
+            source_texts = []
+            for file_path in input_file:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    source_text = f.read()
+                    source_texts.append(source_text)
+                    pairs = json.loads(source_text)
+                    original_pairs.extend(pairs)
             # 创建去重记录
             dedup_record = DedupRecord(
                 input_file=input_file,
                 output_file=output_file,
                 dedup_by_answer=dedup_by_answer,
                 threshold=dedup_threshold,
+                min_answer_length=min_answer_length,
+                deleted_pairs_file=deleted_pairs_file,
                 status="processing",
-                source_text=source_text  # 保存源文本
+                source_text="\n".join(source_texts),
+                original_count=len(original_pairs),
+                kept_count=0
             )
             result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
             record_id = result.inserted_id
@@ -43,7 +53,8 @@ class QADedupService:
                 output_file=output_file,
                 dedup_by_answer=dedup_by_answer,
                 dedup_threshold=dedup_threshold,
-                parallel_num=parallel_num
+                min_answer_length=min_answer_length,
+                deleted_pairs_file=deleted_pairs_file,
             )
 
             qa_deduplication = QADeduplication(hparams)

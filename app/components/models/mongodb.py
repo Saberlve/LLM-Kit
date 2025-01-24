@@ -84,10 +84,12 @@ class QAQualityRecord(MongoBaseModel):
 # 5. 去重模块
 class DedupRecord(MongoBaseModel):
     """去重记录"""
-    input_file: str
+    input_file: list[str]
     output_file: str
     dedup_by_answer: bool
     threshold: float = Field(ge=0.0, le=1.0)
+    min_answer_length: int = Field(default=10)
+    deleted_pairs_file: str = Field(default="deleted.json")
     status: str = "processing"
     source_text: str
     original_count: Optional[int] = Field(ge=0)

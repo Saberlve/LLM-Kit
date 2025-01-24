@@ -19,7 +19,8 @@ async def deduplicate_qa(
             output_file=request.output_file,
             dedup_by_answer=request.dedup_by_answer,
             dedup_threshold=request.dedup_threshold,
-            parallel_num=request.parallel_num
+            min_answer_length=request.min_answer_length,
+            deleted_pairs_file=request.deleted_pairs_file,
         )
         return APIResponse(
             status="success",

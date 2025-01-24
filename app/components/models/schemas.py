@@ -13,14 +13,13 @@ class QAGenerateRequest(BaseRequest):
     model_name: str
     domain: str
 
-class DedupRequest(BaseRequest):
-    input_file: str
+class DedupRequest(BaseModel):
+    input_file: List[str]
     output_file: str
     dedup_by_answer: bool = False
-    min_answer_length: int = 15
-    deleted_pairs_file: Optional[str] = None
+    min_answer_length: int = 10
+    deleted_pairs_file: Optional[str] = "deleted.json"
     dedup_threshold: float = 0.8
-    dedup_num_perm: int = 128
 
 class QualityControlRequest(BaseRequest):
     qa_path: str
