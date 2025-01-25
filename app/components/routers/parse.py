@@ -8,9 +8,48 @@ from app.components.services.parse_service import ParseService
 from text_parse.parse import single_ocr
 from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
 import mimetypes
+from typing import List, Union
+from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+import os
+import mimetypes
+from loguru import logger
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class UploadedFile(BaseModel):
+    filename: str = Field(..., alias="filename")
+    content: str = Field(..., alias="content")
+    file_type: str = Field(..., alias="file_type")
+    size: int = Field(..., alias="size")
+    status: str = Field(..., alias="status")
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="created_at")
+    class Config:
+        allow_population_by_field_name = True
+
+class UploadedBinaryFile(BaseModel):
+    filename: str = Field(..., alias="filename")
+    content: Optional[bytes] = Field(None, alias="content")  
+    file_type: str = Field(..., alias="file_type")
+    mime_type: str = Field(..., alias="mime_type")
+    size: int = Field(..., alias="size")
+    status: str = Field(..., alias="status")
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="created_at")
+    class Config:
+        allow_population_by_field_name = True
+
+class FileUploadRequest(BaseModel):
+    filename: str
+    content: str
+    file_type: str
+
+class UnifiedFileListResponse(BaseModel):
+    status: str
+    message: str
+    data: List[dict]
 
 @router.post("/upload")
 async def upload_file(
@@ -145,6 +184,50 @@ async def parse_file(
     except Exception as e:
         logger.error(f"解析文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.get("/files/all")
+async def list_all_files(db: AsyncIOMotorClient = Depends(get_database)):
+    """获取所有上传的文件(文本和二进制)并按时间降序排序"""
+    try:
+        text_files_cursor = db.llm_kit.uploaded_files.find(projection={"content": 0})
+        binary_files_cursor = db.llm_kit.uploaded_binary_files.find(projection={"content": 0})
+        text_files = []
+        async for doc in text_files_cursor:
+            text_files.append({
+                "filename": doc.get("filename"),
+                "content": doc.get("content"),  
+                "file_type": doc.get("file_type"),
+                "size": doc.get("size"),
+                "status": doc.get("status"),
+                "created_at": doc.get("created_at"),
+                "type": "text" 
+            })
+
+        binary_files = []
+        async for doc in binary_files_cursor:
+            binary_files.append({
+                "filename": doc.get("filename"),
+                "file_type": doc.get("file_type"),
+                "mime_type": doc.get("mime_type"),
+                "size": doc.get("size"),
+                "status": doc.get("status"),
+                "created_at": doc.get("created_at"),
+                "type": "binary"  
+            })
+
+        #合并列表并按照时间排序
+        all_files = sorted(text_files + binary_files, key=lambda file: file["created_at"], reverse=True)
+        return UnifiedFileListResponse(
+            status="success",
+            message="All files retrieved successfully",
+            data=all_files
+        )
+    except Exception as e:
+        logger.error(f"获取所有文件失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/parse/history")
 async def get_parse_history(
