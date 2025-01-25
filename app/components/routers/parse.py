@@ -19,6 +19,14 @@ async def upload_file(
 ):
     """保存上传的文件到数据库"""
     try:
+        # 验证文件类型
+        supported_types = ['tex', 'txt', 'json', 'pdf']
+        if request.file_type not in supported_types:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported file type: {request.file_type}. Supported types are: {', '.join(supported_types)}"
+            )
+        
         uploaded_file = UploadedFile(
             filename=request.filename,
             content=request.content,
@@ -36,6 +44,8 @@ async def upload_file(
             message="File uploaded successfully",
             data={"file_id": str(result.inserted_id)}
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"上传文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -47,26 +57,30 @@ async def parse_file(
 ):
     """解析最近上传的文件并保存记录"""
     try:
-        # 获取最近上传的文件
+        # 获取最近上传的文件（修改查询条件，获取最新的pending文件）
         latest_file = await db.llm_kit.uploaded_files.find_one(
             {"status": "pending"},
-            sort=[("created_at", -1)]
+            sort=[("created_at", -1)]  # 按创建时间降序排序
         )
         
         if not latest_file:
             raise HTTPException(status_code=404, detail="No pending file found")
+        
+        # 构建完整的文件名（包含扩展名）
+        filename = f"{latest_file['filename']}.{latest_file['file_type']}"
+        print(f"Processing file: {filename}")  # 添加调试日志
             
         service = ParseService(db)
         result = await service.parse_content(
             content=latest_file["content"],
-            filename=latest_file["filename"],
+            filename=filename,  # 使用完整的文件名
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
             parallel_num=request.parallel_num
         )
         
-        # 更新文件状态
+        # 更新文件状态为已处理
         await db.llm_kit.uploaded_files.update_one(
             {"_id": latest_file["_id"]},
             {"$set": {"status": "processed"}}

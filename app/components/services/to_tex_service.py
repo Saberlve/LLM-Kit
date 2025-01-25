@@ -9,13 +9,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from utils.helper import generate, split_chunk_by_tokens, split_text_into_chunks
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ToTexService:
     def __init__(self, db: AsyncIOMotorClient):
         self.db = db
         self.tex_records = db.llm_kit.tex_records
-        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+        self.parse_records = db.llm_kit.parse_records
+        self.error_logs = db.llm_kit.error_logs
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -48,9 +51,78 @@ class ToTexService:
         end_index = text.rfind('```')
         return text[start_index:end_index].strip()
 
+    async def get_parsed_files(self):
+        """获取所有已解析的文件列表（同名文件只返回最新的）"""
+        try:
+            # 使用聚合管道，按文件名分组并获取每组最新的记录
+            pipeline = [
+                # 只查找已完成的记录
+                {"$match": {"status": "completed"}},
+                
+                # 按文件名分组，保留最新的记录
+                {"$group": {
+                    "_id": "$input_file",
+                    "created_at": {"$max": "$created_at"},
+                    "file_type": {"$first": "$file_type"},
+                    "latest_doc": {"$first": "$$ROOT"}
+                }},
+                
+                # 按创建时间降序排序
+                {"$sort": {"created_at": -1}},
+                
+                # 重新格式化输出
+                {"$project": {
+                    "_id": 0,
+                    "filename": "$_id",
+                    "created_at": 1,
+                    "file_type": 1
+                }}
+            ]
+            
+            cursor = self.parse_records.aggregate(pipeline)
+            files = []
+            async for record in cursor:
+                files.append({
+                    "filename": record["filename"],
+                    "created_at": record["created_at"],
+                    "file_type": record.get("file_type", "")
+                })
+            
+            return files
+        except Exception as e:
+            logger.error(f"获取解析文件列表失败: {str(e)}")
+            raise Exception(f"获取解析文件列表失败: {str(e)}")
+
+    async def get_parsed_content(self, filename: str):
+        """根据文件名获取解析后的内容"""
+        try:
+            # 查找指定文件名的已完成记录
+            record = await self.parse_records.find_one(
+                {
+                    "input_file": filename,
+                    "status": "completed"
+                }
+            )
+            
+            if not record:
+                raise Exception(f"未找到文件 {filename} 的解析记录")
+            
+            if not record.get("content"):
+                raise Exception(f"文件 {filename} 的解析内容为空")
+            
+            return {
+                "content": record["content"],
+                "filename": record["input_file"],
+                "created_at": record["created_at"],
+                "file_type": record["file_type"]
+            }
+        except Exception as e:
+            logger.error(f"获取解析内容失败: {str(e)}")
+            raise Exception(f"获取解析内容失败: {str(e)}")
+
     async def convert_to_latex(
             self,
-            parsed_file_path: str,
+            content: str,
             save_path: str,
             SK: List[str],
             AK: List[str],
@@ -59,9 +131,6 @@ class ToTexService:
     ):
         try:
             # 验证输入
-            if not os.path.exists(parsed_file_path):
-                raise FileNotFoundError(f"输入文件未找到: {parsed_file_path}")
-            
             assert len(AK) == len(SK), 'AK和SK数量必须相同'
             assert len(AK) >= parallel_num, '请提供足够的AK和SK'
 
@@ -70,7 +139,7 @@ class ToTexService:
 
             # 创建初始记录
             record = TexConversionRecord(
-                input_file=parsed_file_path,
+                input_file="direct_content",
                 status="processing",
                 model_name=model_name,
                 save_path=save_path
@@ -79,19 +148,16 @@ class ToTexService:
             record_id = result.inserted_id
 
             try:
-                # 读取文件内容
-                with open(parsed_file_path, "r", encoding="utf-8") as f:
-                    text = f.read()
-
                 # 生成保存路径
-                file_name = os.path.basename(parsed_file_path)
                 tex_file_path = os.path.join(
-                    save_path, 'tex_files', file_name.split('.')[0] + '.json'
+                    save_path, 
+                    'tex_files', 
+                    f'tex_conversion_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
                 )
                 os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
 
                 # 切分文本
-                text_chunks = split_text_into_chunks(parallel_num, text)
+                text_chunks = split_text_into_chunks(parallel_num, content)
 
                 # 并行处理文本块
                 results = []

@@ -14,8 +14,7 @@ from typing import List
 
 import tempfile
 
-
-
+from bson import ObjectId
 
 
 class ParseService:
@@ -27,8 +26,6 @@ class ParseService:
         self.parse_records = db.llm_kit.parse_records
 
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
-
-
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
 
@@ -48,8 +45,6 @@ class ParseService:
 
         await self.error_logs.insert_one(error_log)
 
-
-
     async def parse_file(self, file_path: str, save_path: str, SK: List[str], AK: List[str], parallel_num: int = 4):
 
         try:
@@ -57,8 +52,6 @@ class ParseService:
             # 获取文件类型
 
             file_type = os.path.splitext(file_path)[1].lower().replace('.', '')
-
-
 
             # 按照 HyperParams 的要求传入所有必需参数
 
@@ -76,13 +69,9 @@ class ParseService:
 
             )
 
-
-
             # 读取并解析文件
 
             parsed_file_path = parse.parse(hparams)
-
-
 
             # 读取解析后的文件内容
 
@@ -90,19 +79,17 @@ class ParseService:
 
                 content = f.read()
 
-
-
             # 创建记录时包含所有必需字段
 
             parse_record = ParseRecord(
 
-                input_file=file_path,
+                input_file=os.path.basename(file_path),  # 只存储文件名
 
                 content=content,  # 存储解析后的文件内容
 
-                parsed_file_path=parsed_file_path,  # 使用实际的解析文件路径
+                parsed_file_path=parsed_file_path,
 
-                status="processing",
+                status="completed",  # 直接设置为completed
 
                 file_type=file_type,
 
@@ -110,15 +97,11 @@ class ParseService:
 
             )
 
-
-
             result = await self.parse_records.insert_one(
 
-                parse_record.dict(by_alias=True)
+                parse_record.model_dump(by_alias=True)
 
             )
-
-
 
             return {
 
@@ -136,8 +119,6 @@ class ParseService:
 
             raise Exception(f"Parse failed: {str(e)}")
 
-
-
     async def get_parse_records(self):
 
         """获取最近一次的解析历史记录"""
@@ -152,13 +133,8 @@ class ParseService:
 
             )
 
-            
-
             if not record:
-
                 return []
-
-            
 
             return [{
 
@@ -174,7 +150,7 @@ class ParseService:
 
                 "save_path": record["save_path"],
 
-                "content": record.get("content", "")[:1200] + "..." if record.get("content", "") else "",
+                "content": record.get("content", ""),  # 返回完整内容
 
                 "created_at": record["created_at"]
 
@@ -188,19 +164,28 @@ class ParseService:
 
             raise Exception(f"Failed to get records: {str(e)}")
 
-
-
-    async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str], parallel_num: int = 4):
+    async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str],
+                            parallel_num: int = 4):
         """解析文件内容"""
         try:
-            # 获取文件类型
-            file_type = os.path.splitext(filename)[1].lower().replace('.', '')
+            # 获取文件类型并验证
+            file_type = filename.split('.')[-1].lower()  # 确保小写
+            print(f"Processing file type: {file_type}")  # 添加调试日志
             
+            supported_types = ['tex', 'txt', 'json', 'pdf']
+
+            if not file_type:
+                raise ValueError("File type is missing")
+            if file_type not in supported_types:
+                raise ValueError(
+                    f"Unsupported file type: {file_type}. Supported types are: {', '.join(supported_types)}")
+
             # 创建临时文件
-            with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False, encoding='utf-8') as temp_file:
+            with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False,
+                                             encoding='utf-8') as temp_file:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
-            
+
             try:
                 # 使用现有的解析逻辑
                 result = await self.parse_file(
@@ -210,13 +195,19 @@ class ParseService:
                     AK=AK,
                     parallel_num=parallel_num
                 )
-                
+
+                # 更新文件名为原始文件名
+                await self.parse_records.update_one(
+                    {"_id": ObjectId(result["record_id"])},
+                    {"$set": {"input_file": filename}}
+                )
+
                 return result
             finally:
                 # 清理临时文件
                 if os.path.exists(temp_file_path):
                     os.unlink(temp_file_path)
-                    
+
         except Exception as e:
             import traceback
             await self._log_error(str(e), "parse_content", traceback.format_exc())

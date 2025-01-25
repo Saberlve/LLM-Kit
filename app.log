@@ -48,3 +48,277 @@ Exception: Deduplication failed: too many values to unpack (expected 2)
 2025-01-25 10:13:32,008 - jieba - DEBUG - Loading model from cache C:\Users\WSX\AppData\Local\Temp\jieba.cache
 2025-01-25 10:13:32,394 - jieba - DEBUG - Loading model cost 0.388 seconds.
 2025-01-25 10:13:32,394 - jieba - DEBUG - Prefix dict has been built successfully.
+2025-01-25 13:31:13,451 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 83, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 206, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 137, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 223, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:35:50,286 - app.components.services.to_tex_service - WARNING - 没有找到已解析的文件记录
+2025-01-25 13:35:55,510 - app.components.services.to_tex_service - WARNING - 没有找到已解析的文件记录
+2025-01-25 13:43:32,116 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:43:45,713 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:44:32,456 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:44:33,477 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:44:34,373 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:44:34,727 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:44:35,006 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 85, in parse_file
+    parsed_file_path = parse.parse(hparams)
+  File "D:\Code\Python\LLM-Kit\text_parse\parse.py", line 126, in parse
+    raise ValueError(f"Unsupported file type: {file_type}. Supported types are: tex, txt, json, pdf.")
+ValueError: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 208, in parse_content
+    result = await self.parse_file(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 139, in parse_file
+    raise Exception(f"Parse failed: {str(e)}")
+Exception: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 60, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 231, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Parse failed: Unsupported file type: . Supported types are: tex, txt, json, pdf.
+2025-01-25 13:47:00,623 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: File type is missing
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 203, in parse_content
+    raise ValueError("File type is missing")
+ValueError: File type is missing
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 70, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 237, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: File type is missing
+2025-01-25 13:49:21,277 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 179, in parse_content
+    raise ValueError(
+ValueError: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 70, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 213, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+2025-01-25 13:50:40,573 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 179, in parse_content
+    raise ValueError(
+ValueError: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 70, in parse_file
+    result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 213, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: Unsupported file type: text. Supported types are: tex, txt, json, pdf
+2025-01-25 13:55:59,390 - app.components.services.to_tex_service - ERROR - 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+2025-01-25 13:55:59,391 - app.components.routers.to_tex - ERROR - 获取解析内容失败: 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 87, in get_parsed_content
+    raise Exception(f"未找到文件 {filename} 的解析记录")
+Exception: 未找到文件 tex33.tex 的解析记录
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 40, in get_parsed_content
+    content = await service.get_parsed_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 100, in get_parsed_content
+    raise Exception(f"获取解析内容失败: {str(e)}")
+Exception: 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+2025-01-25 13:56:00,073 - app.components.services.to_tex_service - ERROR - 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+2025-01-25 13:56:00,074 - app.components.routers.to_tex - ERROR - 获取解析内容失败: 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 87, in get_parsed_content
+    raise Exception(f"未找到文件 {filename} 的解析记录")
+Exception: 未找到文件 tex33.tex 的解析记录
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 40, in get_parsed_content
+    content = await service.get_parsed_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 100, in get_parsed_content
+    raise Exception(f"获取解析内容失败: {str(e)}")
+Exception: 获取解析内容失败: 未找到文件 tex33.tex 的解析记录

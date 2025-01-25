@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 from fastapi import UploadFile
 
@@ -34,7 +34,7 @@ class ParseRequest(BaseRequest):
     convert_to_tex: Optional[bool] = False
 
 class ToTexRequest(BaseRequest):
-    parsed_file_path: str
+    content: str  # 改为直接接收内容
     model_name: str
 
 class APIResponse(BaseModel):
@@ -70,9 +70,14 @@ class ErrorLogsListResponse(BaseModel):
     logs: List[ErrorLogResponse]
 
 class FileUploadRequest(BaseModel):
-    filename: str
+    filename: str  # 不包含扩展名的文件名
     content: str
-    file_type: str
+    file_type: Literal['tex', 'txt', 'json', 'pdf']  # 文件扩展名
+
+    @property
+    def full_filename(self) -> str:
+        """获取完整文件名（包含扩展名）"""
+        return f"{self.filename}.{self.file_type}"
 
 class BinaryFileResponse(BaseModel):
     """二进制文件响应模型"""
@@ -83,3 +88,16 @@ class BinaryFileResponse(BaseModel):
     size: int
     status: str
     created_at: datetime
+
+class ParsedFileListResponse(BaseModel):
+    """已解析文件列表的响应模型"""
+    filename: str
+    created_at: datetime
+    file_type: str
+
+class ParsedContentResponse(BaseModel):
+    """解析内容的响应模型"""
+    content: str
+    filename: str
+    created_at: datetime
+    file_type: str
