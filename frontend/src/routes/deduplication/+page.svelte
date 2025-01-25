@@ -4,6 +4,8 @@
     Accordion,
     AccordionItem,
     Button,
+    Input,
+    Checkbox
   } from "flowbite-svelte";
   import axios from "axios";
   import { page } from "$app/stores";
@@ -15,6 +17,7 @@
   import DatasetTable from "./DatasetTable.svelte";
   import { onDestroy, onMount } from "svelte";
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
+
   let entries: Array<DatasetEntry> = [];
   async function fetch_dataset_entries() {
     entries = (await axios.get("http://127.0.0.1:8000/parse/parse/history")).data;
@@ -27,19 +30,12 @@
   let name = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
   let description = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
   let deduplicationing: boolean = false;
-  let selectedModel: string | null = null; // Added for model selection
+  let dedupByAnswer: boolean = true;
+  let minAnswerLength: number = 10;
+  let deduplicatedEntries: Array<DatasetEntry> = [];
+  let deletedPairs: Array<any> = [];
 
-  // Mock data for model selection
-  //Replace it with real data, may from an API request
-  let models = [
-    {name: 'erine', value: 'erine'},
-    {name: 'flash', value: 'flash'},
-    {name: 'lite', value: 'lite'},
-    {name: 'Qwen', value: 'Qwen'},
-  ];
-
-
-  $: validFordeduplication = selectedDatasetId !== null && selectedModel !== null;
+  $: validFordeduplication = selectedDatasetId !== null;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -47,15 +43,34 @@
 
   async function deduplication() {
     deduplicationing = true;
-    await axios.post(`http://127.0.0.1:8000/qa/generate_qa`, {
+    try {
+      const response = await axios.post(`http://127.0.0.1:8000/dedup/deduplicate_qa`, {
+        input_file: selectedDatasetId,
+        output_file: name,
+        dedup_by_answer: dedupByAnswer,
+        min_answer_length: minAnswerLength,
+        deleted_pairs_file: `${name}-deleted.json`,
+      });
 
-      name: name,
-      domain: description,
-      source_entry_id: selectedDatasetId,
-      model_name: selectedModel,
-    });
-    await sleep(500);
-    deduplicationing = false;
+      if (response.data) {
+        deduplicatedEntries = response.data[0]; // Assuming the first element is deduplicated entries
+        deletedPairs = response.data[1];  // Assuming the second element is deleted pairs
+        goto('/deduplication/dedup_process', {
+          state: {
+            deduplicatedEntries: deduplicatedEntries,
+            deletedPairs: deletedPairs
+          }
+        });
+
+      } else {
+        console.error("Deduplication failed, no data received")
+      }
+    } catch (error) {
+      console.error("Error during deduplication:", error);
+    } finally {
+      await sleep(500);
+      deduplicationing = false;
+    }
   }
 
   let fetch_entries_updater: any;
@@ -110,8 +125,8 @@
   <div class="m-2 p-2">
     <span>{t("deduplication.p1")}</span>
     <DatasetTable datasetEntries={entries} noOperation={true} on:modified={async (_) => {
-            await fetch_dataset_entries();
-        }} selectable={true} bind:selectedDatasetId={selectedDatasetId}/>
+      await fetch_dataset_entries();
+    }} selectable={true} bind:selectedDatasetId={selectedDatasetId}/>
   </div>
 
   <div>
@@ -120,17 +135,17 @@
         <AccordionItem open={true}>
           <span slot="header">{t("deduplication.zone")}</span>
           <div class="justify-end items-center text-black">
+            <div class="m-2 p-2 flex flex-row items-center gap-2">
+              <Checkbox bind:checked={dedupByAnswer}>{t('deduplication.dedup_by_answer')}</Checkbox>
+            </div>
             <div class="m-2 p-2">
-              <span>{t("deduplication.model_select")}</span>
-              <select
-                      class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      bind:value={selectedModel}
-              >
-                <option value={null} disabled selected>{t("deduplication.select_model")}</option>
-                {#each models as model}
-                  <option value={model.value}>{model.name}</option>
-                {/each}
-              </select>
+              <span>{t("deduplication.min_answer_length")}</span>
+              <Input
+                      type="number"
+                      aria-describedby="helper-text-explanation"
+                      class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
+                      bind:value={minAnswerLength}
+              />
             </div>
             <div class="m-2 p-2">
               <span>{t("data.filter.name")}</span>
