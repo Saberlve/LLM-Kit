@@ -28,3 +28,4 @@ nvidia-ml-py
 jieba
 datasketch
 levenshtein
+python-multipart

@@ -12,6 +12,8 @@ import os
 
 from typing import List
 
+import tempfile
+
 
 
 
@@ -185,3 +187,37 @@ class ParseService:
             await self._log_error(str(e), "get_parse_records", traceback.format_exc())
 
             raise Exception(f"Failed to get records: {str(e)}")
+
+
+
+    async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str], parallel_num: int = 4):
+        """解析文件内容"""
+        try:
+            # 获取文件类型
+            file_type = os.path.splitext(filename)[1].lower().replace('.', '')
+            
+            # 创建临时文件
+            with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False, encoding='utf-8') as temp_file:
+                temp_file.write(content)
+                temp_file_path = temp_file.name
+            
+            try:
+                # 使用现有的解析逻辑
+                result = await self.parse_file(
+                    file_path=temp_file_path,
+                    save_path=save_path,
+                    SK=SK,
+                    AK=AK,
+                    parallel_num=parallel_num
+                )
+                
+                return result
+            finally:
+                # 清理临时文件
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                    
+        except Exception as e:
+            import traceback
+            await self._log_error(str(e), "parse_content", traceback.format_exc())
+            raise Exception(f"Parse content failed: {str(e)}")

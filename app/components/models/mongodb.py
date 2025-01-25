@@ -137,3 +137,20 @@ class DeletedQAPair(MongoBaseModel):
     question: str
     answer: str
     similar_pairs: List[dict]  # 存储相似的问答对信息
+
+class UploadedFile(MongoBaseModel):
+    """上传的文件记录"""
+    filename: str
+    content: str  # 文件内容
+    file_type: str  # 文件类型
+    size: int  # 文件大小(字节)
+    status: str = "pending"  # pending, processed
+
+class UploadedBinaryFile(MongoBaseModel):
+    """上传的二进制文件记录"""
+    filename: str
+    content: bytes  # 二进制文件内容
+    file_type: str  # 文件类型 (pdf, jpg, png等)
+    mime_type: str  # MIME类型
+    size: int  # 文件大小(字节)
+    status: str = "pending"  # pending, processed

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from fastapi import UploadFile
 
 # API 请求/响应基础模型
 class BaseRequest(BaseModel):
@@ -29,8 +30,8 @@ class QualityControlRequest(BaseRequest):
     domain: str
 
 class ParseRequest(BaseRequest):
-    file_path: str
-    convert_to_tex: Optional[bool] = True
+    # file_path: str
+    convert_to_tex: Optional[bool] = False
 
 class ToTexRequest(BaseRequest):
     parsed_file_path: str
@@ -67,3 +68,18 @@ class ErrorLogsListResponse(BaseModel):
     """错误日志列表响应"""
     total: int
     logs: List[ErrorLogResponse]
+
+class FileUploadRequest(BaseModel):
+    filename: str
+    content: str
+    file_type: str
+
+class BinaryFileResponse(BaseModel):
+    """二进制文件响应模型"""
+    file_id: str
+    filename: str
+    file_type: str
+    mime_type: str
+    size: int
+    status: str
+    created_at: datetime
