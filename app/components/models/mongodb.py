@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from pydantic import BaseModel, Field
 from bson import ObjectId
 
@@ -85,11 +85,11 @@ class QAQualityRecord(MongoBaseModel):
 class DedupRecord(MongoBaseModel):
     """去重记录"""
     input_file: list[str]
-    output_file: str
+    output_file: str  # 将由系统自动生成
+    deleted_pairs_file: str  # 将由系统自动生成
     dedup_by_answer: bool
     threshold: float = Field(ge=0.0, le=1.0)
     min_answer_length: int = Field(default=10)
-    deleted_pairs_file: str = Field(default="deleted.json")
     status: str = "processing"
     source_text: str
     original_count: Optional[int] = Field(ge=0)
@@ -129,3 +129,11 @@ class ErrorLog(MongoBaseModel):
                 "request_body": '{"value": 42}'
             }
         }
+
+class DeletedQAPair(MongoBaseModel):
+    """被删除的问答对"""
+    dedup_id: PyObjectId
+    qa_id: str
+    question: str
+    answer: str
+    similar_pairs: List[dict]  # 存储相似的问答对信息

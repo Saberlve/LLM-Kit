@@ -113,15 +113,15 @@ class QADeduplication:
             self.lsh.insert(f"qa_pair_{idx}", minhash)
         
         # 执行去重
-        unique_qa_pairs, delete_qa_pairs = self._process_deduplication(qa_pairs, by_question=True)
+        unique_qa_pairs, deleted_groups = self._process_deduplication(qa_pairs, by_question=True)
         
         # 保存结果
         self._save_results(unique_qa_pairs, output_file)
         if deleted_pairs_file:
-            self._save_results(delete_qa_pairs, deleted_pairs_file)
+            self._save_results(deleted_groups, deleted_pairs_file)
             
         print(f"Execution time: {datetime.now() - start_time}")
-        return unique_qa_pairs
+        return unique_qa_pairs, deleted_groups  # 修改返回值，同时返回删除的组
     
     def deduplicate_by_answer(self, input_file, output_file, min_answer_length=15):
         start_time = datetime.now()
@@ -136,7 +136,7 @@ class QADeduplication:
             self.lsh.insert(f"qa_pair_{idx}", minhash)
         
         # 执行去重
-        unique_qa_pairs, _ = self._process_deduplication(
+        unique_qa_pairs, deleted_groups = self._process_deduplication(
             qa_pairs, 
             by_question=False, 
             min_answer_length=min_answer_length
@@ -145,11 +145,11 @@ class QADeduplication:
         # 保存结果
         self._save_results(unique_qa_pairs, output_file)
         print(f"Execution time: {datetime.now() - start_time}")
-        return unique_qa_pairs
+        return unique_qa_pairs, deleted_groups  # 修改返回值，同时返回删除的组
     
     def _process_deduplication(self, qa_pairs, by_question=True, min_answer_length=0):
         unique_qa_pairs = []
-        delete_qa_pairs = []
+        deleted_groups = []  # 修改为存储删除的问答对组
         seen_id = set()
         filtered_count = 0
         
@@ -181,12 +181,12 @@ class QADeduplication:
                 if selected_pair and selected_pair not in unique_qa_pairs:
                     unique_qa_pairs.append(selected_pair)
                     if by_question:
-                        delete_qa_pairs.append(all_pairs)
+                        deleted_groups.append(all_pairs)  # 存储整个相似组
             else:
                 unique_qa_pairs.append(qa_pair)
                 
         print(f"Number of filtered data: {filtered_count}")
-        return unique_qa_pairs, delete_qa_pairs
+        return unique_qa_pairs, deleted_groups  # 返回保留的和删除的问答对
     
     def _get_similar_pairs(self, result, qa_pairs, current_idx, seen_id):
         similar_pairs = []
@@ -220,7 +220,7 @@ class QADeduplication:
                 - deleted_pairs_file: 存储被删除问答对的文件路径
         
         Returns:
-            list: 去重后的问答对列表
+            tuple: (去重后的问答对列表, 被删除的问答对组列表)
         """
         # 自动设置文件优先级
         if isinstance(hparams.input_file, list):

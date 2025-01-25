@@ -18,11 +18,9 @@ async def deduplicate_qa(
         service = QADedupService(db)
         result = await service.deduplicate_qa(
             input_file=request.input_file,
-            output_file=request.output_file,
             dedup_by_answer=request.dedup_by_answer,
             dedup_threshold=request.dedup_threshold,
             min_answer_length=request.min_answer_length,
-            deleted_pairs_file=request.deleted_pairs_file,
         )
         return APIResponse(
             status="success",

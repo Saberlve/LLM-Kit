@@ -16,10 +16,8 @@ class QAGenerateRequest(BaseRequest):
 
 class DedupRequest(BaseModel):
     input_file: List[str]
-    output_file: str
     dedup_by_answer: bool = False
     min_answer_length: int = 10
-    deleted_pairs_file: Optional[str] = "deleted.json"
     dedup_threshold: float = 0.8
 
 class QualityControlRequest(BaseRequest):
