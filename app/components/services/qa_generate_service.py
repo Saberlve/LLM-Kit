@@ -14,7 +14,8 @@ class QAGenerateService:
         self.db = db
         self.qa_generations = db.llm_kit.qa_generations
         self.qa_pairs = db.llm_kit.qa_pairs
-        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+        self.error_logs = db.llm_kit.error_logs
+        self.tex_records = db.llm_kit.tex_records  # 修改为正确的集合名称
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -85,9 +86,75 @@ class QAGenerateService:
                     
         return qa_pairs
 
+    async def get_all_tex_files(self):
+        """获取所有已转换的tex文件记录，同名文件只返回最新的记录"""
+        try:
+            # 使用聚合管道，按文件名分组并获取每组最新的记录
+            pipeline = [
+                # 只查找已完成的记录
+                {"$match": {"status": "completed"}},
+                
+                # 按文件名分组，保留最新的记录
+                {"$group": {
+                    "_id": "$input_file",
+                    "created_at": {"$max": "$created_at"},
+                    "latest_doc": {"$first": "$$ROOT"}
+                }},
+                
+                # 按创建时间降序排序
+                {"$sort": {"created_at": -1}},
+                
+                # 重新格式化输出
+                {"$project": {
+                    "_id": 0,
+                    "filename": "$_id",
+                    "created_at": 1
+                }}
+            ]
+            
+            cursor = self.tex_records.aggregate(pipeline)
+            files = []
+            async for record in cursor:
+                files.append({
+                    "filename": record["filename"],
+                    "created_at": record["created_at"]
+                })
+            
+            return files
+        except Exception as e:
+            await self._log_error(str(e), "get_all_tex_files")
+            raise Exception(f"获取tex文件列表失败: {str(e)}")
+
+    async def get_tex_content(self, filename: str):
+        """根据文件名获取tex转换后的内容"""
+        try:
+            # 查找指定文件名的最新已完成记录
+            record = await self.tex_records.find_one(
+                {
+                    "input_file": filename,
+                    "status": "completed"
+                },
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                raise Exception("文件不存在或未完成转换")
+                
+            if not record.get("content"):
+                raise Exception("文件内容为空")
+                
+            return {
+                "content": record["content"],
+                "created_at": record["created_at"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_tex_content")
+            raise Exception(f"获取tex内容失败: {str(e)}")
+
     async def generate_qa_pairs(
             self,
-            chunks_path: str,
+            content: str,
+            filename: str,
             save_path: str,
             SK: list,
             AK: list,
@@ -97,28 +164,20 @@ class QAGenerateService:
     ):
         generation_id = None
         try:
-            # 读取源文本
-            try:
-                with open(chunks_path, 'r', encoding='utf-8') as f:
-                    source_text = f.read()
-            except Exception as e:
-                raise Exception(f"Failed to read source file: {str(e)}")
-
             # 创建生成记录
             generation = QAGeneration(
-                input_file=chunks_path,
+                input_file=filename,
                 save_path=save_path,
                 model_name=model_name,
                 domain=domain,
                 status="processing",
-                source_text=source_text
+                source_text=content
             )
             result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
 
-            # 读取并处理文本块
-            with open(chunks_path, 'r', encoding='utf-8') as f:
-                chunks = json.load(f)
+            # 将内容分块处理
+            chunks = [{"chunk": content}]
             
             # 并行处理所有文本块
             qa_pairs = await self.process_chunks_parallel(
@@ -133,14 +192,15 @@ class QAGenerateService:
             if not qa_pairs:
                 raise Exception("No QA pairs generated")
 
-            # 构建保存路径
-            save_dir_path = os.path.join('result', 'qas', f"qa_for_{os.path.basename(chunks_path).split('.')[0]}")
+            # 构建保存路径 - 使用 QA_ 前缀来区分问答对文件
+            qa_filename = f"QA_{filename}"  # 添加QA_前缀区分
+            save_dir_path = os.path.join('result', 'qas')
             os.makedirs(save_dir_path, exist_ok=True)
             
-            # 使用原始文件名作为保存文件名
+            # 使用固定的文件名格式，这样同名文件会被覆盖
             final_save_path = os.path.join(
                 save_dir_path,
-                os.path.basename(chunks_path)
+                f"{qa_filename}.json"
             )
 
             # 保存问答对到文件
@@ -157,6 +217,17 @@ class QAGenerateService:
             )
 
             # 保存问答对到数据库
+            # 先删除之前同文件名的问答对记录
+            await self.qa_pairs.delete_many({
+                "generation_id": {
+                    "$in": [
+                        doc["_id"] for doc in await self.qa_generations.find(
+                            {"input_file": filename, "_id": {"$ne": generation_id}}
+                        ).to_list(None)
+                    ]
+                }
+            })
+
             qa_records = []
             for qa in qa_pairs:
                 qa_record = QAPairDB(
@@ -169,7 +240,12 @@ class QAGenerateService:
             if qa_records:
                 await self.qa_pairs.insert_many(qa_records)
 
-            # 更新生成记录状态
+            # 更新生成记录状态，同时将旧记录标记为已覆盖
+            await self.qa_generations.update_many(
+                {"input_file": filename, "_id": {"$ne": generation_id}},
+                {"$set": {"status": "overwritten"}}
+            )
+            
             await self.qa_generations.update_one(
                 {"_id": generation_id},
                 {"$set": {"status": "completed"}}
@@ -177,14 +253,14 @@ class QAGenerateService:
 
             return {
                 "generation_id": str(generation_id),
+                "filename": filename,
                 "qa_pairs": qa_pairs,
-                "source_text": source_text
+                "source_text": content
             }
 
         except Exception as e:
             import traceback
             await self._log_error(str(e), "generate_qa_pairs", traceback.format_exc())
-            # 如果生成过程中出现错误，更新状态为failed
             if generation_id:
                 try:
                     await self.qa_generations.update_one(
@@ -195,9 +271,8 @@ class QAGenerateService:
                         }}
                     )
                 except Exception as db_error:
-                    # 记录数据库更新失败，但仍然抛出原始异常
                     print(f"Failed to update generation status: {str(db_error)}")
-            raise  # 直接重新抛出原始异常，保留完整的堆栈信息
+            raise
 
     async def get_qa_records(self):
         """获取最近一次的问答对生成历史记录"""

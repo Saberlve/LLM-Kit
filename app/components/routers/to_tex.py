@@ -58,6 +58,7 @@ async def convert_to_latex(
         service = ToTexService(db)
         result = await service.convert_to_latex(
             content=request.content,
+            filename=request.filename,
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,

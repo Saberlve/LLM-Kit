@@ -8,6 +8,41 @@ from app.components.services.qa_generate_service import QAGenerateService
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("/tex_files")
+async def get_tex_files(
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取所有已转换的tex文件列表"""
+    try:
+        service = QAGenerateService(db)
+        files = await service.get_all_tex_files()
+        return APIResponse(
+            status="success",
+            message="获取文件列表成功",
+            data={"files": files}
+        )
+    except Exception as e:
+        logger.error(f"获取tex文件列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/tex_content/{filename}")
+async def get_tex_content(
+    filename: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取指定tex文件的内容"""
+    try:
+        service = QAGenerateService(db)
+        content = await service.get_tex_content(filename)
+        return APIResponse(
+            status="success",
+            message="获取文件内容成功",
+            data=content
+        )
+    except Exception as e:
+        logger.error(f"获取tex文件内容失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/generate_qa")
 async def generate_qa_pairs(
     request: QAGenerateRequest,
@@ -31,7 +66,8 @@ async def generate_qa_pairs(
             
         service = QAGenerateService(db)
         result = await service.generate_qa_pairs(
-            chunks_path=request.chunks_path,
+            content=request.content,
+            filename=request.filename,  # 添加文件名参数
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,

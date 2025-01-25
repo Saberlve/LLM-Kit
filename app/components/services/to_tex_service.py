@@ -123,6 +123,7 @@ class ToTexService:
     async def convert_to_latex(
             self,
             content: str,
+            filename: str,
             save_path: str,
             SK: List[str],
             AK: List[str],
@@ -139,7 +140,7 @@ class ToTexService:
 
             # 创建初始记录
             record = TexConversionRecord(
-                input_file="direct_content",
+                input_file=filename,
                 status="processing",
                 model_name=model_name,
                 save_path=save_path
@@ -152,7 +153,7 @@ class ToTexService:
                 tex_file_path = os.path.join(
                     save_path, 
                     'tex_files', 
-                    f'tex_conversion_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+                    f'{filename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
                 )
                 os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
 
@@ -200,6 +201,7 @@ class ToTexService:
 
                 return {
                     "record_id": str(record_id),
+                    "filename": filename,
                     "save_path": tex_file_path,
                     "content": data_to_save
                 }

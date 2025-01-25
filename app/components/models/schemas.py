@@ -11,7 +11,8 @@ class BaseRequest(BaseModel):
     parallel_num: int = 1
 
 class QAGenerateRequest(BaseRequest):
-    chunks_path: str
+    content: str
+    filename: str  # 添加文件名参数，用于跟踪文件
     model_name: str
     domain: str
 
@@ -34,7 +35,8 @@ class ParseRequest(BaseRequest):
     convert_to_tex: Optional[bool] = False
 
 class ToTexRequest(BaseRequest):
-    content: str  # 改为直接接收内容
+    content: str  # 文本内容
+    filename: str  # 文件名
     model_name: str
 
 class APIResponse(BaseModel):
