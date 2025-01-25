@@ -46,3 +46,30 @@ async def get_dedup_history(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/dedup/progress/{record_id}")
+async def get_dedup_progress(
+    record_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取去重进度"""
+    try:
+        from bson import ObjectId
+        record = await db.llm_kit.dedup_records.find_one(
+            {"_id": ObjectId(record_id)}
+        )
+        
+        if not record:
+            raise HTTPException(status_code=404, detail="Record not found")
+        
+        return APIResponse(
+            status="success",
+            message="Progress retrieved successfully",
+            data={
+                "progress": record.get("progress", 0),
+                "status": record.get("status", "processing")
+            }
+        )
+    except Exception as e:
+        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -8,100 +8,109 @@ from utils.helper import split_chunk_by_tokens, split_text_into_chunks
 from utils.hparams import HyperParams
 
 class LatexConverter:
-    def __init__(self,parsed_file_path, hparams: HyperParams):
-
+    def __init__(self, parsed_file_path, hparams: HyperParams, progress_callback=None):
         self.hparams = hparams
         self.ak_list = hparams.AK
         self.sk_list = hparams.SK
         self.parallel_num = hparams.parallel_num
         self.parsed_file_path = parsed_file_path
-        self.save_path=None
+        self.save_path = None
+        self.progress_callback = progress_callback
         assert len(self.ak_list) == len(self.sk_list), 'AKs and SKs must have the same length!'
         assert len(self.ak_list) >= self.parallel_num, 'Please add enough AK and SK!'
 
-    def process_chunk_with_api(self, chunk: str, ak: str, sk: str, max_tokens: int = 650) -> list:
-        """
-        用指定的 AK 和 SK 调用 API 对文本块进行处理，确保每段不超过指定的 token 数量。
-
-        Args:
-            chunk (str): 输入的文本块。
-            ak (str): API Key。
-            sk (str): Secret Key。
-            max_tokens (int): 每段的最大 token 数量，默认值为 650。
-
-        Returns:
-            list: 处理后的结果，每段的处理结果为一个字符串。
-        """
+    def process_chunk_with_api(self, chunk: str, ak: str, sk: str, chunk_index: int, total_chunks: int, max_tokens: int = 650) -> list:
+        """处理单个文本块并更新进度"""
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
-        for sub_chunk in sub_chunks:
-            print(f"调用 API：\nAK: {ak}, SK: {sk}\n处理文本块: {sub_chunk[:30]}...")  # 显示前30字符
-            for attempt in range(3):  # 尝试3次处理
+        for i, sub_chunk in enumerate(sub_chunks):
+            for attempt in range(3):
                 try:
                     tex_text = generate(sub_chunk, self.hparams.model_name, 'ToTex', ak, sk)
                     results.append(self.clean_result(tex_text))
+                    
+                    # 更新进度 - 使用浮点数计算以提高精度
+                    if self.progress_callback:
+                        # 当前块的基础进度 (0-80)
+                        base_progress = (chunk_index / float(total_chunks)) * 80
+                        # 当前子块的进度
+                        sub_progress = ((i + 1) / float(len(sub_chunks))) * (80 / float(total_chunks))
+                        # 合并进度并确保不超过80
+                        progress = min(int(base_progress + sub_progress), 80)
+                        self.progress_callback(progress)
                     break
                 except Exception as e:
-                    print(f"尝试 {attempt + 1} 次失败: {e}")
+                    if attempt == 2:
+                        raise e
 
         return results
 
     def convert_to_latex(self):
-        """
-        将解析后的文件内容转为 LaTeX 格式，并保存
+        """将解析后的文件内容转为LaTeX格式"""
+        try:
+            with open(self.parsed_file_path, "r", encoding="utf-8") as f:
+                text = f.read()
 
-        Args:
-            parsed_file_path (str): 待处理文件路径。
+            # 更新初始进度
+            if self.progress_callback:
+                self.progress_callback(10)  # 文件读取完成
 
-        """
-        with open(self.parsed_file_path, "r", encoding="utf-8") as f:
-            text = f.read()
+            file_name = os.path.basename(self.parsed_file_path)
+            save_path = os.path.join(
+                self.hparams.save_path, 'tex_files', 
+                file_name.split('.')[0] + '.json'
+            )
+            self.save_path = save_path
 
-        file_name = os.path.basename(self.parsed_file_path)
-        print(f"开始转成latex格式：{file_name}")
+            if os.path.exists(self.save_path):
+                if self.progress_callback:
+                    self.progress_callback(100)  # 文件已存在，直接完成
+                return save_path
 
+            # 切分文本
+            text_chunks = split_text_into_chunks(self.parallel_num, text)
+            total_chunks = len(text_chunks)
 
-        save_path = os.path.join(
-            self.hparams.save_path, 'tex_files', file_name.split('.')[0] + '.json'
-        )
-        self.save_path=save_path
-        if os.path.exists(self.save_path):   #不重复生成
-            return save_path
+            if self.progress_callback:
+                self.progress_callback(20)  # 文本分块完成
 
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            # 并行处理文本块
+            results = []
+            with ThreadPoolExecutor(max_workers=self.parallel_num) as executor:
+                futures = [
+                    executor.submit(
+                        self.process_chunk_with_api, 
+                        chunk, 
+                        self.ak_list[i], 
+                        self.sk_list[i],
+                        i,
+                        total_chunks
+                    )
+                    for i, chunk in enumerate(text_chunks)
+                ]
 
-        # 切分文本
-        text_chunks = split_text_into_chunks(self.parallel_num, text)
+                for future in as_completed(futures):
+                    results.extend(future.result())
 
-        print(f"文本被分为 {len(text_chunks)} 段，每段大小接近均匀")
-
-        # 并行处理文本块
-        results = []
-        with ThreadPoolExecutor(max_workers=self.parallel_num) as executor:
-            futures = [
-                executor.submit(
-                    self.process_chunk_with_api, chunk, self.ak_list[i], self.sk_list[i]
-                )
-                for i, chunk in enumerate(text_chunks)
+            # 准备保存数据
+            data_to_save = [
+                {"id": i + 1, "chunk": result}
+                for i, result in enumerate(results)
             ]
 
-            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing chunks"):
-                results.extend(future.result())
+            # 保存结果
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, 'w', encoding='utf-8') as json_file:
+                json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
-        import json
+            if self.progress_callback:
+                self.progress_callback(100)  # 完成
 
-        # 准备保存数据的结构
-        data_to_save = []
-        for i, result in enumerate(results):
-            data_to_save.append({
-                "id": i + 1,  # id 从 1 开始
-                "chunk": result  # 每个块的内容
-            })
-        with open(save_path, 'w', encoding='utf-8') as json_file:
-            json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
+            return save_path
 
-        print("所有文本段已处理完成并保存！")
+        except Exception as e:
+            raise e
 
     def clean_result(self, text: str) -> str:
         """

@@ -31,9 +31,11 @@ class ParseRecord(MongoBaseModel):
     input_file: str
     content: Optional[str] = None
     parsed_file_path: Optional[str] = None
-    status: str = "processing"
+    status: str = "processing"  # processing, completed, failed
     file_type: str
     save_path: str
+    progress: int = 0  # 添加进度字段
+    task_type: str = "parse"  # parse 或 ocr，用于区分任务类型
 
 # 2. LaTeX转换模块
 class TexConversionRecord(MongoBaseModel):
@@ -41,9 +43,10 @@ class TexConversionRecord(MongoBaseModel):
     input_file: str  # 输入文件路径
     content: Optional[str] = None  # 转换后的内容
     save_path: Optional[str] = None  # 保存路径
-    status: str = "processing"
+    status: str = "processing"  # processing, completed, failed
     file_type: str = "tex"  # 固定为tex
     model_name: str  # 使用的模型名称
+    progress: int = 0  # 添加进度字段
 
 # 3. 问答生成模块
 class QAGeneration(MongoBaseModel):
@@ -52,8 +55,9 @@ class QAGeneration(MongoBaseModel):
     save_path: str
     model_name: str
     domain: str
-    status: str = "processing"
+    status: str = "processing"  # processing, completed, failed
     source_text: str
+    progress: int = 0  # 添加进度字段
 
 class QAPairDB(MongoBaseModel):
     """问答对数据库记录"""
@@ -67,8 +71,9 @@ class QualityControlGeneration(MongoBaseModel):
     input_file: str
     save_path: str
     model_name: str
-    status: str = "processing"
+    status: str = "processing"  # processing, completed, failed
     source_text: str
+    progress: int = 0  # 添加进度字段
 
 class QAQualityRecord(MongoBaseModel):
     """问答质量记录"""
@@ -85,15 +90,16 @@ class QAQualityRecord(MongoBaseModel):
 class DedupRecord(MongoBaseModel):
     """去重记录"""
     input_file: list[str]
-    output_file: str  # 将由系统自动生成
-    deleted_pairs_file: str  # 将由系统自动生成
+    output_file: str
+    deleted_pairs_file: str
     dedup_by_answer: bool
     threshold: float = Field(ge=0.0, le=1.0)
     min_answer_length: int = Field(default=10)
-    status: str = "processing"
+    status: str = "processing"  # processing, completed, failed
     source_text: str
     original_count: Optional[int] = Field(ge=0)
     kept_count: Optional[int] = Field(ge=0)
+    progress: int = 0  # 添加进度字段
 
 class KeptQAPair(MongoBaseModel):
     """保留的问答对"""

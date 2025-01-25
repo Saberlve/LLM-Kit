@@ -5,6 +5,9 @@ from utils.hparams import HyperParams
 from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration, PyObjectId
 import json
 import os
+import time
+import asyncio
+from bson.objectid import ObjectId
 
 
 class QualityService:
@@ -13,6 +16,7 @@ class QualityService:
         self.quality_generations = db.llm_kit.quality_generations
         self.quality_records = db.llm_kit.quality_records
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -204,3 +208,69 @@ class QualityService:
             }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")
+
+    async def update_progress(self, record_id: str, progress: int):
+        """更新进度（带节流控制）"""
+        current_time = time.time()
+        last_update = self.last_progress_update.get(record_id, 0)
+        
+        # 每0.5秒最多更新一次进度
+        if current_time - last_update >= 0.5:
+            await self.quality_records.update_one(
+                {"_id": ObjectId(record_id)},
+                {"$set": {"progress": progress}}
+            )
+            self.last_progress_update[record_id] = current_time
+
+    async def quality_control(self, qa_path: str, save_path: str, 
+                            model_name: str, domain: str):
+        """执行质量控制"""
+        record_id = None
+        try:
+            # 创建质控记录
+            quality_record = QualityControlGeneration(
+                input_file=qa_path,
+                save_path=save_path,
+                model_name=model_name,
+                status="processing",
+                progress=0
+            )
+            result = await self.quality_records.insert_one(
+                quality_record.dict(by_alias=True)
+            )
+            record_id = result.inserted_id
+
+            # 创建质控器实例
+            generator = QAQualityGenerator(
+                qa_path,
+                hparams,
+                progress_callback=lambda p: asyncio.create_task(
+                    self.update_progress(str(record_id), p)
+                )
+            )
+
+            # 执行质控
+            result_path = generator.iterate_optim_qa()
+
+            # 更新记录
+            await self.quality_records.update_one(
+                {"_id": record_id},
+                {"$set": {
+                    "status": "completed",
+                    "save_path": result_path,
+                    "progress": 100
+                }}
+            )
+
+            return {
+                "record_id": str(record_id),
+                "save_path": result_path
+            }
+
+        except Exception as e:
+            if record_id:
+                await self.quality_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {"status": "failed"}}
+                )
+            raise e

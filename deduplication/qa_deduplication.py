@@ -6,12 +6,13 @@ from datetime import datetime
 from utils.hparams import DedupParams
 
 class QADeduplication:
-    def __init__(self,hparams:DedupParams):
+    def __init__(self, hparams: DedupParams, progress_callback=None):
         self.threshold = hparams.dedup_threshold
         self.num_perm = hparams.dedup_num_perm
         self.lsh = MinHashLSH(threshold=self.threshold, num_perm=self.num_perm)
         self.stopwords = self._load_stopwords()
         self.priority_dict = {}
+        self.progress_callback = progress_callback  # 添加进度回调
         
     def _load_stopwords(self):
         input_file_name = './deduplication/hit_stopwords.txt'
@@ -148,11 +149,17 @@ class QADeduplication:
         return unique_qa_pairs, deleted_groups  # 修改返回值，同时返回删除的组
     
     def _process_deduplication(self, qa_pairs, by_question=True, min_answer_length=0):
+        """处理去重并更新进度"""
+        # 定义进度阶段
+        processing_start = 20   # 处理阶段起始
+        processing_range = 70   # 处理阶段占比
+        total_pairs = len(qa_pairs)
+
         unique_qa_pairs = []
-        deleted_groups = []  # 修改为存储删除的问答对组
+        deleted_groups = []
         seen_id = set()
         filtered_count = 0
-        
+
         for idx, qa_pair in enumerate(qa_pairs):
             identity = f"qa_pair_{idx}"
             if identity in seen_id:
@@ -185,6 +192,11 @@ class QADeduplication:
             else:
                 unique_qa_pairs.append(qa_pair)
                 
+            # 更新进度 - 使用更精确的进度计算
+            if self.progress_callback:
+                current_progress = processing_start + int((idx + 1) / float(total_pairs) * processing_range)
+                self.progress_callback(min(current_progress, processing_start + processing_range))
+
         print(f"Number of filtered data: {filtered_count}")
         return unique_qa_pairs, deleted_groups  # 返回保留的和删除的问答对
     
@@ -207,7 +219,7 @@ class QADeduplication:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2) 
     
-    def process_qa_file(self, hparams:DedupParams):
+    def process_qa_file(self, hparams: DedupParams):
         """
         处理多个QA文件的完整流程：加载、去重、保存
         
@@ -222,22 +234,47 @@ class QADeduplication:
         Returns:
             tuple: (去重后的问答对列表, 被删除的问答对组列表)
         """
-        # 自动设置文件优先级
-        if isinstance(hparams.input_file, list):
-            self.set_priority_order([f.split('/')[-1] for f in hparams.input_file])
-            
-        if hparams.dedup_by_answer:
-            return self.deduplicate_by_answer(
-                input_file=hparams.input_file,
-                output_file=hparams.output_file,
-                min_answer_length=hparams.min_answer_length
-            )
-        else:
-            return self.deduplicate_by_question(
-                input_file=hparams.input_file,
-                output_file=hparams.output_file,
-                deleted_pairs_file=hparams.deleted_pairs_file
-            )
+        try:
+            # 更新初始进度
+            if self.progress_callback:
+                self.progress_callback(10)  # 开始处理
+
+            # 自动设置文件优先级
+            if isinstance(hparams.input_file, list):
+                self.set_priority_order([f.split('/')[-1] for f in hparams.input_file])
+
+            if self.progress_callback:
+                self.progress_callback(20)  # 文件读取完成
+
+            # 执行去重
+            if hparams.dedup_by_answer:
+                result = self.deduplicate_by_answer(
+                    input_file=hparams.input_file,
+                    output_file=hparams.output_file,
+                    min_answer_length=hparams.min_answer_length
+                )
+            else:
+                result = self.deduplicate_by_question(
+                    input_file=hparams.input_file,
+                    output_file=hparams.output_file,
+                    deleted_pairs_file=hparams.deleted_pairs_file
+                )
+
+            if self.progress_callback:
+                self.progress_callback(90)  # 处理完成，准备保存
+
+            # 保存结果
+            self._save_results(result[0], hparams.output_file)
+            if hparams.deleted_pairs_file:
+                self._save_results(result[1], hparams.deleted_pairs_file)
+
+            if self.progress_callback:
+                self.progress_callback(100)  # 完成
+
+            return result
+
+        except Exception as e:
+            raise e
             
             
             

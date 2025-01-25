@@ -6,6 +6,9 @@ import json
 from typing import List
 from datetime import datetime
 import os
+import time
+import asyncio
+from bson import ObjectId
 
 
 class QADedupService:
@@ -17,6 +20,7 @@ class QADedupService:
         self.deleted_pairs = db.llm_kit.deleted_pairs
         self.base_output_dir = "results/dedup"  # 添加基础输出目录
         os.makedirs(self.base_output_dir, exist_ok=True)
+        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -33,6 +37,19 @@ class QADedupService:
         output_file = os.path.join(self.base_output_dir, f"dedup_result_{date_str}.json")
         deleted_file = os.path.join(self.base_output_dir, f"deleted_pairs_{date_str}.json")
         return output_file, deleted_file
+
+    async def update_progress(self, record_id: str, progress: int):
+        """更新进度（带节流控制）"""
+        current_time = time.time()
+        last_update = self.last_progress_update.get(record_id, 0)
+        
+        # 每0.5秒最多更新一次进度
+        if current_time - last_update >= 0.5:
+            await self.dedup_records.update_one(
+                {"_id": ObjectId(record_id)},
+                {"$set": {"progress": progress}}
+            )
+            self.last_progress_update[record_id] = current_time
 
     async def deduplicate_qa(
             self,
@@ -67,7 +84,8 @@ class QADedupService:
                 status="processing",
                 source_text="\n".join(source_texts),
                 original_count=len(original_pairs),
-                kept_count=0
+                kept_count=0,
+                progress=0
             )
             result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
             record_id = result.inserted_id
@@ -82,7 +100,12 @@ class QADedupService:
                 deleted_pairs_file=deleted_pairs_file,
             )
 
-            qa_deduplication = QADeduplication(hparams)
+            qa_deduplication = QADeduplication(
+                hparams,
+                progress_callback=lambda p: asyncio.create_task(
+                    self.update_progress(str(record_id), p)
+                )
+            )
             kept_pairs, deleted_groups = qa_deduplication.process_qa_file(hparams)
 
             # 保存保留的问答对到数据库
@@ -129,7 +152,8 @@ class QADedupService:
                     "$set": {
                         "status": "completed",
                         "original_count": len(original_pairs),
-                        "kept_count": len(kept_pairs)
+                        "kept_count": len(kept_pairs),
+                        "progress": 100
                     }
                 }
             )
@@ -147,6 +171,11 @@ class QADedupService:
         except Exception as e:
             import traceback
             await self._log_error(str(e), "deduplicate_qa", traceback.format_exc())
+            if record_id:
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {"status": "failed"}}
+                )
             raise Exception(f"Deduplication failed: {str(e)}")
 
     async def get_dedup_records(self):

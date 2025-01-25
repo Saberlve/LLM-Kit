@@ -6,7 +6,7 @@ from app.components.core.database import get_database
 from app.components.models.schemas import ParseRequest, APIResponse, OCRRequest, FileUploadRequest
 from app.components.services.parse_service import ParseService
 from text_parse.parse import single_ocr
-from app.components.models.mongodb import UploadedFile, UploadedBinaryFile
+from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
 import mimetypes
 
 router = APIRouter()
@@ -57,40 +57,91 @@ async def parse_file(
 ):
     """解析最近上传的文件并保存记录"""
     try:
-        # 获取最近上传的文件（修改查询条件，获取最新的pending文件）
+        # 获取最近上传的文件
         latest_file = await db.llm_kit.uploaded_files.find_one(
             {"status": "pending"},
-            sort=[("created_at", -1)]  # 按创建时间降序排序
+            sort=[("created_at", -1)]
         )
         
         if not latest_file:
             raise HTTPException(status_code=404, detail="No pending file found")
         
-        # 构建完整的文件名（包含扩展名）
-        filename = f"{latest_file['filename']}.{latest_file['file_type']}"
-        print(f"Processing file: {filename}")  # 添加调试日志
-            
-        service = ParseService(db)
-        result = await service.parse_content(
-            content=latest_file["content"],
-            filename=filename,  # 使用完整的文件名
+        # 创建初始记录
+        parse_record = ParseRecord(
+            input_file=latest_file['filename'],
+            status="processing",
+            file_type=latest_file['file_type'],
             save_path=request.save_path,
-            SK=request.SK,
-            AK=request.AK,
-            parallel_num=request.parallel_num
+            task_type="parse",
+            progress=0
         )
+        result = await db.llm_kit.parse_records.insert_one(
+            parse_record.dict(by_alias=True)
+        )
+        record_id = result.inserted_id
         
-        # 更新文件状态为已处理
-        await db.llm_kit.uploaded_files.update_one(
-            {"_id": latest_file["_id"]},
-            {"$set": {"status": "processed"}}
-        )
-        
-        return APIResponse(
-            status="success",
-            message="File parsed successfully",
-            data=result
-        )
+        try:
+            # 1. 更新文件准备进度
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"progress": 20}}
+            )
+            
+            # 2. 构建完整的文件名
+            filename = f"{latest_file['filename']}.{latest_file['file_type']}"
+            
+            # 3. 准备解析服务
+            service = ParseService(db)
+            
+            # 4. 执行解析（解析过程中会更新进度）
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"progress": 50}}
+            )
+            
+            result = await service.parse_content(
+                content=latest_file["content"],
+                filename=filename,
+                save_path=request.save_path,
+                SK=request.SK,
+                AK=request.AK,
+                parallel_num=request.parallel_num,
+                record_id=str(record_id)
+            )
+            
+            # 5. 更新文件状态和进度
+            await db.llm_kit.uploaded_files.update_one(
+                {"_id": latest_file["_id"]},
+                {"$set": {"status": "processed"}}
+            )
+            
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "content": result.get("content", ""),
+                    "parsed_file_path": result.get("parsed_file_path", "")
+                }}
+            )
+            
+            return APIResponse(
+                status="success",
+                message="File parsed successfully",
+                data={
+                    "record_id": str(record_id),
+                    **result
+                }
+            )
+            
+        except Exception as e:
+            # 更新失败状态
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"status": "failed"}}
+            )
+            raise e
+            
     except Exception as e:
         logger.error(f"解析文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -125,33 +176,68 @@ async def ocr_file(
         # 确保保存路径存在
         os.makedirs(os.path.dirname(request.save_path), exist_ok=True)
         
-        result = single_ocr(request.file_path)
-        
-        # 保存OCR记录到数据库
-        parse_record = {
-            "input_file": request.file_path,
-            "content": result,
-            "status": "completed",
-            "file_type": "ocr",
-            "save_path": request.save_path,
-            "parsed_file_path": request.save_path  # 添加解析后的文件路径
-        }
-        
-        await db.llm_kit.parse_records.insert_one(parse_record)
-        
-        # 将结果保存到文件
-        save_path = os.path.join(request.save_path, os.path.basename(request.file_path) + '.txt')
-        with open(save_path, 'w', encoding='utf-8') as f:
-            f.write(result)
-            
-        return APIResponse(
-            status="success",
-            message="OCR completed successfully",
-            data={
-                "result": result,
-                "save_path": save_path
-            }
+        # 创建初始记录
+        parse_record = ParseRecord(
+            input_file=os.path.basename(request.file_path),
+            status="processing",
+            file_type="ocr",
+            save_path=request.save_path,
+            task_type="ocr",
+            progress=0
         )
+        result = await db.llm_kit.parse_records.insert_one(
+            parse_record.dict(by_alias=True)
+        )
+        record_id = result.inserted_id
+        
+        try:
+            # OCR处理过程分为三个步骤：加载模型、处理图片、保存结果
+            # 1. 更新加载模型进度
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"progress": 30}}
+            )
+            
+            # 2. 执行OCR识别
+            result = single_ocr(request.file_path)
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"progress": 70}}
+            )
+            
+            # 3. 保存结果
+            save_path = os.path.join(request.save_path, os.path.basename(request.file_path) + '.txt')
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(result)
+            
+            # 更新完成状态
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "content": result,
+                    "parsed_file_path": save_path
+                }}
+            )
+            
+            return APIResponse(
+                status="success",
+                message="OCR completed successfully",
+                data={
+                    "record_id": str(record_id),
+                    "result": result,
+                    "save_path": save_path
+                }
+            )
+        except Exception as e:
+            # 更新失败状态
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"status": "failed"}}
+            )
+            raise e
+            
     except Exception as e:
         logger.error(f"OCR处理失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -314,4 +400,30 @@ async def get_binary_file_content(
         )
     except Exception as e:
         logger.error(f"获取二进制文件内容失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/task/progress/{record_id}")
+async def get_task_progress(
+    record_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取任务进度"""
+    try:
+        from bson import ObjectId
+        record = await db.llm_kit.parse_records.find_one({"_id": ObjectId(record_id)})
+        
+        if not record:
+            raise HTTPException(status_code=404, detail="Record not found")
+        
+        return APIResponse(
+            status="success",
+            message="Progress retrieved successfully",
+            data={
+                "progress": record.get("progress", 0),
+                "status": record.get("status", "processing"),
+                "task_type": record.get("task_type", "parse")
+            }
+        )
+    except Exception as e:
+        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

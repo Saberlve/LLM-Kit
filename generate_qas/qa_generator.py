@@ -29,6 +29,7 @@ class QAGenerator:
         r"\\part", r"\\chapter", r"\\section", r"\\subsection",
         r"\\subsubsection", r"\\paragraph", r"\\subparagraph",
     ])
+    progress_callback: callable = None  # 添加进度回调参数
 
     def __post_init__(self):
         """初始化后的额外设置"""
@@ -101,26 +102,29 @@ class QAGenerator:
         return not any(condition(text) for condition in invalid_conditions)
 
 
-    def process_chunk_with_api(self, text: str, ak: str, sk: str) -> List[Dict[str, Any]]:
-        """
-        具体调用api，process_latex_chunk的子函数，为了多线程设置的
-        :param text:
-        :param ak:
-        :param sk:
-        :return:
-        """
+    def process_chunk_with_api(self, text: str, ak: str, sk: str, chunk_index: int, total_chunks: int) -> List[Dict[str, Any]]:
+        """处理单个文本块并更新进度"""
         qa_pairs = []
         max_retries = 5
         
+        # 定义进度阶段
+        base_progress = 20      # 初始阶段
+        process_range = 70      # 处理阶段
+        
         for attempt in range(max_retries):
             try:
-                response = generate(text,self.hparams.model_name, 'ToQA', ak, sk)
-                qas=extract_qa(response)
+                response = generate(text, self.hparams.model_name, 'ToQA', ak, sk)
+                qas = extract_qa(response)
                 for qa_pair in qas:
                     qa_pair["text"] = text
                     qa_pairs.append(qa_pair)
+                
+                # 更新进度 - 使用更精确的进度计算
+                if self.progress_callback:
+                    # 计算当前块的进度，确保不超过处理阶段上限
+                    current_progress = base_progress + int((chunk_index + 1) / float(total_chunks) * process_range)
+                    self.progress_callback(min(current_progress, base_progress + process_range))
                 break
-
             except Exception as e:
                 print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
                 if attempt == max_retries - 1:
@@ -153,7 +157,9 @@ class QAGenerator:
                     self.process_chunk_with_api,
                     text,
                     self.ak_list[i % len(self.ak_list)],
-                    self.sk_list[i % len(self.sk_list)]
+                    self.sk_list[i % len(self.sk_list)],
+                    i,
+                    len(text_chunks)
                 )
                 for i, text in enumerate(text_chunks)
             ]
@@ -170,40 +176,61 @@ class QAGenerator:
     def convert_tex_to_qas(self) :
         """将 LaTeX 文件转换为问答对并保存"""
         try:
+            # 更新初始进度
+            if self.progress_callback:
+                self.progress_callback(10)
+
             with open(self.chunks_path, "r", encoding='utf-8') as f:
                 chunks = json.load(f)
-        except Exception as e:
-            print(f"读取文件失败: {str(e)}")
-            return
-       
-        PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace("'domain'",self.hparams.domain)
-        PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace("'domain'",self.hparams.domain)
+                
+            if self.progress_callback:
+                self.progress_callback(20)  # 文件读取完成
+
+            save_file_path = os.path.join(
+                self.save_dir_path,
+                os.path.basename(self.chunks_path)
+            )
+            
+            if os.path.exists(save_file_path):
+                if self.progress_callback:
+                    self.progress_callback(100)  # 文件已存在，直接完成
+                return save_file_path
+
+            print(f"开始处理文件: {os.path.basename(self.chunks_path)}")
+            qa_result = []
+            total_chunks = len(chunks)
+
+            # 并行处理文本块
+            with ThreadPoolExecutor(max_workers=self.parallel_num) as executor:
+                futures = [
+                    executor.submit(
+                        self.process_chunk_with_api,
+                        chunk.get("chunk", ""),
+                        self.ak_list[i % len(self.ak_list)],
+                        self.sk_list[i % len(self.sk_list)],
+                        i,
+                        total_chunks
+                    )
+                    for i, chunk in enumerate(chunks)
+                ]
+
+                for future in as_completed(futures):
+                    qa_result.extend(future.result())
+
             # 保存结果
-        
-        save_file_path = os.path.join(
-            self.save_dir_path,
-            os.path.basename(self.chunks_path)
-        )
-        if os.path.exists(save_file_path):
-            return save_file_path  #不重复生成
-        
+            try:
+                with open(save_file_path, "w", encoding="utf-8") as f:
+                    json.dump(qa_result, f, ensure_ascii=False, indent=4)
+                if self.progress_callback:
+                    self.progress_callback(100)  # 完成
+                print(f"结果已保存至: {save_file_path}")
+            except Exception as e:
+                print(f"保存结果失败: {str(e)}")
+                raise e
 
-        print(f"开始处理文件: {os.path.basename(self.chunks_path)}")
-        qa_result = []
-        
-        for chunk in tqdm(chunks, desc="生成问答对"):
-            qas = self.process_latex_chunk(chunk.get("chunk", ""))
-            qa_result.extend(qas)
-
-
-        
-        try:
-            with open(save_file_path, "w", encoding="utf-8") as f:
-                json.dump(qa_result, f, ensure_ascii=False, indent=4)
-            print(f"结果已保存至: {save_file_path}")
+            return save_file_path
         except Exception as e:
-            print(f"保存结果失败: {str(e)}")
-        return save_file_path
+            raise e
 
     
 

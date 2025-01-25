@@ -16,6 +16,10 @@ import tempfile
 
 from bson import ObjectId
 
+import asyncio
+
+import time
+
 
 class ParseService:
 
@@ -26,6 +30,8 @@ class ParseService:
         self.parse_records = db.llm_kit.parse_records
 
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+
+        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
 
@@ -150,7 +156,11 @@ class ParseService:
 
                 "save_path": record["save_path"],
 
-                "content": record.get("content", ""),  # 返回完整内容
+                "content": record.get("content", ""),
+
+                "progress": record.get("progress", 0),  # 添加进度信息
+
+                "task_type": record.get("task_type", "parse"),  # 添加任务类型
 
                 "created_at": record["created_at"]
 
@@ -165,15 +175,14 @@ class ParseService:
             raise Exception(f"Failed to get records: {str(e)}")
 
     async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str],
-                            parallel_num: int = 4):
+                          parallel_num: int = 4, record_id: str = None):
         """解析文件内容"""
         try:
             # 获取文件类型并验证
-            file_type = filename.split('.')[-1].lower()  # 确保小写
-            print(f"Processing file type: {file_type}")  # 添加调试日志
+            file_type = filename.split('.')[-1].lower()
+            print(f"Processing file type: {file_type}")
             
             supported_types = ['tex', 'txt', 'json', 'pdf']
-
             if not file_type:
                 raise ValueError("File type is missing")
             if file_type not in supported_types:
@@ -182,31 +191,60 @@ class ParseService:
 
             # 创建临时文件
             with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False,
-                                             encoding='utf-8') as temp_file:
+                                           encoding='utf-8') as temp_file:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
 
+            async def update_progress(progress: int):
+                """异步更新进度（带节流控制）"""
+                if record_id:
+                    current_time = time.time()
+                    last_update = self.last_progress_update.get(record_id, 0)
+                    
+                    # 每0.5秒最多更新一次进度
+                    if current_time - last_update >= 0.5:
+                        actual_progress = min(20 + int(progress * 0.8), 100)
+                        await self.parse_records.update_one(
+                            {"_id": ObjectId(record_id)},
+                            {"$set": {"progress": actual_progress}}
+                        )
+                        self.last_progress_update[record_id] = current_time
+
             try:
                 # 使用现有的解析逻辑
-                result = await self.parse_file(
-                    file_path=temp_file_path,
-                    save_path=save_path,
+                hparams = HyperParams(
                     SK=SK,
                     AK=AK,
-                    parallel_num=parallel_num
+                    parallel_num=parallel_num,
+                    file_path=temp_file_path,
+                    save_path=save_path
                 )
 
-                # 更新文件名为原始文件名
-                await self.parse_records.update_one(
-                    {"_id": ObjectId(result["record_id"])},
-                    {"$set": {"input_file": filename}}
+                # 执行解析，传入进度回调
+                parsed_file_path = parse.parse(
+                    hparams,
+                    progress_callback=lambda p: asyncio.create_task(update_progress(p))
                 )
 
-                return result
+                # 读取解析后的文件内容
+                with open(parsed_file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # 更新最终进度
+                await update_progress(100)
+
+                return {
+                    "content": content,
+                    "parsed_file_path": parsed_file_path
+                }
+
             finally:
                 # 清理临时文件
                 if os.path.exists(temp_file_path):
                     os.unlink(temp_file_path)
+                # 清理进度更新记录
+                if record_id in self.last_progress_update:
+                    del self.last_progress_update[record_id]
 
         except Exception as e:
             import traceback
