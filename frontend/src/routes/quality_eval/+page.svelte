@@ -30,15 +30,17 @@
       pools = (await axios.get(`/api/pool/`)).data as Array<PoolEntry>;
     });
     let entries: Array<DatasetEntry> = [];
+    
     async function fetch_dataset_entries() {
-    entries = (await axios.get("http://127.0.0.1:8000/parse/parse/history")).data;
+      entries = (await axios.get("http://127.0.0.1:8000/parse/parse/history")).data;
     }
     onMount(async () => {
       await fetch_dataset_entries();
     })
+    
     let selectedDatasetId: number | null = null;
-    let name = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
-    let description = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
+    let name = `quality_control-${Date.now().toString().substring(5, 10)}`;
+    let description = `quality_control-${Date.now().toString().substring(5, 10)}`;
     let quality_eval_processing: boolean | null = false;
 
     $: validFordeduplication = selectedDatasetId !== null;
@@ -47,15 +49,48 @@
     return new Promise(resolve => setTimeout(resolve, ms));
     } 
 
+    let fetch_entries_updater: any;
+    onMount(async () => {
+      fetch_entries_updater = setInterval(
+          fetch_dataset_entries,
+          UPDATE_VIEW_INTERVAL,
+      );
+    });
+    onDestroy(async () => {
+      clearInterval(fetch_entries_updater);
+    });
+
+
     async function quality_eval() {
       quality_eval_processing = true;
-      await axios.post(`http://127.0.0.1:8000/`, {
-        name: name,
-        domain: description,
-        source_entry_id: selectedDatasetId,
-      });
-      await sleep(500);
-      quality_eval_processing = false;
+      try {
+        const response = await axios.post(`http://127.0.0.1:8000/quality`, {
+          input_file: selectedDatasetId,
+          output_file: name,
+          dedup_by_answer: dedupByAnswer,
+          min_answer_length: minAnswerLength,
+          deleted_pairs_file: `${name}-deleted.json`,
+        });
+
+        if (response.data) {
+          deduplicatedEntries = response.data[0]; // Assuming the first element is deduplicated entries
+          deletedPairs = response.data[1];  // Assuming the second element is deleted pairs
+          goto('/deduplication/dedup_process', {
+            state: {
+              deduplicatedEntries: deduplicatedEntries,
+              deletedPairs: deletedPairs
+            }
+          });
+
+        } else {
+          console.error("Quality Control failed, no data received")
+        }
+      } catch (error) {
+        console.error("Error during quality control:", error);
+      } finally {
+        await sleep(500);
+        quality_eval_processing = false;
+      }
     }
   </script>
 
@@ -81,7 +116,7 @@
   {/each}
 </div> -->
 
-<!-- <div class="m-2 p-2">
+<div class="m-2 p-2">
   <span>{t("deduplication.p1")}</span>
   <DatasetTable datasetEntries={entries} noOperation={true} on:modified={async (_) => {
           await fetch_dataset_entries();
@@ -96,4 +131,4 @@
   >
     {t("deduplication.begin")}
   </Button>
-</div> -->
+</div>

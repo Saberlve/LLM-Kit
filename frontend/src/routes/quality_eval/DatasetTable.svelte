@@ -21,19 +21,8 @@
   export let selectable = false;
   let delete_modal = false;
   let id_to_delete: null | number = null;
-
-  import { createEventDispatcher } from "svelte";
+  
   import VisbilityButton from "../components/VisbilityButton.svelte";
-
-  const dispatch = createEventDispatcher();
-
-  async function delete_handle() {
-    if (id_to_delete == null) {
-      throw "Attempting to delete without an id";
-    }
-    await axios.delete(`/api/dataset/${id_to_delete}`);
-    dispatch("modified");
-  }
 </script>
 
 <table class="table-auto w-full divide-y divide-gray-200">
