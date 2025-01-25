@@ -170,29 +170,37 @@ class QualityService:
             raise Exception(f"Quality control failed: {str(e)}")
 
     async def get_quality_records(self):
-        """获取质量控制历史记录"""
+        """获取最近一次的质量控制历史记录"""
         try:
-            cursor = self.quality_generations.find().sort("created_at", -1)
-            records = []
-            async for record in cursor:
-                qa_cursor = self.quality_records.find({"generation_id": record["_id"]})
-                qa_pairs = []
-                async for qa in qa_cursor:
-                    qa_pairs.append({
-                        "question": qa["question"],
-                        "answer": qa["answer"],
-                        "similarity_score": qa["similarity_score"],
-                        "coverage_rate": qa["coverage_rate"],
-                        "status": qa["status"]
-                    })
-
-                records.append({
-                    "generation_id": str(record["_id"]),
-                    "input_file": record["input_file"],
-                    "status": record["status"],
-                    "source_text": record["source_text"],  # 添加源文本
-                    "qa_pairs": qa_pairs
+            # 只获取最新的一条记录
+            record = await self.quality_generations.find_one(
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                return []
+            
+            # 获取该记录对应的所有问答对
+            qa_cursor = self.quality_records.find({"generation_id": record["_id"]})
+            qa_pairs = []
+            async for qa in qa_cursor:
+                qa_pairs.append({
+                    "question": qa["question"],
+                    "answer": qa["answer"],
+                    "similarity_score": qa["similarity_score"],
+                    "coverage_rate": qa["coverage_rate"],
+                    "status": qa["status"]
                 })
-            return records
+
+            return [{
+                "generation_id": str(record["_id"]),
+                "input_file": record["input_file"],
+                "output_file": record.get("output_file", ""),  # 添加输出文件路径
+                "model_name": record["model_name"],
+                "status": record["status"],
+                "source_text": record["source_text"],
+                "qa_pairs": qa_pairs,
+                "created_at": record["created_at"]
+            }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")

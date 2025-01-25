@@ -154,18 +154,23 @@ class ToTexService:
             raise Exception(f"转换失败: {str(e)}")
 
     async def get_tex_records(self):
-        """获取LaTeX转换历史记录"""
+        """获取最近一次的LaTeX转换历史记录"""
         try:
-            cursor = self.tex_records.find().sort("created_at", -1)
-            records = []
-            async for record in cursor:
-                records.append({
-                    "record_id": str(record["_id"]),
-                    "input_file": record["input_file"],
-                    "status": record["status"],
-                    "save_path": record.get("save_path"),
-                    "content": record.get("content", ""),
-                })
-            return records
+            # 只获取最新的一条记录
+            record = await self.tex_records.find_one(
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                return []
+            
+            return [{
+                "record_id": str(record["_id"]),
+                "input_file": record["input_file"],
+                "status": record["status"],
+                "save_path": record.get("save_path"),
+                "content": record.get("content", ""),
+                "created_at": record["created_at"]
+            }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")

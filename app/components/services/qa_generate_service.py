@@ -200,27 +200,35 @@ class QAGenerateService:
             raise  # 直接重新抛出原始异常，保留完整的堆栈信息
 
     async def get_qa_records(self):
-        """获取问答对生成历史记录"""
+        """获取最近一次的问答对生成历史记录"""
         try:
-            cursor = self.qa_generations.find().sort("created_at", -1)
-            records = []
-            async for record in cursor:
-                # 获取该记录对应的所有问答对
-                qa_cursor = self.qa_pairs.find({"generation_id": record["_id"]})
-                qa_pairs = []
-                async for qa in qa_cursor:
-                    qa_pairs.append({
-                        "question": qa["question"],
-                        "answer": qa["answer"]
-                    })
-
-                records.append({
-                    "generation_id": str(record["_id"]),
-                    "input_file": record["input_file"],
-                    "status": record["status"],
-                    "source_text": record["source_text"],  # 添加源文本
-                    "qa_pairs": qa_pairs
+            # 只获取最新的一条记录
+            record = await self.qa_generations.find_one(
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                return []
+            
+            # 获取该记录对应的所有问答对
+            qa_cursor = self.qa_pairs.find({"generation_id": record["_id"]})
+            qa_pairs = []
+            async for qa in qa_cursor:
+                qa_pairs.append({
+                    "question": qa["question"],
+                    "answer": qa["answer"]
                 })
-            return records
+
+            return [{
+                "generation_id": str(record["_id"]),
+                "input_file": record["input_file"],
+                "save_path": record.get("save_path", ""),
+                "model_name": record["model_name"],
+                "domain": record["domain"],
+                "status": record["status"],
+                "source_text": record["source_text"],
+                "qa_pairs": qa_pairs,
+                "created_at": record["created_at"]
+            }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")

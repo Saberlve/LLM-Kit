@@ -138,29 +138,45 @@ class ParseService:
 
     async def get_parse_records(self):
 
-        """获取解析历史记录"""
+        """获取最近一次的解析历史记录"""
 
         try:
 
-            cursor = self.parse_records.find().sort("created_at", -1)
+            # 只获取最新的一条记录
 
-            records = []
+            record = await self.parse_records.find_one(
 
-            async for record in cursor:
+                sort=[("created_at", -1)]
 
-                records.append({
+            )
 
-                    "record_id": str(record["_id"]),
+            
 
-                    "input_file": record["input_file"],
+            if not record:
 
-                    "status": record["status"],
+                return []
 
-                    "content": record.get("content", "")[:1200] + "..." if record.get("content", "") else "",
+            
 
-                })
+            return [{
 
-            return records
+                "record_id": str(record["_id"]),
+
+                "input_file": record["input_file"],
+
+                "parsed_file_path": record.get("parsed_file_path", ""),
+
+                "status": record["status"],
+
+                "file_type": record["file_type"],
+
+                "save_path": record["save_path"],
+
+                "content": record.get("content", "")[:1200] + "..." if record.get("content", "") else "",
+
+                "created_at": record["created_at"]
+
+            }]
 
         except Exception as e:
 

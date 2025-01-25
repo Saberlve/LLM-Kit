@@ -1,0 +1,50 @@
+2025-01-25 10:10:12,328 - app.components.routers.qa_dedup - ERROR - 问答对去重失败: Deduplication failed: [Errno 2] No such file or directory: 'result/qa_iteratedfor_ceshi/ceshi.json'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 53, in deduplicate_qa
+    with open(file_path, 'r', encoding='utf-8') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'result/qa_iteratedfor_ceshi/ceshi.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_dedup.py", line 19, in deduplicate_qa
+    result = await service.deduplicate_qa(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 150, in deduplicate_qa
+    raise Exception(f"Deduplication failed: {str(e)}")
+Exception: Deduplication failed: [Errno 2] No such file or directory: 'result/qa_iteratedfor_ceshi/ceshi.json'
+2025-01-25 10:10:56,028 - app.components.routers.qa_dedup - ERROR - 问答对去重失败: Deduplication failed: [Errno 2] No such file or directory: 'result/qa_iterated/qa_iteratedfor_ceshi/ceshi.json'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 53, in deduplicate_qa
+    with open(file_path, 'r', encoding='utf-8') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'result/qa_iterated/qa_iteratedfor_ceshi/ceshi.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_dedup.py", line 19, in deduplicate_qa
+    result = await service.deduplicate_qa(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 150, in deduplicate_qa
+    raise Exception(f"Deduplication failed: {str(e)}")
+Exception: Deduplication failed: [Errno 2] No such file or directory: 'result/qa_iterated/qa_iteratedfor_ceshi/ceshi.json'
+2025-01-25 10:11:04,500 - jieba - DEBUG - Building prefix dict from the default dictionary ...
+2025-01-25 10:11:04,502 - jieba - DEBUG - Loading model from cache C:\Users\WSX\AppData\Local\Temp\jieba.cache
+2025-01-25 10:11:04,909 - jieba - DEBUG - Loading model cost 0.409 seconds.
+2025-01-25 10:11:04,909 - jieba - DEBUG - Prefix dict has been built successfully.
+2025-01-25 10:11:04,933 - app.components.routers.qa_dedup - ERROR - 问答对去重失败: Deduplication failed: too many values to unpack (expected 2)
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 86, in deduplicate_qa
+    kept_pairs, deleted_groups = qa_deduplication.process_qa_file(hparams)
+ValueError: too many values to unpack (expected 2)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_dedup.py", line 19, in deduplicate_qa
+    result = await service.deduplicate_qa(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_dedup_service.py", line 150, in deduplicate_qa
+    raise Exception(f"Deduplication failed: {str(e)}")
+Exception: Deduplication failed: too many values to unpack (expected 2)
+2025-01-25 10:13:32,006 - jieba - DEBUG - Building prefix dict from the default dictionary ...
+2025-01-25 10:13:32,008 - jieba - DEBUG - Loading model from cache C:\Users\WSX\AppData\Local\Temp\jieba.cache
+2025-01-25 10:13:32,394 - jieba - DEBUG - Loading model cost 0.388 seconds.
+2025-01-25 10:13:32,394 - jieba - DEBUG - Prefix dict has been built successfully.
