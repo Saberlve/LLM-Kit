@@ -17,7 +17,8 @@ async def evaluate_and_optimize_qa(
     try:
         service = QualityService(db)
         result = await service.evaluate_and_optimize_qa(
-            qa_path=request.qa_path,
+            content=request.content,
+            filename=request.filename,
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
@@ -53,29 +54,37 @@ async def get_quality_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/quality/progress/{record_id}")
-async def get_quality_progress(
-    record_id: str,
+@router.get("/qa_files")
+async def get_qa_files(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取质量控制进度"""
+    """获取所有已生成的问答对文件列表"""
     try:
-        from bson import ObjectId
-        record = await db.llm_kit.quality_control_generations.find_one(
-            {"_id": ObjectId(record_id)}
-        )
-        
-        if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
-        
+        service = QualityService(db)
+        files = await service.get_all_qa_files()
         return APIResponse(
             status="success",
-            message="Progress retrieved successfully",
-            data={
-                "progress": record.get("progress", 0),
-                "status": record.get("status", "processing")
-            }
+            message="获取文件列表成功",
+            data={"files": files}
         )
     except Exception as e:
-        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        logger.error(f"获取问答对文件列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/qa_content/{filename}")
+async def get_qa_content(
+    filename: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取指定问答对文件的内容"""
+    try:
+        service = QualityService(db)
+        content = await service.get_qa_content(filename)
+        return APIResponse(
+            status="success",
+            message="获取文件内容成功",
+            data=content
+        )
+    except Exception as e:
+        logger.error(f"获取问答对文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

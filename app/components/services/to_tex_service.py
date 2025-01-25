@@ -1,19 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
-from text_parse.to_tex import LatexConverter
-from utils.hparams import HyperParams
 from app.components.models.mongodb import TexConversionRecord
 import os
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
 from utils.helper import generate, split_chunk_by_tokens, split_text_into_chunks
 import json
 import logging
-import time
-import tempfile
-import asyncio
-from bson.objectid import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +16,6 @@ class ToTexService:
         self.tex_records = db.llm_kit.tex_records
         self.parse_records = db.llm_kit.parse_records
         self.error_logs = db.llm_kit.error_logs
-        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -125,100 +117,118 @@ class ToTexService:
             logger.error(f"获取解析内容失败: {str(e)}")
             raise Exception(f"获取解析内容失败: {str(e)}")
 
-    async def update_progress(self, record_id: str, progress: int):
-        """更新进度（带节流控制）"""
-        current_time = time.time()
-        last_update = self.last_progress_update.get(record_id, 0)
-        
-        # 每0.5秒最多更新一次进度
-        if current_time - last_update >= 0.5:
-            await self.tex_records.update_one(
-                {"_id": ObjectId(record_id)},
-                {"$set": {"progress": progress}}
-            )
-            self.last_progress_update[record_id] = current_time
-
-    async def convert_to_latex(self, content: str, filename: str, save_path: str, 
-                             SK: List[str], AK: List[str], model_name: str, 
-                             parallel_num: int = 4):
-        """转换文本为LaTeX格式"""
-        record_id = None
+    async def convert_to_latex(
+            self,
+            content: str,
+            filename: str,
+            save_path: str,
+            SK: List[str],
+            AK: List[str],
+            parallel_num: int,
+            model_name: str
+    ):
         try:
-            # 创建转换记录
-            tex_record = TexConversionRecord(
+            # 验证输入
+            assert len(AK) == len(SK), 'AK和SK数量必须相同'
+            assert len(AK) >= parallel_num, '请提供足够的AK和SK'
+
+            # 创建保存目录
+            os.makedirs(save_path, exist_ok=True)
+
+            # 创建初始记录
+            record = TexConversionRecord(
                 input_file=filename,
                 status="processing",
                 model_name=model_name,
-                progress=0
+                save_path=save_path
             )
-            result = await self.tex_records.insert_one(
-                tex_record.dict(by_alias=True)
-            )
+            result = await self.tex_records.insert_one(record.dict(by_alias=True))
             record_id = result.inserted_id
 
-            # 创建临时文件
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', 
-                                           delete=False, encoding='utf-8') as temp_file:
-                temp_file.write(content)
-                temp_file_path = temp_file.name
-
             try:
-                # 创建转换器实例
-                hparams = HyperParams(
-                    SK=SK,
-                    AK=AK,
-                    parallel_num=parallel_num,
-                    model_name=model_name,
-                    save_path=save_path
+                # 生成保存路径
+                tex_file_path = os.path.join(
+                    save_path, 
+                    'tex_files', 
+                    f'{filename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
                 )
+                os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
 
-                converter = LatexConverter(
-                    temp_file_path, 
-                    hparams,
-                    progress_callback=lambda p: asyncio.create_task(
-                        self.update_progress(str(record_id), p)
-                    )
-                )
+                # 切分文本
+                text_chunks = split_text_into_chunks(parallel_num, content)
 
-                # 执行转换
-                tex_file_path = converter.convert_to_latex()
+                # 并行处理文本块
+                results = []
+                with ThreadPoolExecutor(max_workers=parallel_num) as executor:
+                    futures = [
+                        executor.submit(
+                            self._process_chunk_with_api,
+                            chunk,
+                            AK[i],
+                            SK[i],
+                            model_name
+                        )
+                        for i, chunk in enumerate(text_chunks)
+                    ]
 
-                # 读取转换结果
-                with open(tex_file_path, 'r', encoding='utf-8') as f:
-                    tex_content = f.read()
+                    for future in as_completed(futures):
+                        results.extend(future.result())
 
-                # 更新记录
+                # 准备保存数据
+                data_to_save = [
+                    {"id": i + 1, "chunk": result}
+                    for i, result in enumerate(results)
+                ]
+
+                # 保存结果到文件
+                with open(tex_file_path, 'w', encoding='utf-8') as json_file:
+                    json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
+
+                # 更新原始记录状态
                 await self.tex_records.update_one(
                     {"_id": record_id},
-                    {"$set": {
-                        "status": "completed",
-                        "content": tex_content,
-                        "save_path": tex_file_path,
-                        "progress": 100
-                    }}
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "content": json.dumps(data_to_save),
+                            "save_path": tex_file_path
+                        }
+                    }
                 )
+
+                # 添加一条新记录，用于存储保存文件的信息
+                saved_file_record = {
+                    "input_file": os.path.basename(tex_file_path),  # 使用保存的文件名作为input_file
+                    "original_file": filename,  # 原始文件名
+                    "status": "completed",
+                    "content": json.dumps(data_to_save),
+                    "created_at": datetime.now(timezone.utc),
+                    "save_path": tex_file_path,
+                    "model_name": model_name
+                }
+                await self.tex_records.insert_one(saved_file_record)
 
                 return {
                     "record_id": str(record_id),
+                    "filename": filename,
                     "save_path": tex_file_path,
-                    "content": tex_content
+                    "content": data_to_save
                 }
 
-            finally:
-                # 清理临时文件
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
-                # 清理进度更新记录
-                if record_id and str(record_id) in self.last_progress_update:
-                    del self.last_progress_update[str(record_id)]
-
-        except Exception as e:
-            if record_id:
+            except Exception as e:
                 await self.tex_records.update_one(
                     {"_id": record_id},
-                    {"$set": {"status": "failed"}}
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
                 )
-            raise e
+                raise e
+
+        except Exception as e:
+            import traceback
+            await self._log_error(str(e), "convert_to_latex", traceback.format_exc())
+            raise Exception(f"转换失败: {str(e)}")
 
     async def get_tex_records(self):
         """获取最近一次的LaTeX转换历史记录"""

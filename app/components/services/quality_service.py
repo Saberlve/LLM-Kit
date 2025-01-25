@@ -5,9 +5,7 @@ from utils.hparams import HyperParams
 from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration, PyObjectId
 import json
 import os
-import time
-import asyncio
-from bson.objectid import ObjectId
+from typing import List
 
 
 class QualityService:
@@ -16,7 +14,8 @@ class QualityService:
         self.quality_generations = db.llm_kit.quality_generations
         self.quality_records = db.llm_kit.quality_records
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
-        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
+        self.qa_generations = db.llm_kit.qa_generations  # 添加对qa_generations的引用
+        self.qa_pairs = db.llm_kit.qa_pairs  # 添加对qa_pairs的引用
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -29,7 +28,8 @@ class QualityService:
 
     async def evaluate_and_optimize_qa(
             self,
-            qa_path: str,
+            content: List[dict],
+            filename: str,
             save_path: str,
             SK: list,
             AK: list,
@@ -42,18 +42,16 @@ class QualityService:
     ):
         generation_id = None
         try:
-            # 读取源文本
-            with open(qa_path, 'r', encoding='utf-8') as f:
-                source_text = f.read()
-                qa_pairs = json.loads(source_text)
+            # 直接使用传入的问答对内容
+            qa_pairs = content  # content已经是列表了
 
             # 创建生成记录
             generation = QualityControlGeneration(
-                input_file=qa_path,
+                input_file=filename,
                 save_path=save_path,
                 model_name=model_name,
                 status="processing",
-                source_text=source_text
+                source_text=json.dumps(content, ensure_ascii=False)
             )
             result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
@@ -119,11 +117,27 @@ class QualityService:
                 if os.path.exists(result_path):
                     os.remove(result_path)
 
+            # 使用 QUALITY_ 前缀构建最终保存路径
+            quality_filename = f"QUALITY_{filename}"  # 添加QUALITY_前缀区分
+            final_save_path = os.path.join(
+                save_path,
+                f"{quality_filename}.json"
+            )
+
             # 保存最终结果
-            final_filename = f"quality_control_{os.path.basename(qa_path)}"
-            final_path = os.path.join(save_path, final_filename)
-            with open(final_path, 'w', encoding='utf-8') as f:
+            with open(final_save_path, 'w', encoding='utf-8') as f:
                 json.dump(all_qa_pairs, f, ensure_ascii=False, indent=4)
+
+            # 先删除之前同文件名的质量控制记录
+            await self.quality_records.delete_many({
+                "generation_id": {
+                    "$in": [
+                        doc["_id"] for doc in await self.quality_generations.find(
+                            {"input_file": filename, "_id": {"$ne": generation_id}}
+                        ).to_list(None)
+                    ]
+                }
+            })
 
             # 保存问答对到数据库
             qa_records = []
@@ -146,30 +160,39 @@ class QualityService:
             if qa_records:
                 await self.quality_records.insert_many(qa_records)
 
-            # 更新状态
+            # 更新旧记录状态为已覆盖
+            await self.quality_generations.update_many(
+                {"input_file": filename, "_id": {"$ne": generation_id}},
+                {"$set": {"status": "overwritten"}}
+            )
+
+            # 更新当前记录状态
             await self.quality_generations.update_one(
                 {"_id": generation_id},
                 {"$set": {
                     "status": "completed",
-                    "output_file": final_path  # 添加输出文件路径
+                    "save_path": final_save_path
                 }}
             )
 
             return {
                 "generation_id": str(generation_id),
+                "filename": filename,
                 "qa_pairs": all_qa_pairs,
-                "source_text": source_text,
-                "output_file": final_path  # 在返回结果中也包含输出文件路径
+                "source_text": json.dumps(content, ensure_ascii=False),
+                "save_path": final_save_path
             }
 
         except Exception as e:
             import traceback
             await self._log_error(str(e), "evaluate_and_optimize_qa", traceback.format_exc())
-            # 如果发生错误，更新状态为失败
             if generation_id:
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {"status": "failed"}}
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
                 )
             raise Exception(f"Quality control failed: {str(e)}")
 
@@ -196,81 +219,101 @@ class QualityService:
                     "status": qa["status"]
                 })
 
+            # 修改：如果source_text是JSON字符串，解析它
+            source_text = record["source_text"]
+            try:
+                source_text = json.loads(source_text)
+            except:
+                pass  # 如果解析失败，保持原样
+
             return [{
                 "generation_id": str(record["_id"]),
                 "input_file": record["input_file"],
-                "output_file": record.get("output_file", ""),  # 添加输出文件路径
+                "output_file": record.get("output_file", ""),
                 "model_name": record["model_name"],
                 "status": record["status"],
-                "source_text": record["source_text"],
+                "source_text": source_text,  # 使用解析后的source_text
                 "qa_pairs": qa_pairs,
                 "created_at": record["created_at"]
             }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")
 
-    async def update_progress(self, record_id: str, progress: int):
-        """更新进度（带节流控制）"""
-        current_time = time.time()
-        last_update = self.last_progress_update.get(record_id, 0)
-        
-        # 每0.5秒最多更新一次进度
-        if current_time - last_update >= 0.5:
-            await self.quality_records.update_one(
-                {"_id": ObjectId(record_id)},
-                {"$set": {"progress": progress}}
-            )
-            self.last_progress_update[record_id] = current_time
-
-    async def quality_control(self, qa_path: str, save_path: str, 
-                            model_name: str, domain: str):
-        """执行质量控制"""
-        record_id = None
+    async def get_all_qa_files(self):
+        """获取所有已生成的问答对文件列表，同名文件只返回最新的记录"""
         try:
-            # 创建质控记录
-            quality_record = QualityControlGeneration(
-                input_file=qa_path,
-                save_path=save_path,
-                model_name=model_name,
-                status="processing",
-                progress=0
-            )
-            result = await self.quality_records.insert_one(
-                quality_record.dict(by_alias=True)
-            )
-            record_id = result.inserted_id
-
-            # 创建质控器实例
-            generator = QAQualityGenerator(
-                qa_path,
-                hparams,
-                progress_callback=lambda p: asyncio.create_task(
-                    self.update_progress(str(record_id), p)
-                )
-            )
-
-            # 执行质控
-            result_path = generator.iterate_optim_qa()
-
-            # 更新记录
-            await self.quality_records.update_one(
-                {"_id": record_id},
-                {"$set": {
-                    "status": "completed",
-                    "save_path": result_path,
-                    "progress": 100
-                }}
-            )
-
-            return {
-                "record_id": str(record_id),
-                "save_path": result_path
-            }
-
+            # 获取所有已完成的记录
+            records = await self.qa_generations.find(
+                {"status": "completed"},
+                {"save_path": 1, "created_at": 1}
+            ).to_list(None)
+            
+            # 按文件名分组，保留最新的记录
+            filename_dict = {}  # {filename: {"filename": filename, "created_at": created_at}}
+            
+            for record in records:
+                if not record.get("save_path"):
+                    continue
+                    
+                # 从save_path中提取文件名
+                filename = os.path.basename(record["save_path"])
+                created_at = record["created_at"]
+                
+                # 如果文件名已存在，比较创建时间
+                if filename in filename_dict:
+                    if created_at > filename_dict[filename]["created_at"]:
+                        filename_dict[filename] = {
+                            "filename": filename,
+                            "created_at": created_at
+                        }
+                else:
+                    filename_dict[filename] = {
+                        "filename": filename,
+                        "created_at": created_at
+                    }
+            
+            # 转换为列表并按创建时间降序排序
+            files = list(filename_dict.values())
+            files.sort(key=lambda x: x["created_at"], reverse=True)
+            
+            return files
+            
         except Exception as e:
-            if record_id:
-                await self.quality_records.update_one(
-                    {"_id": record_id},
-                    {"$set": {"status": "failed"}}
-                )
-            raise e
+            await self._log_error(str(e), "get_all_qa_files")
+            raise Exception(f"获取问答对文件列表失败: {str(e)}")
+
+    async def get_qa_content(self, filename: str):
+        """根据文件名获取问答对内容"""
+        try:
+            # 查找指定文件名的最新已完成记录
+            record = await self.qa_generations.find_one(
+                {
+                    "input_file": filename,  # 使用保存的文件名查询
+                    "status": "completed"
+                },
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                raise Exception("文件不存在或未完成生成")
+            
+            # 直接从记录中获取问答对内容
+            if record.get("content"):
+                qa_pairs = json.loads(record["content"])
+            else:
+                # 如果记录中没有内容，从文件中读取
+                try:
+                    with open(record["save_path"], 'r', encoding='utf-8') as f:
+                        qa_pairs = json.load(f)
+                except Exception as e:
+                    raise Exception(f"读取问答对文件失败: {str(e)}")
+                
+            return {
+                "filename": filename,
+                "created_at": record["created_at"],
+                "qa_pairs": qa_pairs,
+                "save_path": record.get("save_path", "")
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_qa_content")
+            raise Exception(f"获取问答对内容失败: {str(e)}")

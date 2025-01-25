@@ -12,11 +12,10 @@ from utils.helper import extract_qa
 from utils.hparams import HyperParams
 from model_api.prompts import PROMPT_DICT
 class QAQualityGenerator:
-    def __init__(self, qa_path: str, hparams: HyperParams, progress_callback=None):
+    def __init__(self, qa_path: str, hparams: HyperParams):
         # 基础配置
         self.hparams = hparams
         self.qa_path = qa_path
-        self.progress_callback = progress_callback  # 添加进度回调
         self.save_dir_path = os.path.join('result', 'qas_iterated', f"qa_iteratedfor_{os.path.basename(qa_path).split('.')[0]}")
         os.makedirs(self.save_dir_path, exist_ok=True)
         self.model_name = hparams.model_name
@@ -153,6 +152,7 @@ class QAQualityGenerator:
         for attempt in range(self.max_attempts):
             try:
                 # 检查答案与文本相似度
+                print(qa)
                 answer_list = qa['answer'].split('。')
                 text_list = qa['text'].split('。')
                 ratio = max(self.calculate_similarity(j, k) for j in text_list for k in answer_list)
@@ -188,80 +188,47 @@ class QAQualityGenerator:
 
     def iterate_optim_qa(self):
         """读取文件中的问答对，进行迭代"""
-        try:
-            # 更新初始进度
-            if self.progress_callback:
-                self.progress_callback(10)  # 开始处理
+        with open(self.qa_path, "r", encoding='utf-8') as f:
+            qas = json.load(f)
 
-            with open(self.qa_path, "r", encoding='utf-8') as f:
-                qas = json.load(f)
+        print(f"开始处理 {os.path.basename(self.qa_path)}")
+        qa_result = []
 
-            if self.progress_callback:
-                self.progress_callback(20)  # 文件读取完成
-
-            print(f"开始处理 {os.path.basename(self.qa_path)}")
-            qa_result = []
-            total_qas = len(qas)
-
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                futures = []
-                for i, qa in enumerate(qas):
-                    ak = self.ak_list[0]
-                    sk = self.sk_list[0]
-                    nearby_qas = self.get_nearby_qas(qas, i)
-                    futures.append(
-                        executor.submit(
-                            self.process_single_qa,
-                            qa, nearby_qas, ak, sk, i, total_qas
-                        )
+        with ThreadPoolExecutor(max_workers=1) as executor:  # 改为单线程处理
+            futures = []
+            for i, qa in enumerate(qas):
+                ak = self.ak_list[0]  # 只使用第一个AK
+                sk = self.sk_list[0]  # 只使用第一个SK
+                nearby_qas = self.get_nearby_qas(qas, i)
+                futures.append(
+                    executor.submit(
+                        lambda q, n, a, s: self.check_coverage_and_regenerate(
+                            self.evaluate_qa_and_regenerate(q, n, a, s),
+                            n, a, s
+                        ),
+                        qa,
+                        nearby_qas,
+                        ak,
+                        sk,
                     )
-
+                )
+            with tqdm(total=len(futures), desc="质量控制问答对") as pbar:
                 for future in as_completed(futures):
                     result = future.result()
                     if isinstance(result, list):
                         qa_result.extend(result)
                     elif result:
                         qa_result.append(result)
+                    pbar.update(1)
 
-            # 保存结果
-            save_file_path = os.path.join(
-                self.save_dir_path,
-                os.path.basename(self.qa_path)
-            )
-            with open(save_file_path, "w", encoding="utf-8") as f:
-                json.dump(qa_result, f, ensure_ascii=False, indent=4)
-
-            if self.progress_callback:
-                self.progress_callback(100)  # 完成
-
-            return save_file_path
-
-        except Exception as e:
-            raise e
-
-    def process_single_qa(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str, 
-                         current_index: int, total_qas: int) -> Optional[Dict]:
-        """处理单个问答对并更新进度"""
-        try:
-            # 定义进度阶段
-            processing_start = 20   # 处理阶段起始
-            processing_range = 70   # 处理阶段占比
-            
-            # 评估并重新生成
-            result = self.evaluate_qa_and_regenerate(qa, nearby_qas, ak, sk)
-            if result:
-                result = self.check_coverage_and_regenerate(result, nearby_qas, ak, sk)
-
-            # 更新进度 - 使用更精确的进度计算
-            if self.progress_callback:
-                # 计算当前进度，确保不超过处理阶段上限
-                current_progress = processing_start + int((current_index + 1) / float(total_qas) * processing_range)
-                self.progress_callback(min(current_progress, processing_start + processing_range))
-
-            return result
-        except Exception as e:
-            print(f"处理问答对时出错: {str(e)}")
-            return None
+        # 保存结果
+        save_file_path = os.path.join(
+            self.save_dir_path,
+            os.path.basename(self.qa_path)
+        )
+        with open(save_file_path, "w", encoding="utf-8") as f:
+            json.dump(qa_result, f, ensure_ascii=False, indent=4)
+        return save_file_path
 
     @staticmethod
     def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:

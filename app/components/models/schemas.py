@@ -23,8 +23,8 @@ class DedupRequest(BaseModel):
     dedup_threshold: float = 0.8
 
 class QualityControlRequest(BaseRequest):
-    qa_path: str
-    filename: str  # 添加文件名参数
+    content: List[dict]  # 问答对内容，是一个字典列表
+    filename: str  # 文件名
     model_name: str
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8
