@@ -18,6 +18,7 @@ async def evaluate_and_optimize_qa(
         service = QualityService(db)
         result = await service.evaluate_and_optimize_qa(
             qa_path=request.qa_path,
+            filename=request.filename,
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
@@ -51,4 +52,39 @@ async def get_quality_history(
             data={"records": records}
         )
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/qa_files")
+async def get_qa_files(
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取所有已生成的问答对文件列表"""
+    try:
+        service = QualityService(db)
+        files = await service.get_all_qa_files()
+        return APIResponse(
+            status="success",
+            message="获取文件列表成功",
+            data={"files": files}
+        )
+    except Exception as e:
+        logger.error(f"获取问答对文件列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/qa_content/{filename}")
+async def get_qa_content(
+    filename: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取指定问答对文件的内容"""
+    try:
+        service = QualityService(db)
+        content = await service.get_qa_content(filename)
+        return APIResponse(
+            status="success",
+            message="获取文件内容成功",
+            data=content
+        )
+    except Exception as e:
+        logger.error(f"获取问答对文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

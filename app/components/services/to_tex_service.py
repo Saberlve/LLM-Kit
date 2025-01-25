@@ -1,12 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
-from text_parse.to_tex import LatexConverter
-from utils.hparams import HyperParams
 from app.components.models.mongodb import TexConversionRecord
 import os
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
 from utils.helper import generate, split_chunk_by_tokens, split_text_into_chunks
 import json
 import logging
@@ -183,11 +180,11 @@ class ToTexService:
                     for i, result in enumerate(results)
                 ]
 
-                # 保存结果
+                # 保存结果到文件
                 with open(tex_file_path, 'w', encoding='utf-8') as json_file:
                     json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
-                # 更新记录状态
+                # 更新原始记录状态
                 await self.tex_records.update_one(
                     {"_id": record_id},
                     {
@@ -198,6 +195,18 @@ class ToTexService:
                         }
                     }
                 )
+
+                # 添加一条新记录，用于存储保存文件的信息
+                saved_file_record = {
+                    "input_file": os.path.basename(tex_file_path),  # 使用保存的文件名作为input_file
+                    "original_file": filename,  # 原始文件名
+                    "status": "completed",
+                    "content": json.dumps(data_to_save),
+                    "created_at": datetime.now(timezone.utc),
+                    "save_path": tex_file_path,
+                    "model_name": model_name
+                }
+                await self.tex_records.insert_one(saved_file_record)
 
                 return {
                     "record_id": str(record_id),

@@ -15,7 +15,7 @@ class QAGenerateService:
         self.qa_generations = db.llm_kit.qa_generations
         self.qa_pairs = db.llm_kit.qa_pairs
         self.error_logs = db.llm_kit.error_logs
-        self.tex_records = db.llm_kit.tex_records  # 修改为正确的集合名称
+        self.tex_records = db.llm_kit.tex_records
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -89,38 +89,42 @@ class QAGenerateService:
     async def get_all_tex_files(self):
         """获取所有已转换的tex文件记录，同名文件只返回最新的记录"""
         try:
-            # 使用聚合管道，按文件名分组并获取每组最新的记录
-            pipeline = [
-                # 只查找已完成的记录
-                {"$match": {"status": "completed"}},
-                
-                # 按文件名分组，保留最新的记录
-                {"$group": {
-                    "_id": "$input_file",
-                    "created_at": {"$max": "$created_at"},
-                    "latest_doc": {"$first": "$$ROOT"}
-                }},
-                
-                # 按创建时间降序排序
-                {"$sort": {"created_at": -1}},
-                
-                # 重新格式化输出
-                {"$project": {
-                    "_id": 0,
-                    "filename": "$_id",
-                    "created_at": 1
-                }}
-            ]
+            # 获取所有已完成的记录
+            records = await self.tex_records.find(
+                {"status": "completed"},
+                {"save_path": 1, "created_at": 1}
+            ).to_list(None)
             
-            cursor = self.tex_records.aggregate(pipeline)
-            files = []
-            async for record in cursor:
-                files.append({
-                    "filename": record["filename"],
-                    "created_at": record["created_at"]
-                })
+            # 按文件名分组，保留最新的记录
+            filename_dict = {}  # {filename: {"filename": filename, "created_at": created_at}}
+            
+            for record in records:
+                if not record.get("save_path"):
+                    continue
+                    
+                # 从save_path中提取文件名
+                filename = os.path.basename(record["save_path"])
+                created_at = record["created_at"]
+                
+                # 如果文件名已存在，比较创建时间
+                if filename in filename_dict:
+                    if created_at > filename_dict[filename]["created_at"]:
+                        filename_dict[filename] = {
+                            "filename": filename,
+                            "created_at": created_at
+                        }
+                else:
+                    filename_dict[filename] = {
+                        "filename": filename,
+                        "created_at": created_at
+                    }
+            
+            # 转换为列表并按创建时间降序排序
+            files = list(filename_dict.values())
+            files.sort(key=lambda x: x["created_at"], reverse=True)
             
             return files
+            
         except Exception as e:
             await self._log_error(str(e), "get_all_tex_files")
             raise Exception(f"获取tex文件列表失败: {str(e)}")

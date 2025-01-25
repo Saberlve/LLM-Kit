@@ -24,6 +24,7 @@ class DedupRequest(BaseModel):
 
 class QualityControlRequest(BaseRequest):
     qa_path: str
+    filename: str  # 添加文件名参数
     model_name: str
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8

@@ -13,6 +13,8 @@ class QualityService:
         self.quality_generations = db.llm_kit.quality_generations
         self.quality_records = db.llm_kit.quality_records
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+        self.qa_generations = db.llm_kit.qa_generations  # 添加对qa_generations的引用
+        self.qa_pairs = db.llm_kit.qa_pairs  # 添加对qa_pairs的引用
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -26,6 +28,7 @@ class QualityService:
     async def evaluate_and_optimize_qa(
             self,
             qa_path: str,
+            filename: str,
             save_path: str,
             SK: list,
             AK: list,
@@ -45,7 +48,7 @@ class QualityService:
 
             # 创建生成记录
             generation = QualityControlGeneration(
-                input_file=qa_path,
+                input_file=filename,
                 save_path=save_path,
                 model_name=model_name,
                 status="processing",
@@ -115,11 +118,27 @@ class QualityService:
                 if os.path.exists(result_path):
                     os.remove(result_path)
 
+            # 使用 QUALITY_ 前缀构建最终保存路径
+            quality_filename = f"QUALITY_{filename}"  # 添加QUALITY_前缀区分
+            final_save_path = os.path.join(
+                save_path,
+                f"{quality_filename}.json"
+            )
+
             # 保存最终结果
-            final_filename = f"quality_control_{os.path.basename(qa_path)}"
-            final_path = os.path.join(save_path, final_filename)
-            with open(final_path, 'w', encoding='utf-8') as f:
+            with open(final_save_path, 'w', encoding='utf-8') as f:
                 json.dump(all_qa_pairs, f, ensure_ascii=False, indent=4)
+
+            # 先删除之前同文件名的质量控制记录
+            await self.quality_records.delete_many({
+                "generation_id": {
+                    "$in": [
+                        doc["_id"] for doc in await self.quality_generations.find(
+                            {"input_file": filename, "_id": {"$ne": generation_id}}
+                        ).to_list(None)
+                    ]
+                }
+            })
 
             # 保存问答对到数据库
             qa_records = []
@@ -142,30 +161,39 @@ class QualityService:
             if qa_records:
                 await self.quality_records.insert_many(qa_records)
 
-            # 更新状态
+            # 更新旧记录状态为已覆盖
+            await self.quality_generations.update_many(
+                {"input_file": filename, "_id": {"$ne": generation_id}},
+                {"$set": {"status": "overwritten"}}
+            )
+
+            # 更新当前记录状态
             await self.quality_generations.update_one(
                 {"_id": generation_id},
                 {"$set": {
                     "status": "completed",
-                    "output_file": final_path  # 添加输出文件路径
+                    "save_path": final_save_path
                 }}
             )
 
             return {
                 "generation_id": str(generation_id),
+                "filename": filename,
                 "qa_pairs": all_qa_pairs,
                 "source_text": source_text,
-                "output_file": final_path  # 在返回结果中也包含输出文件路径
+                "save_path": final_save_path
             }
 
         except Exception as e:
             import traceback
             await self._log_error(str(e), "evaluate_and_optimize_qa", traceback.format_exc())
-            # 如果发生错误，更新状态为失败
             if generation_id:
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {"status": "failed"}}
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
                 )
             raise Exception(f"Quality control failed: {str(e)}")
 
@@ -204,3 +232,63 @@ class QualityService:
             }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")
+
+    async def get_all_qa_files(self):
+        """获取所有已生成的问答对文件列表"""
+        try:
+            # 获取所有已完成的记录
+            cursor = self.qa_generations.find(
+                {"status": "completed"},
+                sort=[("created_at", -1)]
+            )
+            
+            files = []
+            async for record in cursor:
+                files.append({
+                    "generation_id": str(record["_id"]),
+                    "input_file": record["input_file"],
+                    "save_path": record.get("save_path", ""),
+                    "model_name": record["model_name"],
+                    "domain": record["domain"],
+                    "status": record["status"],
+                    "created_at": record["created_at"]
+                })
+            
+            return files
+        except Exception as e:
+            await self._log_error(str(e), "get_all_qa_files")
+            raise Exception(f"获取问答对文件列表失败: {str(e)}")
+
+    async def get_qa_content(self, filename: str):
+        """根据文件名获取问答对内容"""
+        try:
+            # 从qa_generations中查找指定文件名的最新已完成记录
+            record = await self.qa_generations.find_one(
+                {
+                    "input_file": filename,
+                    "status": "completed"
+                },
+                sort=[("created_at", -1)]
+            )
+            
+            if not record:
+                raise Exception("文件不存在或未完成生成")
+            
+            # 从qa_pairs获取问答对内容
+            qa_cursor = self.qa_pairs.find({"generation_id": record["_id"]})
+            qa_pairs = []
+            async for qa in qa_cursor:
+                qa_pairs.append({
+                    "question": qa["question"],
+                    "answer": qa["answer"]
+                })
+                
+            return {
+                "filename": filename,
+                "created_at": record["created_at"],
+                "qa_pairs": qa_pairs,
+                "save_path": record.get("save_path", "")
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_qa_content")
+            raise Exception(f"获取问答对内容失败: {str(e)}")

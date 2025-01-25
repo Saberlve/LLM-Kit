@@ -322,3 +322,731 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 100, in get_parsed_content
     raise Exception(f"获取解析内容失败: {str(e)}")
 Exception: 获取解析内容失败: 未找到文件 tex33.tex 的解析记录
+2025-01-25 16:10:37,261 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:38,021 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:40,434 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:41,339 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:41,912 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:42,470 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:42,977 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:43,521 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:44,046 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:44,603 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:45,130 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:45,617 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:46,136 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:46,623 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:47,215 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:47,741 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:48,204 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:48,595 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:49,067 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:49,661 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:50,268 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:50,810 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:51,242 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:51,610 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:52,071 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:52,461 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:52,826 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:53,189 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:53,454 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:53,816 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,074 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,201 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,365 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,502 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,663 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,783 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:54,957 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,091 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,259 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,392 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,554 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,673 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:55,846 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:56,002 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:56,158 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:56,311 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:56,476 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:10:56,619 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 141, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 152, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:41:28,008 - app.components.routers.qa_generate - ERROR - 获取tex文件列表失败: 获取tex文件列表失败: 'QAGenerateService' object has no attribute 'tex_records'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 115, in get_all_tex_files
+    cursor = self.tex_records.aggregate(pipeline)
+AttributeError: 'QAGenerateService' object has no attribute 'tex_records'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 18, in get_tex_files
+    files = await service.get_all_tex_files()
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 129, in get_all_tex_files
+    raise Exception(f"获取tex文件列表失败: {str(e)}")
+Exception: 获取tex文件列表失败: 'QAGenerateService' object has no attribute 'tex_records'
+2025-01-25 16:42:22,787 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 'QAGenerateService' object has no attribute 'tex_conversions'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 135, in get_tex_content
+    record = await self.tex_conversions.find_one(
+AttributeError: 'QAGenerateService' object has no attribute 'tex_conversions'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 155, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 'QAGenerateService' object has no attribute 'tex_conversions'
+2025-01-25 16:43:03,788 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 144, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 155, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-25 16:43:33,528 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 144, in get_tex_content
+    raise Exception("文件不存在或未完成转换")
+Exception: 文件不存在或未完成转换
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 36, in get_tex_content
+    content = await service.get_tex_content(filename)
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 155, in get_tex_content
+    raise Exception(f"获取tex内容失败: {str(e)}")
+Exception: 获取tex内容失败: 文件不存在或未完成转换
