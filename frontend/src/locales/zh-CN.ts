@@ -74,7 +74,7 @@ export default {
     description: "配置系统参数"
   },
 
-  data:{
+  data: {
     title: "数据管理",
     description: "创建与管理数据池，上传数据集到数据池，支持对数据进行各种操作",
     create_pool: "创建数据池",
@@ -99,7 +99,7 @@ export default {
       p7: "不会",
       p8: "被保存。",
     },
-    table:{
+    table: {
       col_name: "名称",
       col_time: "创建时间",
       col_size: "数据量",
@@ -114,11 +114,12 @@ export default {
       yes: "删除",
       no: "不"
     },
-    uploader:{
+    uploader: {
       col_filename: "文件名",
       col_datasetname: "数据集名",
       col_des: "描述",
       col_option: "操作",
+      col_filesize:"文件大小",
       datapool_detail: "数据池详细信息",
       zone: "暂存区",
       format: "格式",
@@ -153,68 +154,88 @@ export default {
       des: "数据池描述",
       enter_des: "请输入数据池描述"
     },
-    filter:{
+    filter: {
       title: "数据筛选",
       p1: "原始数据集：",
       p2: "保留比例：",
       name: "新数据集名称：",
       des: "新数据集描述：",
       begin: "开始筛选"
-    }
-  },
-  deduplication: {
-    title: "数据集去重",
-    description: "对数据集进行去重操作以保证数据集质量",
-    create_task: "创建去重任务",
-    task_list: "去重任务列表",
-    task_name: "任务名称",
-    task_status: "任务状态",
-    task_time: "任务时间",
-    action: "操作",
-    view_logs: "查看日志",
-    download_logs: "下载日志",
-    search_placeholder: "输入以逗号分隔的标签",
-    search: "查找",
-    wordcloud: "词云",
-    close: "关闭",
-    dedup_process: {
-      upload_files:"上传文件",
-      select_models:"选择模型",
-      start:"开始",
-      progress:"进度",
-      remain_time: "剩余时间",
-      wait:"等待"
     },
-    task_detail: {
-      title: "任务详细信息",
+    construct: {
+      title: "数据构建",
+      p1: "原始数据集",
+      AK: "API KEY：",
+      AU: "API URL：",
+      prompt: "提示词：",
+      name: "新数据集名称：",
+      des: "新数据集描述：",
+      begin: "开始转换",
+      zone: "参数",
+      model_select:"模型选择",
+      select_model:'点击选择模型',
+      no_file: "暂存区内无已上传文件",
+      submit: "提交暂存区的所有文件",
+      optional: "(可选)",
+      model_name: "模型名称：",
+      progress: "目前进度：",
+      remain_time: "估计剩余时间：",
+      constructing: "正在构建中。。。",
+      construct_finish: "完成构建！",
+      wait: "需要时间较长，请耐心等待。",
+      subtitle: "构建一个问答对数据集",
+      create_task: "创建一个构建任务",
+      next_step: "下一步",
+      previous_step: "上一步",
+    },
+  },
+
+    deduplication: {
+      title: "数据集去重",
+      description: "对数据集进行去重操作以保证数据集质量",
+      create_task: "创建去重任务",
+      task_list: "去重任务列表",
       task_name: "任务名称",
       task_status: "任务状态",
       task_time: "任务时间",
-      task_description: "任务描述",
-      task_input: "任务输入",
-      task_output: "任务输出",
-      task_logs: "任务日志",
-      task_message: "任务消息",
-      task_source: "任务源",
-      task_code: "任务代码",
-      task_action: "任务操作",
+      action: "操作",
       view_logs: "查看日志",
       download_logs: "下载日志",
-      close: "关闭"
+      search_placeholder: "输入以逗号分隔的标签",
+      search: "查找",
+      wordcloud: "词云",
+      close: "关闭",
+      dedup_process: {
+        upload_files: "上传文件",
+        select_models: "选择模型",
+        start: "开始",
+        progress: "进度",
+        remain_time: "剩余时间",
+        wait: "等待"
+      },
+      task_detail: {
+        title: "任务详细信息",
+        task_name: "任务名称",
+        task_status: "任务状态",
+        task_time: "任务时间",
+        task_description: "任务描述",
+        task_input: "任务输入",
+        task_output: "任务输出",
+        task_logs: "任务日志",
+        task_message: "任务消息",
+        task_source: "任务源",
+        task_code: "任务代码",
+        task_action: "任务操作",
+        view_logs: "查看日志",
+        download_logs: "下载日志",
+        close: "关闭"
+      }
+    },
+    eval: {
+      title: "数据集质控",
+      subtitle: "评估数据集的质量优良",
+      create_task: "创建评估任务",
+      next_step: "下一步",
+      previous_step: "上一步",
     }
-  },
-  eval: {
-    title: "数据集质控",
-    subtitle: "评估数据集的质量优良",
-    create_task: "创建评估任务",
-    next_step: "下一步",
-    previous_step: "上一步",
-  },
-  construct: {
-    title: "数据集构建",
-    subtitle: "构建一个问答对数据集",
-    create_task: "创建一个构建任务",
-    next_step: "下一步",
-    previous_step: "上一步",
-  }
 };

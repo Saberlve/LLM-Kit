@@ -26,8 +26,7 @@ export default {
     data: {
       data_pool_selector: "data pool:",
       data_pool_des: "select a data pool",
-      data_set_selector: "data set:",
-      data_set_des: "select a dataset from the above data pool"
+      data_set_selector: "data set:"
     },
     eval_metrics_description: {
       acc_des: "Number of correctly predicted samples/total number of samples",
@@ -93,6 +92,30 @@ export default {
       p2: "The data will not be recoverable after deletion.",
       yes: "Delete",
       no: "No"
+    },
+    construct: {
+      title: "title",
+      p1: "原始数据集",
+      AK: "API KEY：",
+      AU: "API URL：",
+      prompt: "prompt：",
+      name: "name：",
+      des: "des：",
+      begin: "begin",
+      zone: "zone",
+      model_select:"model_select",
+      no_file: "no_file",
+      submit: "submit",
+      model_name: "model_name：",
+      progress: "progress：",
+      remain_time: "remain_time：",
+      constructing: "constructing",
+      construct_finish: "construct_finish！",
+      wait: "wait",
+      subtitle: "subtitle",
+      create_task: "create_task",
+      next_step: "next_step",
+      previous_step: "previous_step",
     },
     uploader: {
       col_filename: "Filename",
