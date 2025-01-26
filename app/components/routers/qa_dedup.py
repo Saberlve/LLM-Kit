@@ -4,9 +4,16 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import DedupRequest, APIResponse
 from app.components.services.qa_dedup_service import QADedupService
+from pydantic import BaseModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class FileIDRequest(BaseModel):
+    file_id: str
+
+class RecordIDRequest(BaseModel):
+    record_id: str
 
 @router.post("/deduplicate_qa")
 async def deduplicate_qa(
@@ -47,16 +54,16 @@ async def get_dedup_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/dedup/progress/{record_id}")
+@router.post("/dedup/progress")
 async def get_dedup_progress(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取去重进度"""
     try:
         from bson import ObjectId
         record = await db.llm_kit.dedup_records.find_one(
-            {"_id": ObjectId(record_id)}
+            {"_id": ObjectId(request.record_id)}
         )
         
         if not record:
@@ -74,15 +81,15 @@ async def get_dedup_progress(
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/quality_content/{file_id}")
+@router.post("/quality_content")
 async def get_quality_content(
-    file_id: str,
+    request: FileIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定quality文件的内容"""
     try:
         service = QADedupService(db)
-        content = await service.get_quality_content(file_id)
+        content = await service.get_quality_content(request.file_id)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
@@ -92,15 +99,15 @@ async def get_quality_content(
         logger.error(f"获取quality文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/dedup_content/{file_id}")
+@router.post("/dedup_content")
 async def get_dedup_content(
-    file_id: str,
+    request: FileIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定去重文件的内容"""
     try:
         service = QADedupService(db)
-        content = await service.get_dedup_content(file_id)
+        content = await service.get_dedup_content(request.file_id)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
