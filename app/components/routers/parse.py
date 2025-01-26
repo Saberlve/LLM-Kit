@@ -19,6 +19,23 @@ from loguru import logger
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+import os
+
+def check_parsed_file_exists(file_id: str) -> int:
+    """
+    检查 parsed_files/parsed_file/{file_id} 是否存在
+    :param file_id: 文件ID
+    :return: 如果文件存在返回1，否则返回0
+    """
+    # 构造文件路径
+    file_path = os.path.join("parsed_files", "parsed_file", file_id)
+
+    # 检查文件是否存在
+    if os.path.exists(file_path):
+        return 1
+    else:
+        return 0
+
 
 class UploadedFile(BaseModel):
     filename: str = Field(..., alias="filename")
@@ -32,7 +49,7 @@ class UploadedFile(BaseModel):
 
 class UploadedBinaryFile(BaseModel):
     filename: str = Field(..., alias="filename")
-    content: Optional[bytes] = Field(None, alias="content")  
+    content: Optional[bytes] = Field(None, alias="content")
     file_type: str = Field(..., alias="file_type")
     mime_type: str = Field(..., alias="mime_type")
     size: int = Field(..., alias="size")
@@ -51,10 +68,16 @@ class UnifiedFileListResponse(BaseModel):
     message: str
     data: List[dict]
 
+class FileIDRequest(BaseModel):
+    file_id: str = Field(..., description="File ID to operate on")
+
+class RecordIDRequest(BaseModel):
+    record_id: str = Field(..., description="Record ID to retrieve progress for")
+
 @router.post("/upload")
 async def upload_file(
-    request: FileUploadRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FileUploadRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """保存上传的文件到数据库"""
     try:
@@ -62,10 +85,10 @@ async def upload_file(
         supported_types = ['tex', 'txt', 'json', 'pdf']
         if request.file_type not in supported_types:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Unsupported file type: {request.file_type}. Supported types are: {', '.join(supported_types)}"
             )
-        
+
         uploaded_file = UploadedFile(
             filename=request.filename,
             content=request.content,
@@ -73,11 +96,11 @@ async def upload_file(
             size=len(request.content.encode('utf-8')),
             status="pending"
         )
-        
+
         result = await db.llm_kit.uploaded_files.insert_one(
             uploaded_file.dict(by_alias=True)
         )
-        
+
         return APIResponse(
             status="success",
             message="File uploaded successfully",
@@ -91,8 +114,8 @@ async def upload_file(
 
 @router.post("/parse")
 async def parse_file(
-    request: ParseRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: ParseRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """解析最近上传的文件并保存记录"""
     try:
@@ -101,10 +124,10 @@ async def parse_file(
             {"status": "pending"},
             sort=[("created_at", -1)]
         )
-        
+
         if not latest_file:
             raise HTTPException(status_code=404, detail="No pending file found")
-        
+
         # 创建初始记录
         parse_record = ParseRecord(
             input_file=latest_file['filename'],
@@ -118,26 +141,26 @@ async def parse_file(
             parse_record.dict(by_alias=True)
         )
         record_id = result.inserted_id
-        
+
         try:
             # 1. 更新文件准备进度
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {"progress": 20}}
             )
-            
+
             # 2. 构建完整的文件名
             filename = f"{latest_file['filename']}.{latest_file['file_type']}"
-            
+
             # 3. 准备解析服务
             service = ParseService(db)
-            
+
             # 4. 执行解析（解析过程中会更新进度）
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {"progress": 50}}
             )
-            
+
             result = await service.parse_content(
                 content=latest_file["content"],
                 filename=filename,
@@ -147,13 +170,13 @@ async def parse_file(
                 parallel_num=request.parallel_num,
                 record_id=str(record_id)
             )
-            
+
             # 5. 更新文件状态和进度
             await db.llm_kit.uploaded_files.update_one(
                 {"_id": latest_file["_id"]},
                 {"$set": {"status": "processed"}}
             )
-            
+
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {
@@ -163,7 +186,7 @@ async def parse_file(
                     "parsed_file_path": result.get("parsed_file_path", "")
                 }}
             )
-            
+
             return APIResponse(
                 status="success",
                 message="File parsed successfully",
@@ -172,7 +195,7 @@ async def parse_file(
                     **result
                 }
             )
-            
+
         except Exception as e:
             # 更新失败状态
             await db.llm_kit.parse_records.update_one(
@@ -180,41 +203,54 @@ async def parse_file(
                 {"$set": {"status": "failed"}}
             )
             raise e
-            
+
     except Exception as e:
         logger.error(f"解析文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@router.post("/check-parsed-file")
+async def check_parsed_file(request: FileIDRequest):
+    """
+    检查 parsed_files/parsed_file/{file_id} 是否存在
+    """
+    try:
+        file_id = request.file_id  # 从请求体中提取 file_id
+        result = check_parsed_file_exists(file_id)
+        return {"exists": result}
+    except Exception as e:
+        logger.error(f"检查文件失败 file_id: {file_id}, 错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/files/all")
 async def list_all_files(db: AsyncIOMotorClient = Depends(get_database)):
-    """获取所有上传的文件(文本和二进制)并按时间降序排序"""
+    """获取所有上传的文件(文本和二进制)并按时间降序排序, 包含文件ID"""
     try:
         text_files_cursor = db.llm_kit.uploaded_files.find(projection={"content": 0})
         binary_files_cursor = db.llm_kit.uploaded_binary_files.find(projection={"content": 0})
         text_files = []
         async for doc in text_files_cursor:
             text_files.append({
+                "file_id": str(doc.get("_id")), # 添加 file_id
                 "filename": doc.get("filename"),
-                "content": doc.get("content"),  
+                "content": doc.get("content"),
                 "file_type": doc.get("file_type"),
                 "size": doc.get("size"),
                 "status": doc.get("status"),
                 "created_at": doc.get("created_at"),
-                "type": "text" 
+                "type": "text"
             })
 
         binary_files = []
         async for doc in binary_files_cursor:
             binary_files.append({
+                "file_id": str(doc.get("_id")), # 添加 file_id
                 "filename": doc.get("filename"),
                 "file_type": doc.get("file_type"),
                 "mime_type": doc.get("mime_type"),
                 "size": doc.get("size"),
                 "status": doc.get("status"),
                 "created_at": doc.get("created_at"),
-                "type": "binary"  
+                "type": "binary"
             })
 
         #合并列表并按照时间排序
@@ -231,7 +267,7 @@ async def list_all_files(db: AsyncIOMotorClient = Depends(get_database)):
 
 @router.get("/parse/history")
 async def get_parse_history(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取解析历史记录"""
     try:
@@ -245,20 +281,177 @@ async def get_parse_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/parse/file")
+async def parse_specific_file(
+        request: FileIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    """解析指定的上传文件，根据文件类型自动选择解析方式"""
+    try:
+        from bson import ObjectId
+        file_id = request.file_id
+        print(file_id)
+        # 尝试从文本文件集合中查找
+        text_file = await db.llm_kit.uploaded_files.find_one({"_id": ObjectId(file_id)})
+        binary_file = None
+        file_source = "text"
+
+        if not text_file:
+            # 如果没找到，尝试从二进制文件集合中查找
+            binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": ObjectId(file_id)})
+            if not binary_file:
+                raise HTTPException(status_code=404, detail="File not found")
+            file_source = "binary"
+            file = binary_file
+        else:
+            file = text_file
+
+
+        # 创建解析记录
+        parse_record = ParseRecord(
+            input_file=file['filename'],
+            status="processing",
+            file_type=file.get('file_type') or file.get('mime_type') or "unknown", # Handle both text and binary
+            save_path=f"./parsed_files/{file_id}", # 默认保存路径或从请求中获取
+            task_type="parse" if file_source == "text" else "ocr",
+            progress=0
+        )
+        result = await db.llm_kit.parse_records.insert_one(
+            parse_record.dict(by_alias=True)
+        )
+        record_id = result.inserted_id
+
+        try:
+            if file_source == "text":
+                # Text file parsing logic (using ParseService, similar to /parse endpoint)
+                service = ParseService(db)
+                parse_result = await service.parse_content(
+                    content=file["content"],
+                    filename=file["filename"] + "." + file["file_type"],
+                    save_path="./parsed_files", # 默认保存路径或从请求中获取
+                    SK="YOUR_SK",  # 从配置或请求中获取
+                    AK="YOUR_AK",  # 从配置或请求中获取
+                    parallel_num=1, # 或从请求中获取
+                    record_id=str(record_id)
+                )
+            elif file_source == "binary":
+                # Binary file OCR logic (similar to /ocr endpoint, but using content from DB)
+                if binary_file and binary_file["content"]:
+                    ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
+                    save_path = os.path.join("./parsed_files", file["filename"] + '.txt') # Define save path
+                    with open(save_path, 'w', encoding='utf-8') as f:
+                        f.write(ocr_result)
+                    parse_result = {"content": ocr_result, "parsed_file_path": save_path} # Structure to match text parse result
+                else:
+                    raise HTTPException(status_code=500, detail="Binary file content missing")
+
+            # Update parse record with result and status
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "content": parse_result.get("content", ""),
+                    "parsed_file_path": parse_result.get("parsed_file_path", "")
+                }}
+            )
+            return APIResponse(status="success", message="File parsed successfully", data={"record_id": str(record_id), **parse_result})
+
+
+        except Exception as e:
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"status": "failed"}}
+            )
+            raise e
+
+    except Exception as e:
+        logger.error(f"解析文件失败 file_id: {request.file_id}, 错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/parse/ocr/")
+async def ocr_specific_file(
+        request: FileIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    """对指定的二进制文件进行OCR识别"""
+    try:
+        from bson import ObjectId
+        file_id = request.file_id
+
+        # 获取二进制文件记录
+        binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": ObjectId(file_id)})
+        if not binary_file:
+            raise HTTPException(status_code=404, detail="Binary file not found")
+
+        # 创建解析记录
+        parse_record = ParseRecord(
+            input_file=binary_file['filename'],
+            status="processing",
+            file_type=binary_file['file_type'],
+            save_path="./parsed_files", # 默认保存路径或从请求中获取
+            task_type="ocr",
+            progress=0
+        )
+        result = await db.llm_kit.parse_records.insert_one(
+            parse_record.dict(by_alias=True)
+        )
+        record_id = result.inserted_id
+
+        try:
+            # OCR processing
+            if binary_file and binary_file["content"]:
+                ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
+                save_path = os.path.join("./parsed_files", binary_file["filename"] + '.txt')
+                with open(save_path, 'w', encoding='utf-8') as f:
+                    f.write(ocr_result)
+                parse_result = {"content": ocr_result, "parsed_file_path": save_path}
+            else:
+                raise HTTPException(status_code=500, detail="Binary file content missing")
+
+
+            # Update parse record
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "content": parse_result.get("content", ""),
+                    "parsed_file_path": parse_result.get("parsed_file_path", "")
+                }}
+            )
+            return APIResponse(status="success", message="OCR completed successfully", data={"record_id": str(record_id), **parse_result})
+
+
+        except Exception as e:
+            await db.llm_kit.parse_records.update_one(
+                {"_id": record_id},
+                {"$set": {"status": "failed"}}
+            )
+            raise e
+
+    except Exception as e:
+        logger.error(f"OCR 文件失败 file_id: {request.file_id}, 错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/ocr")
 async def ocr_file(
-    request: OCRRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: OCRRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """对文件进行OCR识别"""
     try:
         # 确保文件存在
         if not os.path.exists(request.file_path):
             raise HTTPException(status_code=400, detail="File not found")
-            
+
         # 确保保存路径存在
         os.makedirs(os.path.dirname(request.save_path), exist_ok=True)
-        
+
         # 创建初始记录
         parse_record = ParseRecord(
             input_file=os.path.basename(request.file_path),
@@ -272,7 +465,7 @@ async def ocr_file(
             parse_record.dict(by_alias=True)
         )
         record_id = result.inserted_id
-        
+
         try:
             # OCR处理过程分为三个步骤：加载模型、处理图片、保存结果
             # 1. 更新加载模型进度
@@ -280,19 +473,19 @@ async def ocr_file(
                 {"_id": record_id},
                 {"$set": {"progress": 30}}
             )
-            
+
             # 2. 执行OCR识别
             result = single_ocr(request.file_path)
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {"progress": 70}}
             )
-            
+
             # 3. 保存结果
             save_path = os.path.join(request.save_path, os.path.basename(request.file_path) + '.txt')
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(result)
-            
+
             # 更新完成状态
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
@@ -303,7 +496,7 @@ async def ocr_file(
                     "parsed_file_path": save_path
                 }}
             )
-            
+
             return APIResponse(
                 status="success",
                 message="OCR completed successfully",
@@ -320,14 +513,14 @@ async def ocr_file(
                 {"$set": {"status": "failed"}}
             )
             raise e
-            
+
     except Exception as e:
         logger.error(f"OCR处理失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/upload/latest")
 async def get_latest_upload(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取最近一次上传的文件内容"""
     try:
@@ -335,14 +528,14 @@ async def get_latest_upload(
         latest_file = await db.llm_kit.uploaded_files.find_one(
             sort=[("created_at", -1)]
         )
-        
+
         if not latest_file:
             return APIResponse(
                 status="success",
                 message="No uploaded files found",
                 data=None
             )
-            
+
         return APIResponse(
             status="success",
             message="Latest file retrieved successfully",
@@ -362,22 +555,22 @@ async def get_latest_upload(
 
 @router.post("/upload/binary")
 async def upload_binary_file(
-    file: UploadFile = File(...),
-    db: AsyncIOMotorClient = Depends(get_database)
+        file: UploadFile = File(...),
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """上传二进制文件(图片、PDF等)到数据库"""
     try:
         # 读取文件内容
         content = await file.read()
-        
+
         # 获取文件类型
         file_type = os.path.splitext(file.filename)[1].lower().replace('.', '')
-        
+
         # 获取MIME类型
         mime_type, _ = mimetypes.guess_type(file.filename)
         if not mime_type:
             mime_type = file.content_type
-        
+
         # 验证文件类型
         allowed_types = ['pdf', 'jpg', 'jpeg', 'png']
         if file_type not in allowed_types:
@@ -385,7 +578,7 @@ async def upload_binary_file(
                 status_code=400,
                 detail=f"Unsupported file type. Allowed types: {', '.join(allowed_types)}"
             )
-        
+
         # 创建文件记录
         uploaded_file = UploadedBinaryFile(
             filename=file.filename,
@@ -395,12 +588,12 @@ async def upload_binary_file(
             size=len(content),
             status="pending"
         )
-        
+
         # 保存到数据库
         result = await db.llm_kit.uploaded_binary_files.insert_one(
             uploaded_file.dict(by_alias=True)
         )
-        
+
         return APIResponse(
             status="success",
             message="Binary file uploaded successfully",
@@ -421,7 +614,7 @@ async def upload_binary_file(
 
 @router.get("/upload/binary/latest")
 async def get_latest_binary_upload(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取最近一次上传的二进制文件信息（不包含文件内容）"""
     try:
@@ -429,14 +622,14 @@ async def get_latest_binary_upload(
         latest_file = await db.llm_kit.uploaded_binary_files.find_one(
             sort=[("created_at", -1)]
         )
-        
+
         if not latest_file:
             return APIResponse(
                 status="success",
                 message="No uploaded binary files found",
                 data=None
             )
-            
+
         return APIResponse(
             status="success",
             message="Latest binary file info retrieved successfully",
@@ -454,25 +647,26 @@ async def get_latest_binary_upload(
         logger.error(f"获取最近上传的二进制文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/upload/binary/{file_id}/content")
+@router.get("/upload/binary/content/")
 async def get_binary_file_content(
-    file_id: str,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FileIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """通过文件ID获取二进制文件内容"""
     try:
         from bson import ObjectId
-        
+        file_id = request.file_id
+
         # 获取文件记录
         file_record = await db.llm_kit.uploaded_binary_files.find_one(
             {"_id": ObjectId(file_id)}
         )
-        
+
         if not file_record:
             raise HTTPException(status_code=404, detail="File not found")
-            
+
         from fastapi.responses import Response
-        
+
         # 返回二进制内容
         return Response(
             content=file_record["content"],
@@ -485,19 +679,20 @@ async def get_binary_file_content(
         logger.error(f"获取二进制文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/task/progress/{record_id}")
+@router.get("/task/progress/")
 async def get_task_progress(
-    record_id: str,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: RecordIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取任务进度"""
     try:
         from bson import ObjectId
+        record_id = request.record_id
         record = await db.llm_kit.parse_records.find_one({"_id": ObjectId(record_id)})
-        
+
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
-        
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
