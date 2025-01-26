@@ -269,3 +269,85 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
 Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+2025-01-26 14:52:38,524 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmplcx30ncq.txt' -> 'result/parsed_file\\test_parsed.txt'
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmplcx30ncq.txt' -> 'result/parsed_file\\test_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
+    raise e
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
+    result = await service.parse_content(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmplcx30ncq.txt' -> 'result/parsed_file\\test_parsed.txt'
+2025-01-26 14:53:00,900 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795da971e957ef81ff27010, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpdv65ytd6.txt' -> './parsed_files\\parsed_file\\test003_parsed.txt'
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpdv65ytd6.txt' -> './parsed_files\\parsed_file\\test003_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 405, in parse_specific_file
+    raise e
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 367, in parse_specific_file
+    parse_result = await service.parse_content(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpdv65ytd6.txt' -> './parsed_files\\parsed_file\\test003_parsed.txt'
+2025-01-26 14:55:58,515 - app.components.routers.to_tex - ERROR - 删除LaTeX记录失败 record_id: 6795dc181e957ef81ff27019, 错误: 404: Record not found
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\to_tex.py", line 140, in delete_tex_record
+    raise HTTPException(status_code=404, detail="Record not found")
+fastapi.exceptions.HTTPException: 404: Record not found
+2025-01-26 14:56:02,736 - app.components.routers.to_tex - ERROR - 获取进度失败: 404: Record not found
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\to_tex.py", line 113, in get_tex_progress
+    raise HTTPException(status_code=404, detail="Record not found")
+fastapi.exceptions.HTTPException: 404: Record not found
+2025-01-26 14:58:02,603 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 78, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+    raise e
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
+    chunks = json.loads(content)
+             ^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-01-26 15:06:56,082 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 78, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+    raise e
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
+    chunks = json.loads(content)
+             ^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
