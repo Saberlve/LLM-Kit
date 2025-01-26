@@ -13,427 +13,259 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 133, in delete_tex_record
     raise HTTPException(status_code=404, detail="Record not found")
 fastapi.exceptions.HTTPException: 404: Record not found
-2025-01-26 12:24:04,048 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpyuc9faga.txt' -> 'result/parsed_file\\test_prase.txt_parsed.txt'
+2025-01-26 11:02:34,741 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
     os.rename(parsed_file_path, new_file_path)
-FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpyuc9faga.txt' -> 'result/parsed_file\\test_prase.txt_parsed.txt'
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 
 During handling of the above exception, another exception occurred:
 
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpyuc9faga.txt' -> 'result/parsed_file\\test_prase.txt_parsed.txt'
-2025-01-26 12:37:42,450 - app.components.routers.parse - ERROR - 删除记录失败 record_id: 6795bbdc9aa55bb32ebe84e6, 错误: 404: Record not found
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:37,364 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 759, in delete_record
-    raise HTTPException(status_code=404, detail="Record not found")
-fastapi.exceptions.HTTPException: 404: Record not found
-2025-01-26 12:44:33,735 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:44:48,605 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:44:49,417 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:44:50,091 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:45:22,018 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:47:05,063 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:47:32,107 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:47:33,941 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 190, in parse_content
-    raise ValueError(
-ValueError: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
-    raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
-    raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: Unsupported file type: string. Supported types are: tex, txt, json, pdf
-2025-01-26 12:48:22,194 - app.components.routers.parse - ERROR - 解析文件失败: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpg_rj_mwt.txt' -> 'result/parsed_file\\test_parsed.txt'
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
     os.rename(parsed_file_path, new_file_path)
-FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpg_rj_mwt.txt' -> 'result/parsed_file\\test_parsed.txt'
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 
 During handling of the above exception, another exception occurred:
 
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 219, in parse_file
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 178, in parse_file
-    result = await service.parse_content(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
-Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: 'result/parsed_file\\tmpg_rj_mwt.txt' -> 'result/parsed_file\\test_parsed.txt'
-2025-01-26 12:58:43,654 - app.components.routers.parse - ERROR - 检查文件是否存在失败: '6795bead9aa55bb32ebe85051' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:37,850 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 236, in check_parsed_file
-    {"_id": ObjectId(request.file_id)}
-            ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\bson\objectid.py", line 105, in __init__
-    self.__validate(oid)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\bson\objectid.py", line 193, in __validate
-    _raise_invalid_id(oid)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\bson\objectid.py", line 38, in _raise_invalid_id
-    raise InvalidId(
-bson.errors.InvalidId: '6795bead9aa55bb32ebe85051' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
-2025-01-26 13:10:00,554 - app.components.routers.parse - ERROR - OCR处理失败: Torch not compiled with CUDA enabled
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 553, in ocr_file
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 516, in ocr_file
-    result = single_ocr(request.file_path)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\text_parse\parse.py", line 14, in single_ocr
-    model = AutoModel.from_pretrained('AI-ModelScope/GOT-OCR2_0', trust_remote_code=True, low_cpu_mem_usage=True, device_map='cuda', use_safetensors=True, pad_token_id=tokenizer.eos_token_id)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\modelscope\utils\hf_util.py", line 351, in from_pretrained
-    module_obj = module_class.from_pretrained(model_dir, *model_args,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\models\auto\auto_factory.py", line 559, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4225, in from_pretrained
-    ) = cls._load_pretrained_model(
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4728, in _load_pretrained_model
-    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
-                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 993, in _load_state_dict_into_meta_model
-    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\accelerate\utils\modeling.py", line 330, in set_module_tensor_to_device
-    new_value = value.to(device)
-                ^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\torch\cuda\__init__.py", line 284, in _lazy_init
-    raise AssertionError("Torch not compiled with CUDA enabled")
-AssertionError: Torch not compiled with CUDA enabled
-2025-01-26 13:10:23,138 - app.components.routers.parse - ERROR - OCR处理失败: Torch not compiled with CUDA enabled
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:38,226 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 553, in ocr_file
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 516, in ocr_file
-    result = single_ocr(request.file_path)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\text_parse\parse.py", line 14, in single_ocr
-    model = AutoModel.from_pretrained('AI-ModelScope/GOT-OCR2_0', trust_remote_code=True, low_cpu_mem_usage=True, device_map='cuda', use_safetensors=True, pad_token_id=tokenizer.eos_token_id)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\modelscope\utils\hf_util.py", line 351, in from_pretrained
-    module_obj = module_class.from_pretrained(model_dir, *model_args,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\models\auto\auto_factory.py", line 559, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4225, in from_pretrained
-    ) = cls._load_pretrained_model(
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4728, in _load_pretrained_model
-    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
-                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 993, in _load_state_dict_into_meta_model
-    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\accelerate\utils\modeling.py", line 330, in set_module_tensor_to_device
-    new_value = value.to(device)
-                ^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\torch\cuda\__init__.py", line 284, in _lazy_init
-    raise AssertionError("Torch not compiled with CUDA enabled")
-AssertionError: Torch not compiled with CUDA enabled
-2025-01-26 13:25:53,773 - app.components.routers.parse - ERROR - OCR处理失败: Torch not compiled with CUDA enabled
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:03:42,163 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 553, in ocr_file
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 516, in ocr_file
-    result = single_ocr(request.file_path)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\text_parse\parse.py", line 14, in single_ocr
-    model = AutoModel.from_pretrained('AI-ModelScope/GOT-OCR2_0', trust_remote_code=True, low_cpu_mem_usage=True, device_map='cuda', use_safetensors=True, pad_token_id=tokenizer.eos_token_id)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\modelscope\utils\hf_util.py", line 351, in from_pretrained
-    module_obj = module_class.from_pretrained(model_dir, *model_args,
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\models\auto\auto_factory.py", line 559, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4225, in from_pretrained
-    ) = cls._load_pretrained_model(
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 4728, in _load_pretrained_model
-    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
-                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\transformers\modeling_utils.py", line 993, in _load_state_dict_into_meta_model
-    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\accelerate\utils\modeling.py", line 330, in set_module_tensor_to_device
-    new_value = value.to(device)
-                ^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\torch\cuda\__init__.py", line 310, in _lazy_init
-    raise AssertionError("Torch not compiled with CUDA enabled")
-AssertionError: Torch not compiled with CUDA enabled
-2025-01-26 13:36:38,769 - app.components.routers.parse - ERROR - 获取二进制文件内容失败: 'latin-1' codec can't encode characters in position 22-25: ordinal not in range(256)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:06:36,321 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 67958b7e555fd5df1912ebec, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 727, in get_binary_file_content
-    return Response(
-           ^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 45, in __init__
-    self.init_headers(headers)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 60, in init_headers
-    raw_headers = [(k.lower().encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()]
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 60, in <listcomp>
-    raw_headers = [(k.lower().encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()]
-                                                 ^^^^^^^^^^^^^^^^^^^
-UnicodeEncodeError: 'latin-1' codec can't encode characters in position 22-25: ordinal not in range(256)
-2025-01-26 13:57:22,561 - app.components.routers.to_tex - ERROR - 获取进度失败: 404: Record not found
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\to_tex.py", line 106, in get_tex_progress
-    raise HTTPException(status_code=404, detail="Record not found")
-fastapi.exceptions.HTTPException: 404: Record not found
-2025-01-26 14:06:18,258 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
-Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:08:21,553 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+2025-01-26 11:06:40,611 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 67958b7e555fd5df1912ebec, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:08:29,621 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+2025-01-26 11:10:19,682 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:09:09,535 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:19,388 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:12:17,923 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:21,206 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:14:15,542 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:21,730 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\qa_generate.py", line 68, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
     raise e
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-             ^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\Python\Lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 14:30:57,613 - app.components.routers.parse - ERROR - 获取二进制文件内容失败: 'latin-1' codec can't encode characters in position 22-25: ordinal not in range(256)
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,112 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
 Traceback (most recent call last):
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 727, in get_binary_file_content
-    return Response(
-           ^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 45, in __init__
-    self.init_headers(headers)
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 60, in init_headers
-    raw_headers = [(k.lower().encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()]
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\venv\Lib\site-packages\starlette\responses.py", line 60, in <listcomp>
-    raw_headers = [(k.lower().encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()]
-                                                 ^^^^^^^^^^^^^^^^^^^
-UnicodeEncodeError: 'latin-1' codec can't encode characters in position 22-25: ordinal not in range(256)
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,408 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,671 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,990 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:13:39,589 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a80b4a09e7157845e959, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'

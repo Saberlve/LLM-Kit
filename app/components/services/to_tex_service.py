@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.helper import generate, split_chunk_by_tokens, split_text_into_chunks
 import json
 import logging
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class ToTexService:
                 # 重新格式化输出
                 {"$project": {
                     "_id": 0,
+                    "file_id": "$latest_doc._id",
                     "filename": "$_id",
                     "created_at": 1,
                     "file_type": 1
@@ -80,6 +82,7 @@ class ToTexService:
             files = []
             async for record in cursor:
                 files.append({
+                    "file_id": str(record["file_id"]),
                     "filename": record["filename"],
                     "created_at": record["created_at"],
                     "file_type": record.get("file_type", "")
@@ -90,22 +93,22 @@ class ToTexService:
             logger.error(f"获取解析文件列表失败: {str(e)}")
             raise Exception(f"获取解析文件列表失败: {str(e)}")
 
-    async def get_parsed_content(self, filename: str):
-        """根据文件名获取解析后的内容"""
+    async def get_parsed_content(self, file_id: str):
+        """根据文件ID获取解析后的内容"""
         try:
-            # 查找指定文件名的已完成记录
+            # 查找指定ID的已完成记录
             record = await self.parse_records.find_one(
                 {
-                    "input_file": filename,
+                    "_id": ObjectId(file_id),
                     "status": "completed"
                 }
             )
             
             if not record:
-                raise Exception(f"未找到文件 {filename} 的解析记录")
+                raise Exception(f"未找到ID为 {file_id} 的解析记录")
             
             if not record.get("content"):
-                raise Exception(f"文件 {filename} 的解析内容为空")
+                raise Exception(f"ID为 {file_id} 的解析内容为空")
             
             return {
                 "content": record["content"],

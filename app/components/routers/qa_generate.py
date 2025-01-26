@@ -4,9 +4,19 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import QAGenerateRequest, APIResponse
 from app.components.services.qa_generate_service import QAGenerateService
+from pydantic import BaseModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class FileIDRequest(BaseModel):
+    file_id: str
+
+class FilenameRequest(BaseModel):
+    filename: str
+
+class RecordIDRequest(BaseModel):
+    record_id: str
 
 @router.get("/tex_files")
 async def get_tex_files(
@@ -25,15 +35,15 @@ async def get_tex_files(
         logger.error(f"获取tex文件列表失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/tex_content/{filename}")
+@router.post("/tex_content")
 async def get_tex_content(
-    filename: str,
+    request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定tex文件的内容"""
     try:
         service = QAGenerateService(db)
-        content = await service.get_tex_content(filename)
+        content = await service.get_tex_content(request.filename)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
@@ -101,15 +111,15 @@ async def get_qa_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/generate_qa/progress/{record_id}")
+@router.post("/generate_qa/progress")
 async def get_qa_progress(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取问答对生成进度"""
     try:
         from bson import ObjectId
-        record = await db.llm_kit.qa_generations.find_one({"_id": ObjectId(record_id)})
+        record = await db.llm_kit.qa_generations.find_one({"_id": ObjectId(request.record_id)})
         
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
@@ -126,9 +136,9 @@ async def get_qa_progress(
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/qa_records/{record_id}")
+@router.delete("/qa_records")
 async def delete_qa_record(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除问答生成记录及相关问答对"""
@@ -136,20 +146,20 @@ async def delete_qa_record(
         from bson import ObjectId
         
         # 删除生成记录
-        result = await db.llm_kit.qa_generations.delete_one({"_id": ObjectId(record_id)})
+        result = await db.llm_kit.qa_generations.delete_one({"_id": ObjectId(request.record_id)})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
             
         # 删除相关的问答对
-        await db.llm_kit.qa_pairs.delete_many({"generation_id": ObjectId(record_id)})
+        await db.llm_kit.qa_pairs.delete_many({"generation_id": ObjectId(request.record_id)})
         
         return APIResponse(
             status="success",
             message="QA record and related pairs deleted successfully",
-            data={"record_id": record_id}
+            data={"record_id": request.record_id}
         )
         
     except Exception as e:
-        logger.error(f"删除问答记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
+        logger.error(f"删除问答记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

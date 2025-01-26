@@ -4,9 +4,16 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import QualityControlRequest, APIResponse
 from app.components.services.quality_service import QualityService
+from pydantic import BaseModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class FilenameRequest(BaseModel):
+    filename: str
+
+class RecordIDRequest(BaseModel):
+    record_id: str
 
 @router.post("/quality")
 async def evaluate_and_optimize_qa(
@@ -71,15 +78,15 @@ async def get_qa_files(
         logger.error(f"获取问答对文件列表失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/qa_content/{filename}")
+@router.post("/qa_content")
 async def get_qa_content(
-    filename: str,
+    request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定问答对文件的内容"""
     try:
         service = QualityService(db)
-        content = await service.get_qa_content(filename)
+        content = await service.get_qa_content(request.filename)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
@@ -89,15 +96,15 @@ async def get_qa_content(
         logger.error(f"获取问答对文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/quality/progress/{record_id}")
+@router.post("/quality/progress")
 async def get_quality_progress(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取质量控制进度"""
     try:
         from bson import ObjectId
-        record = await db.llm_kit.quality_generations.find_one({"_id": ObjectId(record_id)})
+        record = await db.llm_kit.quality_generations.find_one({"_id": ObjectId(request.record_id)})
         
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
@@ -114,9 +121,9 @@ async def get_quality_progress(
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/quality_records/{record_id}")
+@router.delete("/quality_records")
 async def delete_quality_record(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除质量控制记录及相关质量评估记录"""
@@ -124,20 +131,20 @@ async def delete_quality_record(
         from bson import ObjectId
         
         # 删除质量控制记录
-        result = await db.llm_kit.quality_generations.delete_one({"_id": ObjectId(record_id)})
+        result = await db.llm_kit.quality_generations.delete_one({"_id": ObjectId(request.record_id)})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
             
         # 删除相关的质量评估记录
-        await db.llm_kit.quality_records.delete_many({"generation_id": ObjectId(record_id)})
+        await db.llm_kit.quality_records.delete_many({"generation_id": ObjectId(request.record_id)})
         
         return APIResponse(
             status="success",
             message="Quality control record and related assessments deleted successfully",
-            data={"record_id": record_id}
+            data={"record_id": request.record_id}
         )
         
     except Exception as e:
-        logger.error(f"删除质量控制记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
+        logger.error(f"删除质量控制记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
