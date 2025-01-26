@@ -705,3 +705,30 @@ async def get_task_progress(
     except Exception as e:
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.delete("/records/{record_id}")
+async def delete_record(
+    record_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """根据ID删除解析记录"""
+    try:
+        from bson import ObjectId
+        
+        # 删除解析记录
+        result = await db.llm_kit.parse_records.delete_one({"_id": ObjectId(record_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Record not found")
+            
+        return APIResponse(
+            status="success",
+            message="Record deleted successfully",
+            data={"record_id": record_id}
+        )
+        
+    except Exception as e:
+        logger.error(f"删除记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

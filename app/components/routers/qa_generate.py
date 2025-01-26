@@ -125,3 +125,31 @@ async def get_qa_progress(
     except Exception as e:
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/qa_records/{record_id}")
+async def delete_qa_record(
+    record_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """根据ID删除问答生成记录及相关问答对"""
+    try:
+        from bson import ObjectId
+        
+        # 删除生成记录
+        result = await db.llm_kit.qa_generations.delete_one({"_id": ObjectId(record_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Record not found")
+            
+        # 删除相关的问答对
+        await db.llm_kit.qa_pairs.delete_many({"generation_id": ObjectId(record_id)})
+        
+        return APIResponse(
+            status="success",
+            message="QA record and related pairs deleted successfully",
+            data={"record_id": record_id}
+        )
+        
+    except Exception as e:
+        logger.error(f"删除问答记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
