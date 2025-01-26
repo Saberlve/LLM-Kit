@@ -21,22 +21,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 import os
 
-def check_parsed_file_exists(file_id: str) -> int:
-    """
-    检查 parsed_files/parsed_file/{file_id} 是否存在
-    :param file_id: 文件ID
-    :return: 如果文件存在返回1，否则返回0
-    """
-    # 构造文件路径
-    file_path = os.path.join("parsed_files", "parsed_file", file_id)
-
-    # 检查文件是否存在
-    if os.path.exists(file_path):
-        return 1
-    else:
-        return 0
-
-
 class UploadedFile(BaseModel):
     filename: str = Field(..., alias="filename")
     content: str = Field(..., alias="content")
@@ -223,16 +207,40 @@ async def parse_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/check-parsed-file")
-async def check_parsed_file(request: FileIDRequest):
-    """
-    检查 parsed_files/parsed_file/{file_id} 是否存在
-    """
+async def check_parsed_file(
+    request: FileIDRequest,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """检查解析文件是否存在"""
     try:
-        file_id = request.file_id  # 从请求体中提取 file_id
-        result = check_parsed_file_exists(file_id)
-        return {"exists": result}
+        from bson import ObjectId
+        
+        # 先在数据库中查找记录
+        file_record = await db.llm_kit.uploaded_files.find_one(
+            {"_id": ObjectId(request.file_id)}
+        )
+        
+        if not file_record:
+            # 如果在文本文件集合中找不到，尝试在二进制文件集合中查找
+            file_record = await db.llm_kit.uploaded_binary_files.find_one(
+                {"_id": ObjectId(request.file_id)}
+            )
+        
+        if file_record:
+            return APIResponse(
+                status="success",
+                message="File check completed",
+                data={"exists": 1}
+            )
+        
+        return APIResponse(
+            status="success",
+            message="File not found",
+            data={"exists": 0}
+        )
+        
     except Exception as e:
-        logger.error(f"检查文件失败 file_id: {file_id}, 错误: {str(e)}", exc_info=True)
+        logger.error(f"检查文件是否存在失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/files/all")
@@ -542,7 +550,7 @@ async def get_latest_upload(
         latest_file = await db.llm_kit.uploaded_files.find_one(
             sort=[("created_at", -1)]
         )
-        print(latest_file["_id"])
+
         if not latest_file:
             return APIResponse(
                 status="success",
@@ -649,7 +657,7 @@ async def upload_binary_file(
 
 @router.get("/upload/binary/latest")
 async def get_latest_binary_upload(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取最近一次上传的二进制文件信息（不包含文件内容）"""
     try:
@@ -657,7 +665,6 @@ async def get_latest_binary_upload(
         latest_file = await db.llm_kit.uploaded_binary_files.find_one(
             sort=[("created_at", -1)]
         )
-        # print(str(latest_file['_id']))
 
         if not latest_file:
             return APIResponse(

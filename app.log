@@ -279,47 +279,8 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 660, in get_latest_binary_upload
     print(str(latest_file['_id']))
 TypeError: 'NoneType' object is not subscriptable
-2025-01-26 15:34:18,559 - app.components.routers.qa_generate - ERROR - 获取tex文件内容失败: 获取tex内容失败: 文件不存在或未完成转换
+2025-01-26 15:43:57,232 - app.components.routers.parse - ERROR - OCR 文件失败 file_id: 6795e75019dad9f4e636466c, 错误: 404: Binary file not found
 Traceback (most recent call last):
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 158, in get_tex_content
-    raise Exception("文件不存在或未完成转换")
-Exception: 文件不存在或未完成转换
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 46, in get_tex_content
-    content = await service.get_tex_content(request.filename)
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 169, in get_tex_content
-    raise Exception(f"获取tex内容失败: {str(e)}")
-Exception: 获取tex内容失败: 文件不存在或未完成转换
-2025-01-26 15:37:48,966 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
-Traceback (most recent call last):
-  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 78, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 330, in generate_qa_pairs
-    raise e
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 212, in generate_qa_pairs
-    chunks = json.loads(content)
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2025-01-26 15:38:52,995 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
-Traceback (most recent call last):
-  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 78, in generate_qa_pairs
-    result = await service.generate_qa_pairs(
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 331, in generate_qa_pairs
-    raise e
-  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 213, in generate_qa_pairs
-    chunks = json.loads(content)
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+  File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 426, in ocr_specific_file
+    raise HTTPException(status_code=404, detail="Binary file not found")
+fastapi.exceptions.HTTPException: 404: Binary file not found

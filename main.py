@@ -103,13 +103,29 @@ async def clear_all_collections():
         "quality_records",
         "dedup_records",
         "kept_pairs",
-        "error_logs"  # 添加错误日志集合
+        "error_logs",
+        "uploaded_files",           # 添加文本文件集合
+        "uploaded_binary_files"     # 添加二进制文件集合
     ]
+    
     for collection_name in collections:
         collection = db.llm_kit[collection_name]
         try:
             await collection.delete_many({})
             print(f"Cleared collection: {collection_name}")
+            
+            # 如果是文件相关的集合，同时清理文件系统中的文件
+            if collection_name in ["uploaded_files", "uploaded_binary_files"]:
+                import shutil
+                import os
+                
+                # 清理 parsed_files 目录
+                parsed_files_dir = os.path.join("parsed_files", "parsed_file")
+                if os.path.exists(parsed_files_dir):
+                    shutil.rmtree(parsed_files_dir)
+                    os.makedirs(parsed_files_dir, exist_ok=True)
+                    print(f"Cleared directory: {parsed_files_dir}")
+                
         except Exception as e:
             await log_error(str(e), f"clear_collection_{collection_name}")
             print(f"Error clearing collection {collection_name}: {str(e)}")
