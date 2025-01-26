@@ -19,7 +19,7 @@ class BaseRequest(BaseModel):
     parallel_num: int = 1
 
 class QAGenerateRequest(BaseRequest):
-    content: List[dict] = None
+    content: str = None
     filename: str  # 添加文件名参数，用于跟踪文件
     model_name: str
     domain: str
@@ -31,7 +31,7 @@ class DedupRequest(BaseModel):
     dedup_threshold: float = 0.8
 
 class QualityControlRequest(BaseRequest):
-    content: List[dict]  # 问答对内容，是一个字典列表
+    content: str  # 问答对内容，是一个字典列表
     filename: str  # 文件名
     model_name: str
     similarity_rate: float = 0.8

@@ -284,3 +284,30 @@ Traceback (most recent call last):
   File "D:\problem_solve\Python\Final_LLM\LLM-Kit\app\components\routers\parse.py", line 426, in ocr_specific_file
     raise HTTPException(status_code=404, detail="Binary file not found")
 fastapi.exceptions.HTTPException: 404: Binary file not found
+2025-01-26 16:49:41,142 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 81, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-01-26 16:49:57,312 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 81, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-01-26 16:50:15,398 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 81, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
