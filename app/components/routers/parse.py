@@ -706,15 +706,14 @@ async def get_latest_binary_upload(
         logger.error(f"获取最近上传的二进制文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/upload/binary/content/")
+@router.get("/upload/binary/content/{file_id}")
 async def get_binary_file_content(
-        request: FileIDRequest,
+        file_id: str,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """通过文件ID获取二进制文件内容"""
     try:
         from bson import ObjectId
-        file_id = request.file_id
 
         # 获取文件记录
         file_record = await db.llm_kit.uploaded_binary_files.find_one(
@@ -738,7 +737,7 @@ async def get_binary_file_content(
         logger.error(f"获取二进制文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/task/progress/")
+@router.post("/task/progress")
 async def get_task_progress(
         request: RecordIDRequest,
         db: AsyncIOMotorClient = Depends(get_database)
