@@ -21,22 +21,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 import os
 
-def check_parsed_file_exists(file_id: str) -> int:
-    """
-    检查 parsed_files/parsed_file/{file_id} 是否存在
-    :param file_id: 文件ID
-    :return: 如果文件存在返回1，否则返回0
-    """
-    # 构造文件路径
-    file_path = os.path.join("parsed_files", "parsed_file", file_id)
-
-    # 检查文件是否存在
-    if os.path.exists(file_path):
-        return 1
-    else:
-        return 0
-
-
 class UploadedFile(BaseModel):
     filename: str = Field(..., alias="filename")
     content: str = Field(..., alias="content")
