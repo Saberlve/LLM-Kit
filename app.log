@@ -269,3 +269,13 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
 Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+2025-01-26 15:26:12,024 - app.components.routers.parse - ERROR - 获取最近上传的二进制文件失败: 'NoneType' object is not subscriptable
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 660, in get_latest_binary_upload
+    print(latest_file['_id'])
+TypeError: 'NoneType' object is not subscriptable
+2025-01-26 15:26:57,144 - app.components.routers.parse - ERROR - 获取最近上传的二进制文件失败: 'NoneType' object is not subscriptable
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 660, in get_latest_binary_upload
+    print(str(latest_file['_id']))
+TypeError: 'NoneType' object is not subscriptable

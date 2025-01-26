@@ -542,7 +542,7 @@ async def get_latest_upload(
         latest_file = await db.llm_kit.uploaded_files.find_one(
             sort=[("created_at", -1)]
         )
-
+        print(latest_file["_id"])
         if not latest_file:
             return APIResponse(
                 status="success",
@@ -649,7 +649,7 @@ async def upload_binary_file(
 
 @router.get("/upload/binary/latest")
 async def get_latest_binary_upload(
-        db: AsyncIOMotorClient = Depends(get_database)
+    db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取最近一次上传的二进制文件信息（不包含文件内容）"""
     try:
@@ -657,6 +657,7 @@ async def get_latest_binary_upload(
         latest_file = await db.llm_kit.uploaded_binary_files.find_one(
             sort=[("created_at", -1)]
         )
+        # print(str(latest_file['_id']))
 
         if not latest_file:
             return APIResponse(
@@ -682,15 +683,14 @@ async def get_latest_binary_upload(
         logger.error(f"获取最近上传的二进制文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/upload/binary/content/")
+@router.get("/upload/binary/content/{file_id}")
 async def get_binary_file_content(
-        request: FileIDRequest,
+        file_id: str,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """通过文件ID获取二进制文件内容"""
     try:
         from bson import ObjectId
-        file_id = request.file_id
 
         # 获取文件记录
         file_record = await db.llm_kit.uploaded_binary_files.find_one(
@@ -714,7 +714,7 @@ async def get_binary_file_content(
         logger.error(f"获取二进制文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/task/progress/")
+@router.post("/task/progress")
 async def get_task_progress(
         request: RecordIDRequest,
         db: AsyncIOMotorClient = Depends(get_database)
