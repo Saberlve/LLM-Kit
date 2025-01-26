@@ -105,11 +105,11 @@ class QAGenerateService:
             # 获取所有已完成的记录
             records = await self.tex_records.find(
                 {"status": "completed"},
-                {"save_path": 1, "created_at": 1}
+                {"_id": 1, "save_path": 1, "created_at": 1}
             ).to_list(None)
             
             # 按文件名分组，保留最新的记录
-            filename_dict = {}  # {filename: {"filename": filename, "created_at": created_at}}
+            filename_dict = {}  # {filename: {"file_id": id, "filename": filename, "created_at": created_at}}
             
             for record in records:
                 if not record.get("save_path"):
@@ -123,11 +123,13 @@ class QAGenerateService:
                 if filename in filename_dict:
                     if created_at > filename_dict[filename]["created_at"]:
                         filename_dict[filename] = {
+                            "file_id": str(record["_id"]),
                             "filename": filename,
                             "created_at": created_at
                         }
                 else:
                     filename_dict[filename] = {
+                        "file_id": str(record["_id"]),
                         "filename": filename,
                         "created_at": created_at
                     }
@@ -142,16 +144,15 @@ class QAGenerateService:
             await self._log_error(str(e), "get_all_tex_files")
             raise Exception(f"获取tex文件列表失败: {str(e)}")
 
-    async def get_tex_content(self, filename: str):
-        """根据文件名获取tex转换后的内容"""
+    async def get_tex_content(self, file_id: str):
+        """根据文件ID获取tex转换后的内容"""
         try:
-            # 查找指定文件名的最新已完成记录
+            # 查找指定ID的记录
             record = await self.tex_records.find_one(
                 {
-                    "input_file": filename,
+                    "_id": ObjectId(file_id),
                     "status": "completed"
-                },
-                sort=[("created_at", -1)]
+                }
             )
             
             if not record:
@@ -160,8 +161,13 @@ class QAGenerateService:
             if not record.get("content"):
                 raise Exception("文件内容为空")
                 
+            # 确保content是JSON数组格式
+            content = record["content"]
+            if not isinstance(content, str):
+                content = json.dumps(content)
+                
             return {
-                "content": record["content"],
+                "content": content,
                 "created_at": record["created_at"]
             }
         except Exception as e:
@@ -209,6 +215,7 @@ class QAGenerateService:
             )
 
             try:
+                print(content)
                 chunks = json.loads(content)
                 # 并行处理所有文本块，传入generation_id用于更新进度
                 qa_pairs = await self.process_chunks_parallel(

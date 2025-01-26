@@ -152,14 +152,6 @@ class ToTexService:
             record_id = result.inserted_id
 
             try:
-                # 生成简化的保存路径
-                tex_file_path = os.path.join(
-                    save_path, 
-                    'tex_files', 
-                    f'{base_filename}_tex.tex'  # 简化的文件名格式
-                )
-                os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
-
                 # 切分文本
                 text_chunks = split_text_into_chunks(parallel_num, content)
 
@@ -183,9 +175,23 @@ class ToTexService:
                 # 合并所有LaTeX内容
                 combined_tex = '\n'.join(results)
 
-                # 保存LaTeX内容到.tex文件
-                with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
-                    tex_file.write(combined_tex)
+                # 准备保存的数据格式
+                data_to_save = [
+                    {"id": i + 1, "chunk": result}
+                    for i, result in enumerate(results)
+                ]
+
+                # 生成简化的保存路径
+                tex_file_path = os.path.join(
+                    save_path, 
+                    'tex_files', 
+                    f'{base_filename}.json'  # 修改为.json后缀
+                )
+                os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
+
+                # 保存为JSON格式
+                with open(tex_file_path, 'w', encoding='utf-8') as json_file:
+                    json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
                 # 更新原始记录状态
                 await self.tex_records.update_one(
@@ -193,7 +199,7 @@ class ToTexService:
                     {
                         "$set": {
                             "status": "completed",
-                            "content": combined_tex,
+                            "content": data_to_save,  # 使用JSON格式的数据
                             "save_path": tex_file_path
                         }
                     }
@@ -216,7 +222,7 @@ class ToTexService:
                     "input_file": os.path.basename(tex_file_path),
                     "original_file": filename,
                     "status": "completed",
-                    "content": combined_tex,
+                    "content": data_to_save,  # 使用JSON格式的数据
                     "created_at": datetime.now(timezone.utc),
                     "save_path": tex_file_path,
                     "model_name": model_name
@@ -227,7 +233,7 @@ class ToTexService:
                     "record_id": str(record_id),
                     "filename": os.path.basename(tex_file_path),
                     "save_path": tex_file_path,
-                    "content": combined_tex
+                    "content": data_to_save  # 返回值也使用JSON格式
                 }
 
             except Exception as e:

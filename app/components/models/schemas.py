@@ -3,6 +3,14 @@ from typing import List, Optional, Literal
 from datetime import datetime
 from fastapi import UploadFile
 
+class TexFile(BaseModel):
+    file_id: str
+    filename: str
+    created_at: datetime
+
+class TexContentRequest(BaseModel):
+    file_id: str
+
 # API 请求/响应基础模型
 class BaseRequest(BaseModel):
     save_path: str = "result/"
@@ -11,7 +19,7 @@ class BaseRequest(BaseModel):
     parallel_num: int = 1
 
 class QAGenerateRequest(BaseRequest):
-    content: str
+    content: List[dict] = None
     filename: str  # 添加文件名参数，用于跟踪文件
     model_name: str
     domain: str

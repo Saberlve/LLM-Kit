@@ -2,7 +2,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm  # 用于显示进度条
-
+import json
 from utils.helper import generate
 from utils.helper import split_chunk_by_tokens, split_text_into_chunks
 from utils.hparams import HyperParams

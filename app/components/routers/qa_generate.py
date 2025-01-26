@@ -2,7 +2,10 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
-from app.components.models.schemas import QAGenerateRequest, APIResponse
+from app.components.models.schemas import (
+    QAGenerateRequest, APIResponse, TexFile,
+    TexContentRequest
+)
 from app.components.services.qa_generate_service import QAGenerateService
 from pydantic import BaseModel
 
@@ -18,7 +21,7 @@ class FilenameRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str
 
-@router.get("/tex_files")
+@router.get("/tex_files", response_model=APIResponse)
 async def get_tex_files(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
@@ -29,21 +32,21 @@ async def get_tex_files(
         return APIResponse(
             status="success",
             message="获取文件列表成功",
-            data={"files": files}
+            data={"files": [TexFile(**file) for file in files]}
         )
     except Exception as e:
         logger.error(f"获取tex文件列表失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/tex_content")
+@router.post("/tex_content", response_model=APIResponse)
 async def get_tex_content(
-    request: FilenameRequest,
+    request: TexContentRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定tex文件的内容"""
     try:
         service = QAGenerateService(db)
-        content = await service.get_tex_content(request.filename)
+        content = await service.get_tex_content(request.file_id)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
