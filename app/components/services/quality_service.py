@@ -256,11 +256,11 @@ class QualityService:
             # 获取所有已完成的记录
             records = await self.qa_generations.find(
                 {"status": "completed"},
-                {"save_path": 1, "created_at": 1}
+                {"save_path": 1, "created_at": 1, "_id": 1}
             ).to_list(None)
             
             # 按文件名分组，保留最新的记录
-            filename_dict = {}  # {filename: {"filename": filename, "created_at": created_at}}
+            filename_dict = {}  # {filename: {"id": id, "filename": filename, "created_at": created_at}}
             
             for record in records:
                 if not record.get("save_path"):
@@ -269,16 +269,19 @@ class QualityService:
                 # 从save_path中提取文件名
                 filename = os.path.basename(record["save_path"])
                 created_at = record["created_at"]
+                record_id = str(record["_id"])
                 
                 # 如果文件名已存在，比较创建时间
                 if filename in filename_dict:
                     if created_at > filename_dict[filename]["created_at"]:
                         filename_dict[filename] = {
+                            "id": record_id,
                             "filename": filename,
                             "created_at": created_at
                         }
                 else:
                     filename_dict[filename] = {
+                        "id": record_id,
                         "filename": filename,
                         "created_at": created_at
                     }
@@ -327,4 +330,39 @@ class QualityService:
             }
         except Exception as e:
             await self._log_error(str(e), "get_qa_content")
+            raise Exception(f"获取问答对内容失败: {str(e)}")
+
+    async def get_qa_content_by_id(self, record_id: str):
+        """根据记录ID获取问答对内容"""
+        try:
+            # 将字符串ID转换为ObjectId
+            from bson import ObjectId
+            record = await self.qa_generations.find_one({"_id": ObjectId(record_id)})
+            
+            if not record:
+                raise Exception("记录不存在")
+            
+            if record["status"] != "completed":
+                raise Exception("该记录尚未完成生成")
+            
+            # 直接从记录中获取问答对内容
+            if record.get("content"):
+                qa_pairs = json.loads(record["content"])
+            else:
+                # 如果记录中没有内容，从文件中读取
+                try:
+                    with open(record["save_path"], 'r', encoding='utf-8') as f:
+                        qa_pairs = json.load(f)
+                except Exception as e:
+                    raise Exception(f"读取问答对文件失败: {str(e)}")
+                
+            return {
+                "id": str(record["_id"]),
+                "filename": os.path.basename(record["save_path"]),
+                "created_at": record["created_at"],
+                "qa_pairs": qa_pairs,
+                "save_path": record.get("save_path", "")
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_qa_content_by_id")
             raise Exception(f"获取问答对内容失败: {str(e)}")

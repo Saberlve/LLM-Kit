@@ -80,13 +80,13 @@ async def get_qa_files(
 
 @router.post("/qa_content")
 async def get_qa_content(
-    request: FilenameRequest,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取指定问答对文件的内容"""
+    """根据记录ID获取指定问答对文件的内容"""
     try:
         service = QualityService(db)
-        content = await service.get_qa_content(request.filename)
+        content = await service.get_qa_content_by_id(request.record_id)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
