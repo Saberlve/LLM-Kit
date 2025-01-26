@@ -225,12 +225,23 @@ export default {
       close: "close"
     }
   },
-  eval: {
+  quality_eval: {
     title: "Quality Control",
     subtitle: "Improve the quality of your datasets",
     create_task: "Create Evaluation Task",
     next_step: "Next Step",
     previous_step: "Previous Step",
+    start: "Start Quality Control",
+    AK: "API KEY:",
+    SK: "SCERET KEY:",
+    model_name: "Model Selection:",
+    name: "Input Filename:",
+    des: "New Dataset Description:",
+    optional: "(Optional)",
+    parallel_num: "Parallel Number:",
+    max_attempts: "Maximum attempts:",
+    similarity_rate: "Similarity Rate:",
+    coverage_rate: "Coverage Rate:",
   },
   construct: {
     title: "Dataset Construction",
