@@ -18,9 +18,10 @@ class QADedupService:
         self.kept_pairs = db.llm_kit.kept_pairs
         self.error_logs = db.llm_kit.error_logs
         self.deleted_pairs = db.llm_kit.deleted_pairs
-        self.base_output_dir = "results/dedup"  # 添加基础输出目录
+        self.quality_generations = db.llm_kit.quality_generations  # 添加对quality记录的引用
+        self.base_output_dir = "results/dedup"
         os.makedirs(self.base_output_dir, exist_ok=True)
-        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
+        self.last_progress_update = {}
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -51,31 +52,87 @@ class QADedupService:
             )
             self.last_progress_update[record_id] = current_time
 
+    async def get_quality_content(self, file_id: str):
+        """根据文件ID获取quality文件内容"""
+        try:
+            # 查找指定ID的quality记录
+            record = await self.quality_generations.find_one({"_id": ObjectId(file_id)})
+            
+            if not record:
+                raise Exception(f"未找到ID为 {file_id} 的quality记录")
+            
+            if not record.get("save_path") or not os.path.exists(record["save_path"]):
+                raise Exception(f"文件路径不存在: {record.get('save_path')}")
+            
+            # 读取文件内容
+            with open(record["save_path"], 'r', encoding='utf-8') as f:
+                content = json.load(f)
+            
+            return {
+                "filename": record["input_file"],
+                "content": content,
+                "created_at": record["created_at"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_quality_content")
+            raise Exception(f"获取quality文件内容失败: {str(e)}")
+
+    async def get_dedup_content(self, file_id: str):
+        """根据文件ID获取去重后的文件内容"""
+        try:
+            # 查找指定ID的去重记录
+            record = await self.dedup_records.find_one({"_id": ObjectId(file_id)})
+            
+            if not record:
+                raise Exception(f"未找到ID为 {file_id} 的去重记录")
+            
+            if not record.get("output_file") or not os.path.exists(record["output_file"]):
+                raise Exception(f"文件路径不存在: {record.get('output_file')}")
+            
+            # 读取文件内容
+            with open(record["output_file"], 'r', encoding='utf-8') as f:
+                content = json.load(f)
+            
+            return {
+                "filename": os.path.basename(record["output_file"]),
+                "content": content,
+                "created_at": record["created_at"],
+                "original_count": record["original_count"],
+                "kept_count": record["kept_count"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_dedup_content")
+            raise Exception(f"获取去重文件内容失败: {str(e)}")
+
     async def deduplicate_qa(
             self,
-            input_file: List[str],
+            file_ids: List[str],
             dedup_by_answer: bool,
             dedup_threshold: float,
             min_answer_length: int = 10,
     ):
         try:
-            # 生成输出文件路径
-            timestamp = datetime.now()
-            output_file, deleted_pairs_file = self._generate_output_paths(timestamp)
-
-            # 读取所有源文件的内容
+            # 获取所有文件内容
             original_pairs = []
             source_texts = []
-            for file_path in input_file:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    source_text = f.read()
-                    source_texts.append(source_text)
-                    pairs = json.loads(source_text)
-                    original_pairs.extend(pairs)
+            input_filenames = []
+            
+            for file_id in file_ids:
+                quality_content = await self.get_quality_content(file_id)
+                source_texts.append(json.dumps(quality_content["content"]))
+                original_pairs.extend(quality_content["content"])
+                input_filenames.append(quality_content["filename"])
+
+            # 获取第一个文件名作为基础名
+            base_filename = input_filenames[0].rsplit('.', 1)[0]
+            
+            # 使用简化的文件名格式：原文件名_dedup.json
+            output_file = os.path.join(self.base_output_dir, f"{base_filename}_dedup.json")
+            deleted_pairs_file = os.path.join(self.base_output_dir, f"{base_filename}_dedup_deleted.json")
 
             # 创建去重记录
             dedup_record = DedupRecord(
-                input_file=input_file,
+                input_file=input_filenames,
                 output_file=output_file,
                 deleted_pairs_file=deleted_pairs_file,
                 dedup_by_answer=dedup_by_answer,
@@ -90,83 +147,94 @@ class QADedupService:
             result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
             record_id = result.inserted_id
 
-            # 执行去重
-            hparams = DedupParams(
-                input_file=input_file,
-                output_file=output_file,
-                dedup_by_answer=dedup_by_answer,
-                dedup_threshold=dedup_threshold,
-                min_answer_length=min_answer_length,
-                deleted_pairs_file=deleted_pairs_file,
-            )
+            # 创建临时文件保存合并的问答对
+            temp_input_file = os.path.join(self.base_output_dir, f"temp_input_{str(record_id)}.json")
+            with open(temp_input_file, 'w', encoding='utf-8') as f:
+                json.dump(original_pairs, f, ensure_ascii=False, indent=4)
 
-            qa_deduplication = QADeduplication(
-                hparams,
-                progress_callback=lambda p: asyncio.create_task(
-                    self.update_progress(str(record_id), p)
+            try:
+                # 执行去重
+                hparams = DedupParams(
+                    input_file=[temp_input_file],
+                    output_file=output_file,
+                    dedup_by_answer=dedup_by_answer,
+                    dedup_threshold=dedup_threshold,
+                    min_answer_length=min_answer_length,
+                    deleted_pairs_file=deleted_pairs_file,
                 )
-            )
-            kept_pairs, deleted_groups = qa_deduplication.process_qa_file(hparams)
 
-            # 保存保留的问答对到数据库
-            if kept_pairs:
-                kept_records = []
-                for qa in kept_pairs:
-                    record = KeptQAPair(
-                        dedup_id=record_id,
-                        qa_id=qa['id'],
-                        question=qa['question'],
-                        answer=qa['answer']
-                    ).dict(by_alias=True)
-                    kept_records.append(record)
+                qa_deduplication = QADeduplication(
+                    hparams,
+                    progress_callback=lambda p: asyncio.create_task(
+                        self.update_progress(str(record_id), p)
+                    )
+                )
+                kept_pairs, deleted_groups = qa_deduplication.process_qa_file(hparams)
 
-                if kept_records:
-                    await self.kept_pairs.insert_many(kept_records)
+                # 保存保留的问答对
+                if kept_pairs:
+                    kept_records = []
+                    for qa in kept_pairs:
+                        record = KeptQAPair(
+                            dedup_id=record_id,
+                            qa_id=qa['id'],
+                            question=qa['question'],
+                            answer=qa['answer']
+                        ).dict(by_alias=True)
+                        kept_records.append(record)
 
-            # 保存被删除的问答对到数据库
-            if deleted_groups:
-                deleted_records = []
-                for group in deleted_groups:
-                    main_pair = group[0]  # 主要的问答对
-                    similar_pairs = group[1:]  # 相似的问答对
-                    record = DeletedQAPair(
-                        dedup_id=record_id,
-                        qa_id=main_pair['id'],
-                        question=main_pair['question'],
-                        answer=main_pair['answer'],
-                        similar_pairs=[{
-                            'qa_id': pair['id'],
-                            'question': pair['question'],
-                            'answer': pair['answer']
-                        } for pair in similar_pairs]
-                    ).dict(by_alias=True)
-                    deleted_records.append(record)
+                    if kept_records:
+                        await self.kept_pairs.insert_many(kept_records)
 
-                if deleted_records:
-                    await self.deleted_pairs.insert_many(deleted_records)
+                # 保存被删除的问答对
+                if deleted_groups:
+                    deleted_records = []
+                    for group in deleted_groups:
+                        main_pair = group[0]
+                        similar_pairs = group[1:]
+                        record = DeletedQAPair(
+                            dedup_id=record_id,
+                            qa_id=main_pair['id'],
+                            question=main_pair['question'],
+                            answer=main_pair['answer'],
+                            similar_pairs=[{
+                                'qa_id': pair['id'],
+                                'question': pair['question'],
+                                'answer': pair['answer']
+                            } for pair in similar_pairs]
+                        ).dict(by_alias=True)
+                        deleted_records.append(record)
 
-            # 更新去重记录
-            await self.dedup_records.update_one(
-                {"_id": record_id},
-                {
-                    "$set": {
-                        "status": "completed",
-                        "original_count": len(original_pairs),
-                        "kept_count": len(kept_pairs),
-                        "progress": 100
+                    if deleted_records:
+                        await self.deleted_pairs.insert_many(deleted_records)
+
+                # 更新去重记录
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "original_count": len(original_pairs),
+                            "kept_count": len(kept_pairs),
+                            "progress": 100
+                        }
                     }
-                }
-            )
+                )
 
-            return {
-                "dedup_id": str(record_id),
-                "output_file": output_file,
-                "deleted_pairs_file": deleted_pairs_file,
-                "kept_pairs": kept_pairs,
-                "original_count": len(original_pairs),
-                "kept_count": len(kept_pairs),
-                "deleted_count": len(original_pairs) - len(kept_pairs)
-            }
+                return {
+                    "dedup_id": str(record_id),
+                    "output_file": output_file,
+                    "deleted_pairs_file": deleted_pairs_file,
+                    "kept_pairs": kept_pairs,
+                    "original_count": len(original_pairs),
+                    "kept_count": len(kept_pairs),
+                    "deleted_count": len(original_pairs) - len(kept_pairs)
+                }
+
+            finally:
+                # 清理临时文件
+                if os.path.exists(temp_input_file):
+                    os.remove(temp_input_file)
 
         except Exception as e:
             import traceback

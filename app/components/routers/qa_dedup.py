@@ -17,7 +17,7 @@ async def deduplicate_qa(
     try:
         service = QADedupService(db)
         result = await service.deduplicate_qa(
-            input_file=request.input_file,
+            file_ids=request.input_file,
             dedup_by_answer=request.dedup_by_answer,
             dedup_threshold=request.dedup_threshold,
             min_answer_length=request.min_answer_length,
@@ -72,4 +72,40 @@ async def get_dedup_progress(
         )
     except Exception as e:
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/quality_content/{file_id}")
+async def get_quality_content(
+    file_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取指定quality文件的内容"""
+    try:
+        service = QADedupService(db)
+        content = await service.get_quality_content(file_id)
+        return APIResponse(
+            status="success",
+            message="获取文件内容成功",
+            data=content
+        )
+    except Exception as e:
+        logger.error(f"获取quality文件内容失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/dedup_content/{file_id}")
+async def get_dedup_content(
+    file_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取指定去重文件的内容"""
+    try:
+        service = QADedupService(db)
+        content = await service.get_dedup_content(file_id)
+        return APIResponse(
+            status="success",
+            message="获取文件内容成功",
+            data=content
+        )
+    except Exception as e:
+        logger.error(f"获取去重文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
