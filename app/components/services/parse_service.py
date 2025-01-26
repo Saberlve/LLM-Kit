@@ -261,6 +261,18 @@ class ParseService:
                 # 确保设置最终进度
                 await update_progress(100)
 
+                # 更新原始文件状态为completed
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": base_filename + "." + file_type},
+                    {"$set": {"status": "completed"}}
+                )
+
+                # 同时更新二进制文件集合中的状态（如果存在）
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": base_filename + "." + file_type},
+                    {"$set": {"status": "completed"}}
+                )
+
                 return {
                     "content": content,
                     "parsed_file_path": parsed_file_path
@@ -275,6 +287,16 @@ class ParseService:
                     del self.last_progress_update[record_id]
 
         except Exception as e:
+            # 发生错误时更新状态为failed
+            await self.db.llm_kit.uploaded_files.update_one(
+                {"filename": base_filename + "." + file_type},
+                {"$set": {"status": "failed"}}
+            )
+            await self.db.llm_kit.uploaded_binary_files.update_one(
+                {"filename": base_filename + "." + file_type},
+                {"$set": {"status": "failed"}}
+            )
+            
             import traceback
             await self._log_error(str(e), "parse_content", traceback.format_exc())
             raise Exception(f"Parse content failed: {str(e)}")
