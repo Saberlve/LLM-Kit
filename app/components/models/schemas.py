@@ -17,7 +17,7 @@ class QAGenerateRequest(BaseRequest):
     domain: str
 
 class DedupRequest(BaseModel):
-    input_file: List[str]
+    quality_file_ids: List[str]
     dedup_by_answer: bool = False
     min_answer_length: int = 10
     dedup_threshold: float = 0.8

@@ -17,7 +17,7 @@ async def deduplicate_qa(
     try:
         service = QADedupService(db)
         result = await service.deduplicate_qa(
-            file_ids=request.input_file,
+            file_ids=request.quality_file_ids,
             dedup_by_answer=request.dedup_by_answer,
             dedup_threshold=request.dedup_threshold,
             min_answer_length=request.min_answer_length,
