@@ -135,6 +135,9 @@ class ToTexService:
             # 创建保存目录
             os.makedirs(save_path, exist_ok=True)
 
+            # 获取不带扩展名的文件名
+            base_filename = filename.rsplit('.', 1)[0]
+
             # 创建初始记录
             record = TexConversionRecord(
                 input_file=filename,
@@ -146,11 +149,11 @@ class ToTexService:
             record_id = result.inserted_id
 
             try:
-                # 生成保存路径
+                # 生成简化的保存路径
                 tex_file_path = os.path.join(
                     save_path, 
                     'tex_files', 
-                    f'{filename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+                    f'{base_filename}_tex.tex'  # 简化的文件名格式
                 )
                 os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
 
@@ -174,15 +177,12 @@ class ToTexService:
                     for future in as_completed(futures):
                         results.extend(future.result())
 
-                # 准备保存数据
-                data_to_save = [
-                    {"id": i + 1, "chunk": result}
-                    for i, result in enumerate(results)
-                ]
+                # 合并所有LaTeX内容
+                combined_tex = '\n'.join(results)
 
-                # 保存结果到文件
-                with open(tex_file_path, 'w', encoding='utf-8') as json_file:
-                    json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
+                # 保存LaTeX内容到.tex文件
+                with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
+                    tex_file.write(combined_tex)
 
                 # 更新原始记录状态
                 await self.tex_records.update_one(
@@ -190,18 +190,30 @@ class ToTexService:
                     {
                         "$set": {
                             "status": "completed",
-                            "content": json.dumps(data_to_save),
+                            "content": combined_tex,
                             "save_path": tex_file_path
                         }
                     }
                 )
 
-                # 添加一条新记录，用于存储保存文件的信息
+                # 更新上传文件的状态为completed
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "completed"}}
+                )
+
+                # 同时更新二进制文件集合中的状态（如果存在）
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "completed"}}
+                )
+
+                # 添加一条新记录，使用简化的文件名
                 saved_file_record = {
-                    "input_file": os.path.basename(tex_file_path),  # 使用保存的文件名作为input_file
-                    "original_file": filename,  # 原始文件名
+                    "input_file": os.path.basename(tex_file_path),
+                    "original_file": filename,
                     "status": "completed",
-                    "content": json.dumps(data_to_save),
+                    "content": combined_tex,
                     "created_at": datetime.now(timezone.utc),
                     "save_path": tex_file_path,
                     "model_name": model_name
@@ -210,12 +222,13 @@ class ToTexService:
 
                 return {
                     "record_id": str(record_id),
-                    "filename": filename,
+                    "filename": os.path.basename(tex_file_path),
                     "save_path": tex_file_path,
-                    "content": data_to_save
+                    "content": combined_tex
                 }
 
             except Exception as e:
+                # 更新转换记录状态为failed
                 await self.tex_records.update_one(
                     {"_id": record_id},
                     {"$set": {
@@ -223,6 +236,19 @@ class ToTexService:
                         "error_message": str(e)
                     }}
                 )
+
+                # 更新上传文件的状态为failed
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "failed"}}
+                )
+
+                # 同时更新二进制文件的状态（如果存在）
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "failed"}}
+                )
+
                 raise e
 
         except Exception as e:

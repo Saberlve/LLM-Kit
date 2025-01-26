@@ -181,6 +181,9 @@ class QAGenerateService:
     ):
         generation_id = None
         try:
+            # 获取不带扩展名的文件名
+            base_filename = filename.rsplit('.', 1)[0]
+
             # 创建生成记录
             generation = QAGeneration(
                 input_file=filename,
@@ -189,106 +192,142 @@ class QAGenerateService:
                 domain=domain,
                 status="processing",
                 source_text=content,
-                progress=0  # 初始进度为0
+                progress=0
             )
             result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
-            chunks=json.loads(content)
-            # 将内容分块处理
-            # chunks = [{"chunk": content}]
 
-            # 并行处理所有文本块，传入generation_id用于更新进度
-            qa_pairs = await self.process_chunks_parallel(
-                [chunk.get("chunk", "") for chunk in chunks],
-                AK,
-                SK,
-                parallel_num,
-                model_name,
-                domain,
-                generation_id
+            # 更新原始文件状态为processing
+            await self.db.llm_kit.uploaded_files.update_one(
+                {"filename": filename},
+                {"$set": {"status": "processing"}}
+            )
+            # 同时更新二进制文件集合中的状态（如果存在）
+            await self.db.llm_kit.uploaded_binary_files.update_one(
+                {"filename": filename},
+                {"$set": {"status": "processing"}}
             )
 
-            if not qa_pairs:
-                raise Exception("No QA pairs generated")
-
-            # 构建保存路径
-            qa_filename = f"QA_{filename}"  # 添加QA_前缀区分
-            save_dir_path = os.path.join('result', 'qas')
-            os.makedirs(save_dir_path, exist_ok=True)
-            
-            # 使用固定的文件名格式
-            final_save_path = os.path.join(
-                save_dir_path,
-                f"{qa_filename}.json"
-            )
-
-            # 保存问答对到文件
             try:
-                with open(final_save_path, 'w', encoding='utf-8') as f:
-                    json.dump(qa_pairs, f, ensure_ascii=False, indent=4)
-            except Exception as e:
-                raise Exception(f"Failed to save QA pairs to file: {str(e)}")
-
-            # 更新原始记录状态
-            await self.qa_generations.update_one(
-                {"_id": generation_id},
-                {"$set": {"save_path": final_save_path}}
-            )
-
-            # 添加一条新记录，用于存储保存文件的信息
-            saved_file_record = {
-                "input_file": os.path.basename(final_save_path),  # 使用保存的文件名作为input_file
-                "original_file": filename,  # 原始文件名
-                "status": "completed",
-                "content": json.dumps(qa_pairs),  # 保存问答对内容
-                "created_at": datetime.now(timezone.utc),
-                "save_path": final_save_path,
-                "model_name": model_name,
-                "domain": domain
-            }
-            await self.qa_generations.insert_one(saved_file_record)
-
-            # 保存问答对到数据库
-            # 先删除之前同文件名的问答对记录
-            await self.qa_pairs.delete_many({
-                "generation_id": {
-                    "$in": [
-                        doc["_id"] for doc in await self.qa_generations.find(
-                            {"input_file": filename, "_id": {"$ne": generation_id}}
-                        ).to_list(None)
-                    ]
-                }
-            })
-
-            qa_records = []
-            for qa in qa_pairs:
-                qa_record = QAPairDB(
-                    generation_id=PyObjectId(generation_id),
-                    question=qa["question"],
-                    answer=qa["answer"]
+                chunks = json.loads(content)
+                # 并行处理所有文本块，传入generation_id用于更新进度
+                qa_pairs = await self.process_chunks_parallel(
+                    [chunk.get("chunk", "") for chunk in chunks],
+                    AK,
+                    SK,
+                    parallel_num,
+                    model_name,
+                    domain,
+                    generation_id
                 )
-                qa_records.append(qa_record.dict(by_alias=True))
 
-            if qa_records:
-                await self.qa_pairs.insert_many(qa_records)
+                if not qa_pairs:
+                    raise Exception("No QA pairs generated")
 
-            # 更新生成记录状态，同时将旧记录标记为已覆盖
-            await self.qa_generations.update_many(
-                {"input_file": filename, "_id": {"$ne": generation_id}},
-                {"$set": {"status": "overwritten"}}
-            )
-            
-            await self.qa_generations.update_one(
-                {"_id": generation_id},
-                {"$set": {"status": "completed"}}
-            )
+                # 构建简化的保存路径和文件名
+                save_dir_path = os.path.join('result', 'qas')
+                os.makedirs(save_dir_path, exist_ok=True)
+                
+                # 使用简化的文件名格式：原文件名_qa.json
+                final_save_path = os.path.join(
+                    save_dir_path,
+                    f"{base_filename}_qa.json"
+                )
 
-            return {
-                "generation_id": str(generation_id),
-                "filename": filename,
-                "qa_pairs": qa_pairs,
-                "source_text": content
-            }
+                # 保存问答对到文件
+                try:
+                    with open(final_save_path, 'w', encoding='utf-8') as f:
+                        json.dump(qa_pairs, f, ensure_ascii=False, indent=4)
+                except Exception as e:
+                    raise Exception(f"Failed to save QA pairs to file: {str(e)}")
+
+                # 更新原始记录状态
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {
+                        "status": "completed",
+                        "save_path": final_save_path
+                    }}
+                )
+
+                # 更新原始文件状态为completed
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "completed"}}
+                )
+                # 同时更新二进制文件集合中的状态（如果存在）
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "completed"}}
+                )
+
+                # 添加一条新记录，使用简化的文件名
+                saved_file_record = {
+                    "input_file": os.path.basename(final_save_path),
+                    "original_file": filename,
+                    "status": "completed",
+                    "content": json.dumps(qa_pairs),
+                    "created_at": datetime.now(timezone.utc),
+                    "save_path": final_save_path,
+                    "model_name": model_name,
+                    "domain": domain
+                }
+                await self.qa_generations.insert_one(saved_file_record)
+
+                # 保存问答对到数据库
+                # 先删除之前同文件名的问答对记录
+                await self.qa_pairs.delete_many({
+                    "generation_id": {
+                        "$in": [
+                            doc["_id"] for doc in await self.qa_generations.find(
+                                {"input_file": filename, "_id": {"$ne": generation_id}}
+                            ).to_list(None)
+                        ]
+                    }
+                })
+
+                qa_records = []
+                for qa in qa_pairs:
+                    qa_record = QAPairDB(
+                        generation_id=PyObjectId(generation_id),
+                        question=qa["question"],
+                        answer=qa["answer"]
+                    )
+                    qa_records.append(qa_record.dict(by_alias=True))
+
+                if qa_records:
+                    await self.qa_pairs.insert_many(qa_records)
+
+                # 更新生成记录状态
+                await self.qa_generations.update_many(
+                    {"input_file": filename, "_id": {"$ne": generation_id}},
+                    {"$set": {"status": "overwritten"}}
+                )
+                
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"status": "completed"}}
+                )
+
+                return {
+                    "generation_id": str(generation_id),
+                    "filename": os.path.basename(final_save_path),
+                    "qa_pairs": qa_pairs,
+                    "source_text": content
+                }
+
+            except Exception as e:
+                # 更新原始文件状态为failed
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "failed"}}
+                )
+                # 同时更新二进制文件的状态（如果存在）
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": filename},
+                    {"$set": {"status": "failed"}}
+                )
+                raise e
 
         except Exception as e:
             import traceback

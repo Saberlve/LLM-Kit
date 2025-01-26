@@ -42,8 +42,8 @@ class QualityService:
     ):
         generation_id = None
         try:
-            # 直接使用传入的问答对内容
-            qa_pairs = content  # content已经是列表了
+            # 获取不带扩展名的文件名
+            base_filename = filename.rsplit('.', 1)[0]
 
             # 创建生成记录
             generation = QualityControlGeneration(
@@ -52,7 +52,7 @@ class QualityService:
                 model_name=model_name,
                 status="processing",
                 source_text=json.dumps(content, ensure_ascii=False),
-                progress=0  # 初始进度为0
+                progress=0
             )
             result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
@@ -61,10 +61,10 @@ class QualityService:
             os.makedirs(save_path, exist_ok=True)
             
             # 将问答对分成parallel_num份进行并行处理
-            chunk_size = len(qa_pairs) // parallel_num
+            chunk_size = len(content) // parallel_num
             if chunk_size == 0:
                 chunk_size = 1
-            qa_chunks = [qa_pairs[i:i + chunk_size] for i in range(0, len(qa_pairs), chunk_size)]
+            qa_chunks = [content[i:i + chunk_size] for i in range(0, len(content), chunk_size)]
 
             # 为每个chunk创建参数
             tasks = []
@@ -84,9 +84,9 @@ class QualityService:
                 hparams = HyperParams(
                     file_path=chunk_path,
                     save_path=save_path,
-                    SK=[SK[i % len(SK)]],  # 为每个chunk分配一个SK
-                    AK=[AK[i % len(AK)]],  # 为每个chunk分配一个AK
-                    parallel_num=1,  # 每个子任务使用单线程
+                    SK=[SK[i % len(SK)]],
+                    AK=[AK[i % len(AK)]],
+                    parallel_num=1,
                     model_name=model_name,
                     similarity_rate=similarity_rate,
                     coverage_rate=coverage_rate,
@@ -129,11 +129,10 @@ class QualityService:
                 if os.path.exists(result_path):
                     os.remove(result_path)
 
-            # 使用 QUALITY_ 前缀构建最终保存路径
-            quality_filename = f"QUALITY_{filename}"  # 添加QUALITY_前缀区分
+            # 使用简化的文件名格式：原文件名_quality.json
             final_save_path = os.path.join(
                 save_path,
-                f"{quality_filename}.json"
+                f"{base_filename}_quality.json"
             )
 
             # 保存最终结果
@@ -189,7 +188,7 @@ class QualityService:
 
             return {
                 "generation_id": str(generation_id),
-                "filename": filename,
+                "filename": os.path.basename(final_save_path),
                 "qa_pairs": all_qa_pairs,
                 "source_text": json.dumps(content, ensure_ascii=False),
                 "save_path": final_save_path
