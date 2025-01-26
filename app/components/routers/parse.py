@@ -89,6 +89,20 @@ async def upload_file(
                 detail=f"Unsupported file type: {request.file_type}. Supported types are: {', '.join(supported_types)}"
             )
 
+        # 检查是否存在相同文件名和内容的文件
+        existing_file = await db.llm_kit.uploaded_files.find_one({
+            "filename": request.filename,
+            "content": request.content,
+            "file_type": request.file_type
+        })
+
+        if existing_file:
+            return APIResponse(
+                status="success", 
+                message="File already exists",
+                data={"file_id": str(existing_file["_id"])}
+            )
+
         uploaded_file = UploadedFile(
             filename=request.filename,
             content=request.content,
@@ -577,6 +591,27 @@ async def upload_binary_file(
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported file type. Allowed types: {', '.join(allowed_types)}"
+            )
+
+        # 检查是否存在相同文件名和内容的文件
+        existing_file = await db.llm_kit.uploaded_binary_files.find_one({
+            "filename": file.filename,
+            "content": content,
+            "file_type": file_type
+        })
+
+        if existing_file:
+            return APIResponse(
+                status="success",
+                message="File already exists",
+                data={
+                    "file_id": str(existing_file["_id"]),
+                    "filename": existing_file["filename"],
+                    "file_type": existing_file["file_type"],
+                    "mime_type": existing_file["mime_type"],
+                    "size": existing_file["size"],
+                    "status": existing_file["status"]
+                }
             )
 
         # 创建文件记录
