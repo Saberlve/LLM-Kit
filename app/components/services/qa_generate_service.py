@@ -46,15 +46,28 @@ class QAGenerateService:
         return qa_pairs
 
     async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list, 
-                                    parallel_num: int, model_name: str, domain: str):
+                                    parallel_num: int, model_name: str, domain: str, generation_id: ObjectId):
         """并行处理多个文本块"""
         import asyncio
         
         qa_pairs = []
         tasks = set()
+        total_chunks = len(chunks)
+        processed_chunks = 0
         
         async def process_single_chunk(chunk, ak, sk):
-            return await self.process_chunk_with_api(chunk, ak, sk, model_name, domain)
+            nonlocal processed_chunks
+            result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain)
+            
+            # 更新进度
+            processed_chunks += 1
+            progress = int((processed_chunks / total_chunks) * 100)
+            await self.qa_generations.update_one(
+                {"_id": generation_id},
+                {"$set": {"progress": progress}}
+            )
+            
+            return result
 
         for i, chunk in enumerate(chunks):
             ak = ak_list[i % len(ak_list)]
@@ -175,7 +188,8 @@ class QAGenerateService:
                 model_name=model_name,
                 domain=domain,
                 status="processing",
-                source_text=content
+                source_text=content,
+                progress=0  # 初始进度为0
             )
             result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
@@ -183,14 +197,15 @@ class QAGenerateService:
             # 将内容分块处理
             # chunks = [{"chunk": content}]
 
-            # 并行处理所有文本块
+            # 并行处理所有文本块，传入generation_id用于更新进度
             qa_pairs = await self.process_chunks_parallel(
                 [chunk.get("chunk", "") for chunk in chunks],
                 AK,
                 SK,
                 parallel_num,
                 model_name,
-                domain
+                domain,
+                generation_id
             )
 
             if not qa_pairs:

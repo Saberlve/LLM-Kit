@@ -100,3 +100,28 @@ async def get_qa_history(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/generate_qa/progress/{record_id}")
+async def get_qa_progress(
+    record_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """获取问答对生成进度"""
+    try:
+        from bson import ObjectId
+        record = await db.llm_kit.qa_generations.find_one({"_id": ObjectId(record_id)})
+        
+        if not record:
+            raise HTTPException(status_code=404, detail="Record not found")
+        
+        return APIResponse(
+            status="success",
+            message="Progress retrieved successfully",
+            data={
+                "progress": record.get("progress", 0),
+                "status": record.get("status", "processing")
+            }
+        )
+    except Exception as e:
+        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

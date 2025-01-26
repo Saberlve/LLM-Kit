@@ -51,7 +51,8 @@ class QualityService:
                 save_path=save_path,
                 model_name=model_name,
                 status="processing",
-                source_text=json.dumps(content, ensure_ascii=False)
+                source_text=json.dumps(content, ensure_ascii=False),
+                progress=0  # 初始进度为0
             )
             result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
             generation_id = result.inserted_id
@@ -68,6 +69,9 @@ class QualityService:
             # 为每个chunk创建参数
             tasks = []
             chunk_paths = []
+            total_chunks = len(qa_chunks)
+            processed_chunks = 0
+
             for i, chunk in enumerate(qa_chunks):
                 # 创建临时文件路径
                 chunk_path = os.path.join(save_path, f"temp_chunk_{i}.json")
@@ -92,6 +96,14 @@ class QualityService:
                 
                 generator = QAQualityGenerator(chunk_path, hparams)
                 tasks.append(generator.iterate_optim_qa())
+                
+                # 更新进度
+                processed_chunks += 1
+                progress = int((processed_chunks / total_chunks) * 100)
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": progress}}
+                )
 
             # 等待所有任务完成并合并结果
             all_qa_pairs = []
