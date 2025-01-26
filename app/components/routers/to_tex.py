@@ -7,9 +7,16 @@ from app.components.models.schemas import (
     ParsedContentResponse
 )
 from app.components.services.to_tex_service import ToTexService
+from pydantic import BaseModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+class FileIDRequest(BaseModel):
+    file_id: str
+
+class RecordIDRequest(BaseModel):
+    record_id: str
 
 @router.get("/parsed_files")
 async def get_parsed_files(
@@ -29,15 +36,15 @@ async def get_parsed_files(
         logger.error(error_message, exc_info=True)
         raise HTTPException(status_code=500, detail=error_message)
 
-@router.get("/parsed_content/{filename}")
+@router.post("/parsed_content")
 async def get_parsed_content(
-    filename: str,
+    request: FileIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """根据文件名获取解析后的内容"""
+    """根据文件ID获取解析后的内容"""
     try:
         service = ToTexService(db)
-        content = await service.get_parsed_content(filename)
+        content = await service.get_parsed_content(request.file_id)
         return APIResponse(
             status="success",
             message="解析内容获取成功",
@@ -92,15 +99,15 @@ async def get_tex_history(
         error_message = f"Failed to retrieve LaTeX conversion history: {str(e)}"
         raise HTTPException(status_code=500, detail=error_message)
 
-@router.get("/to_tex/progress/{record_id}")
+@router.post("/to_tex/progress")
 async def get_tex_progress(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取LaTeX转换进度"""
     try:
         from bson import ObjectId
-        record = await db.llm_kit.tex_records.find_one({"_id": ObjectId(record_id)})
+        record = await db.llm_kit.tex_records.find_one({"_id": ObjectId(request.record_id)})
         
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
@@ -117,9 +124,9 @@ async def get_tex_progress(
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/tex_records/{record_id}")
+@router.delete("/tex_records")
 async def delete_tex_record(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除LaTeX转换记录"""
@@ -127,7 +134,7 @@ async def delete_tex_record(
         from bson import ObjectId
         
         # 删除转换记录
-        result = await db.llm_kit.tex_records.delete_one({"_id": ObjectId(record_id)})
+        result = await db.llm_kit.tex_records.delete_one({"_id": ObjectId(request.record_id)})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
@@ -135,9 +142,9 @@ async def delete_tex_record(
         return APIResponse(
             status="success",
             message="TeX record deleted successfully",
-            data={"record_id": record_id}
+            data={"record_id": request.record_id}
         )
         
     except Exception as e:
-        logger.error(f"删除LaTeX记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
+        logger.error(f"删除LaTeX记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

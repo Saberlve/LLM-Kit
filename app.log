@@ -13,3 +13,259 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 133, in delete_tex_record
     raise HTTPException(status_code=404, detail="Record not found")
 fastapi.exceptions.HTTPException: 404: Record not found
+2025-01-26 11:02:34,741 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmprrar_vb8.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:37,364 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpgx2hk66k.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:37,850 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpk_xgvvui.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:02:38,226 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpv5ohru8c.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:03:42,163 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a56f4a09e7157845e924, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmphye_f0rr.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-01-26 11:06:36,321 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 67958b7e555fd5df1912ebec, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpkihjslj6.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+2025-01-26 11:06:40,611 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 67958b7e555fd5df1912ebec, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp9wrqgkhm.txt' -> './parsed_files\\parsed_file\\ttt_parsed.txt'
+2025-01-26 11:10:19,682 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpi6nd7r0p.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:19,388 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpqn4khm4s.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:21,206 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmplhbvxol9.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:21,730 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpxaulmv1z.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,112 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpf221r57r.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,408 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6m1qel4_.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,671 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6phmbe23.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:11:22,990 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a6fb4a09e7157845e93e, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpty32rf9l.txt' -> './parsed_files\\parsed_file\\ce3shi.txt_parsed.txt'
+2025-01-26 11:13:39,589 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 6795a80b4a09e7157845e959, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 258, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 381, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 343, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp62xwlahm.txt' -> './parsed_files\\parsed_file\\ce3s5hi.txt_parsed.txt'

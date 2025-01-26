@@ -743,14 +743,15 @@ async def get_task_progress(
 
 
 
-@router.delete("/records/{record_id}")
+@router.delete("/records")
 async def delete_record(
-    record_id: str,
+    request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除解析记录"""
     try:
         from bson import ObjectId
+        record_id = request.record_id
         
         # 删除解析记录
         result = await db.llm_kit.parse_records.delete_one({"_id": ObjectId(record_id)})
