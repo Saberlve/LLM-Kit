@@ -10,6 +10,7 @@
     TableBody,
     TableBodyCell,
     Input,
+    Progressbar,
   } from "flowbite-svelte";
 
   import { Dropzone } from "flowbite-svelte";
@@ -22,15 +23,6 @@
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
 
   // --- Types ---
-  interface SubmissionEntry {
-    id: string;
-    name: string;
-    domain: string;
-    file: File;
-    size: string;
-    uploadProgress: number;
-    isBinary: boolean;
-  }
 
   interface UploadResponse {
     status: "success" | "fail";
@@ -38,22 +30,42 @@
     data: { file_id: string };
   }
 
+  interface ParseResponse {
+    status: "success" | "fail";
+    message: string;
+    data: { record_id: string };
+  }
+
+  interface TaskProgressResponse {
+    status: "success" | "fail";
+    message: string;
+    data: { progress: number, status: string, task_type: string };
+  }
+
   interface UploadedFile {
+    file_id: string;
     filename: string;
     file_type: string;
     size: number;
-    status: string;
+    status: string; // Backend upload status: "pending", "processed"
     created_at: string;
     type: string;
+    parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
+    parseProgress?: number; // 0-100
+    recordId?: string | null;
   }
   interface UploadedBinaryFile {
+    file_id: string;
     filename: string;
     file_type: string;
     mime_type: string;
     size: number;
-    status: string;
+    status: string; // Backend upload status: "pending", "processed"
     created_at: string;
     type: string;
+    parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
+    parseProgress?: number; // 0-100
+    recordId?: string | null;
   }
 
   type UnifiedFile = UploadedFile | UploadedBinaryFile;
@@ -64,19 +76,22 @@
   }
 
   // --- Component State ---
-  let submissions: SubmissionEntry[] = [];
   let loading = false;
   let errorMessage: string | null = null;
   let uploadedFiles: UnifiedFile[] = [];
   let entries: DatasetEntry[] = [];
-  export let stageEmpty = submissions.length == 0;
-  $: stageEmpty = submissions.length == 0;
+  export let stageEmpty = uploadedFiles.length == 0;
+  $: stageEmpty = uploadedFiles.length == 0;
+  let parsingProgressIntervals: { [fileId: string]: any } = {};
+
 
   const uploaded_file_heads = [
     t("data.uploader.filename"),
     t("data.uploader.file_type"),
     t("data.uploader.size"),
     t("data.uploader.created_at"),
+    t("data.uploader.upload_status"), // 添加 upload status 列头
+    t("data.uploader.action")
   ]
 
 
@@ -98,82 +113,40 @@
     }
   }
 
-  function fileToDefaultEntry(file: File): SubmissionEntry {
-    return {
-      id: generateUniqueId(),
-      name: file.name.split(".")[0],
-      domain: `Uploaded file ${file.name}`,
-      file: file,
-      size: formatFileSize(file.size),
-      uploadProgress: 0,
-      isBinary: false,
-    };
-  }
-
-  function fileToDefaultBinaryEntry(file: File): SubmissionEntry {
-    return {
-      id: generateUniqueId(),
-      name: file.name.split(".")[0],
-      domain: `Uploaded file ${file.name}`,
-      file: file,
-      size: formatFileSize(file.size),
-      uploadProgress: 0,
-      isBinary: true,
-    };
-  }
-
-  function filesToDefaultEntries(files: File[]): SubmissionEntry[] {
-    return files.map((file) => {
-      const fileType = file.name.split(".").pop()?.toLowerCase();
-      if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
-        return fileToDefaultBinaryEntry(file);
-      } else {
-        return fileToDefaultEntry(file);
-      }
-    });
-  }
 
   // --- Event Handlers ---
-  function dropHandle(event: DragEvent) {
+  async function dropHandle(event: DragEvent) {
     event.preventDefault();
     const filesInItems = Array.from(event.dataTransfer.items)
             .filter((item) => item.kind === "file")
             .map((item) => item.getAsFile());
     const filesInFiles = Array.from(event.dataTransfer.files);
     const files = Array.from(new Set([...filesInItems, ...filesInFiles]));
-    submissions = [...submissions, ...filesToDefaultEntries(files)];
+
+    for (const file of files) {
+      await uploadAndProcessFile(file);
+    }
   }
 
-  function changeHandle(event: any) {
+  async function changeHandle(event: any) {
     event.preventDefault();
     const files: File[] = Array.from(event.target.files);
-    submissions = [...submissions, ...filesToDefaultEntries(files)];
+    for (const file of files) {
+      await uploadAndProcessFile(file);
+    }
   }
 
-  function updateSubmissionProgress(id: string, progress: number) {
-    submissions = submissions.map((submission) =>
-            submission.id === id ? { ...submission, uploadProgress: progress } : submission
-    );
-  }
 
   // --- API Functions ---
-  async function uploadFile(entry: SubmissionEntry): Promise<UploadResponse> {
-    const file = entry.file;
+  async function uploadFile(file: File): Promise<UploadResponse> {
     try {
-      if (entry.isBinary) {
+      const fileType = file.name.split(".").pop()?.toLowerCase();
+      if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
         const formData = new FormData();
         formData.append("file", file);
         const response = await axios.post<UploadResponse>(
                 `http://127.0.0.1:8000/parse/upload/binary`,
                 formData,
-                {
-                  onUploadProgress: (progressEvent) => {
-                    const percentage = Math.round(
-                            (progressEvent.loaded * 100) / progressEvent.total
-                    );
-                    updateSubmissionProgress(entry.id, percentage);
-                  },
-                }
         );
         return response.data;
       } else {
@@ -194,14 +167,6 @@
                         filename: file.name,
                         content: fileContent,
                         file_type: file.name.split(".").pop(),
-                      },
-                      {
-                        onUploadProgress: (progressEvent) => {
-                          const percentage = Math.round(
-                                  (progressEvent.loaded * 100) / progressEvent.total
-                          );
-                          updateSubmissionProgress(entry.id, percentage);
-                        },
                       }
               );
               resolve(response.data);
@@ -226,7 +191,13 @@
               `http://127.0.0.1:8000/parse/files/all`
       );
       if (response.data.status === "success") {
-        uploadedFiles = response.data.data;
+        // Reset parse status and progress when fetching new file list
+        uploadedFiles = response.data.data.map(file => ({
+          ...file,
+          parseStatus: file.parseStatus || "",
+          parseProgress: file.parseProgress || 0,
+          recordId: file.recordId || null
+        }));
       } else {
         console.error("Error fetching uploaded files:", response);
         errorMessage = t("data.uploader.fetch_fail");
@@ -237,24 +208,105 @@
     }
   }
 
+  async function parseFileForEntry(file: UnifiedFile) {
+    if (!file.file_id) {
+      console.error("File ID is missing, cannot parse.");
+      return;
+    }
+
+    uploadedFiles = uploadedFiles.map(f =>
+            f.file_id === file.file_id ? { ...f, parseStatus: "pending", parseProgress: 0, recordId: null } : f
+    );
+
+    try {
+      let parseResponse: ParseResponse;
+      if (file.type === 'binary') {
+        parseResponse = await axios.post<ParseResponse>(`http://127.0.0.1:8000/parse/parse/ocr`, { file_id: file.file_id }); // Send file_id in body
+      } else {
+        parseResponse = await axios.post<ParseResponse>(`http://127.0.0.1:8000/parse/parse/file`, { file_id: file.file_id }); // Send file_id in body
+      }
+
+      if (parseResponse.data.status === "success") {
+        const recordId = parseResponse.data.data.record_id;
+        uploadedFiles = uploadedFiles.map(f =>
+                f.file_id === file.file_id ? { ...f, recordId: recordId } : f
+        );
+        startPollingParsingProgress(file.file_id, recordId);
+      } else {
+        uploadedFiles = uploadedFiles.map(f =>
+                f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        );
+        console.error("Parsing failed:", parseResponse);
+      }
+    } catch (error) {
+      uploadedFiles = uploadedFiles.map(f =>
+              f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+      );
+      console.error("Error starting parsing:", error);
+    }
+  }
+
+  async function fetchTaskProgress(recordId: string): Promise<TaskProgressResponse> {
+    return await axios.get<TaskProgressResponse>(`http://127.0.0.1:8000/parse/task/progress`, { params: { record_id: recordId } }); // Send record_id as query parameter
+  }
+
+  function startPollingParsingProgress(fileId: string, recordId: string) {
+    if (parsingProgressIntervals[fileId]) {
+      clearInterval(parsingProgressIntervals[fileId]);
+    }
+
+    parsingProgressIntervals[fileId] = setInterval(async () => {
+      try {
+        const progressResponse = await fetchTaskProgress(recordId);
+        if (progressResponse.data.status === "success") {
+          const progress = progressResponse.data.data.progress;
+          const status = progressResponse.data.data.status;
+          uploadedFiles = uploadedFiles.map(f =>
+                  f.file_id === fileId ? { ...f, parseProgress: progress, parseStatus: status } : f
+          );
+          if (status === "completed" || status === "failed") {
+            clearInterval(parsingProgressIntervals[fileId]);
+            delete parsingProgressIntervals[fileId];
+            if (status === "completed") { // Update upload status to "processed" after successful parse
+              uploadedFiles = uploadedFiles.map(f =>
+                      f.file_id === fileId ? { ...f, status: "processed" } : f
+              );
+            }
+          }
+        } else {
+          console.error("Error fetching task progress:", progressResponse);
+          clearInterval(parsingProgressIntervals[fileId]);
+          delete parsingProgressIntervals[fileId];
+          uploadedFiles = uploadedFiles.map(f =>
+                  f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching task progress:", error);
+        clearInterval(parsingProgressIntervals[fileId]);
+        delete parsingProgressIntervals[fileId];
+        uploadedFiles = uploadedFiles.map(f =>
+                f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        );
+      }
+    }, 2000); // Poll every 2 seconds
+  }
+
 
   // --- Upload Logic ---
-  async function submitHandle() {
+  async function uploadAndProcessFile(file: File) {
     loading = true;
     errorMessage = null;
     try {
-      for (const entry of submissions) {
-        const response = await uploadFile(entry);
+      const response = await uploadFile(file);
 
-        if (response.status !== "success") {
-          errorMessage = t("data.uploader.upload_fail") + ": " + entry.file.name;
-          console.error(`Error uploading file ${entry.file.name}:`, response);
-        } else {
-          console.log("File uploaded successfully, id is", response.data.file_id);
-        }
+      if (response.status !== "success") {
+        errorMessage = t("data.uploader.upload_fail") + ": " + file.name;
+        console.error(`Error uploading file ${file.name}:`, response);
+      } else {
+        console.log("File uploaded successfully, id is", response.data.file_id);
       }
-      await fetchUploadedFiles();
-      submissions = []; // Clear submissions after successful upload
+      await fetchUploadedFiles(); // Refresh file list after each upload
     } catch (error) {
       errorMessage = t("data.uploader.upload_fail_all");
       console.error("Upload failed:", error);
@@ -262,6 +314,7 @@
       loading = false;
     }
   }
+
 
   function returnToData() {
     goto(`/data`);
@@ -275,96 +328,75 @@
 
   onDestroy(() => {
     clearInterval(fetchEntriesUpdater);
+    for (const intervalId in parsingProgressIntervals) {
+      clearInterval(parsingProgressIntervals[intervalId]);
+    }
   });
 
-  function removeFromStageHandle(id: string) {
-    submissions = submissions.filter((entry) => entry.id !== id);
+
+  function handleParseButtonClick(file: UnifiedFile) {
+    parseFileForEntry(file);
   }
 </script>
+
 
 <ActionPageTitle returnTo={"/data"} title={t("data.uploader.title")} />
 
 {#if !loading}
+
   <div class="w-full flex flex-col">
     {#if errorMessage}
       <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
         {errorMessage}
       </div>
     {/if}
-    {#if uploadedFiles && uploadedFiles.length > 0}
-      <div class="m-2">
-        <Accordion>
-          <AccordionItem open={true}>
-            <span slot="header">{t("data.uploader.uploaded_files")}</span>
-            <div class="overflow-x-auto" style="max-height: 300px;">
-              <Table striped={true}>
-                <TableHead>
-                  {#each uploaded_file_heads as head}
-                    <TableHeadCell>{head}</TableHeadCell>
-                  {/each}
-                </TableHead>
-                <TableBody>
-                  {#each uploadedFiles as file}
-                    <tr>
-                      <TableBodyCell>{file.filename}</TableBodyCell>
-                      <TableBodyCell>{file.file_type}</TableBodyCell>
-                      <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
-                      <TableBodyCell>{file.created_at}</TableBodyCell>
-                    </tr>
-                  {/each}
-                </TableBody>
-              </Table>
-            </div>
-          </AccordionItem>
-        </Accordion>
-      </div>
-    {/if}
     <div class="m-2">
       <Accordion>
         <AccordionItem open={true}>
-          <span slot="header">{t("data.uploader.zone")}</span>
-          <div class="flex flex-row justify-end items-center text-black">
-            <div>
-              <Button class="m-2 text-center" on:click={submitHandle}
-              >{t("data.uploader.submit")}</Button
-              >
-            </div>
-          </div>
-          <div class="border border-gray-200 text-gray-800 rounded p-2 m-2">
-            {#if submissions.length === 0}
-              <div class="w-full text-center">
-                <span>{t("data.uploader.no_file")}</span>
-              </div>
-            {:else}
-              <ul class="flex flex-col gap-2">
-                {#each submissions as entry}
-                  <li class="flex flex-col gap-2">
-                    <div class="font-semibold">{entry.file.name}</div>
-                    <div class="flex flex-row gap-2">
-                      <Input
-                              placeholder={t("data.uploader.enter_name")}
-                              bind:value={entry.name}
-                      />
-                      <Input
-                              placeholder={t("data.uploader.enter_des")}
-                              bind:value={entry.domain}
-                      />
-                      <div class="flex justify-center items-center">
-                        <button
-                                on:click={() => removeFromStageHandle(entry.id)}
-                                class="text-blue-500 hover:text-blue-800 hover:underline"
-                        >{t("data.uploader.remove_stage")}</button
-                        >
-                      </div>
-                    </div>
-                  </li>
+          <span slot="header">{t("data.uploader.uploaded_files")}</span>
+          <div class="overflow-x-auto" style="max-height: 600px;">
+            <Table striped={true}>
+              <TableHead>
+                {#each uploaded_file_heads as head}
+                  <TableHeadCell>{head}</TableHeadCell>
                 {/each}
-              </ul>
-            {/if}
+              </TableHead>
+              <TableBody>
+                {#each uploadedFiles as file}
+                  <tr>
+                    <TableBodyCell>{file.filename}</TableBodyCell>
+                    <TableBodyCell>{file.file_type || file.mime_type}</TableBodyCell>
+                    <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
+                    <TableBodyCell>{file.created_at}</TableBodyCell>
+                    <TableBodyCell>{file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending")}</TableBodyCell>
+                    <TableBodyCell>
+                      <Button size="xs" on:click={() => handleParseButtonClick(file)} disabled={file.parseStatus === 'processing' || file.parseStatus === 'completed' || file.status === 'processed'}>{t("data.uploader.parse_button")}</Button>
+                    </TableBodyCell>
+                  </tr>
+                  {#if file.parseStatus}
+                    <tr>
+                      <td colspan="6">
+                        <div class="flex flex-row items-center gap-2">
+                          <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
+                          {#if file.parseStatus === 'processing'}
+                            <Progressbar progress={file.parseProgress} size="sm" />
+                          {:else if file.parseStatus === 'completed'}
+                            <span class="text-green-500">({t("data.uploader.completed")})</span>
+                          {:else if file.parseStatus === 'failed'}
+                            <span class="text-red-500">({t("data.uploader.failed")})</span>
+                          {/if}
+                        </div>
+                      </td>
+                    </tr>
+                  {/if}
+                {/each}
+              </TableBody>
+            </Table>
           </div>
         </AccordionItem>
       </Accordion>
     </div>
+
     <div class="m-4">
       <Dropzone
               id="dropzone"
@@ -403,27 +435,6 @@
   <div class="m-4 p-4 border-2 border-gray-300 rounded text-center">
     <div>
       {t("data.uploader.uploading")}
-    </div>
-    <div class="flex flex-col gap-2">
-      {#each submissions as entry}
-        <div class="relative pt-1">
-          <div
-                  class="flex overflow-hidden bg-gray-200 rounded-lg shadow-sm"
-                  style="height: 23px;"
-          >
-            <div
-                    class="flex-grow bg-white rounded-lg"
-                    style="width: {100 - entry.uploadProgress}%"
-            >
-              <div
-                      class="flex-grow bg-blue-700 rounded-lg"
-                      style="width: {entry.uploadProgress}%"
-              />
-            </div>
-          </div>
-          <span>{entry.file.name} : {entry.uploadProgress.toFixed(2)}%</span>
-        </div>
-      {/each}
     </div>
   </div>
 {/if}
