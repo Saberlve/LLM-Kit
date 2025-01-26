@@ -180,6 +180,7 @@ class ParseService:
         try:
             # 获取文件类型并验证
             file_type = filename.split('.')[-1].lower()
+            base_filename = filename.rsplit('.', 1)[0]  # 获取不带扩展名的文件名
             print(f"Processing file type: {file_type}")
             
             supported_types = ['tex', 'txt', 'json', 'pdf']
@@ -195,20 +196,35 @@ class ParseService:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
 
+            # 修改进度更新逻辑
             async def update_progress(progress: int):
-                """异步更新进度（带节流控制）"""
+                """异步更新进度（优化的节流控制）"""
                 if record_id:
-                    current_time = time.time()
-                    last_update = self.last_progress_update.get(record_id, 0)
-                    
-                    # 每0.5秒最多更新一次进度
-                    if current_time - last_update >= 0.5:
-                        actual_progress = min(20 + int(progress * 0.8), 100)
-                        await self.parse_records.update_one(
-                            {"_id": ObjectId(record_id)},
-                            {"$set": {"progress": actual_progress}}
-                        )
-                        self.last_progress_update[record_id] = current_time
+                    try:
+                        current_time = time.time()
+                        last_update = self.last_progress_update.get(record_id, 0)
+                        
+                        # 对于小文件，减少进度更新频率
+                        content_length = len(content)
+                        if content_length < 1024:  # 小于1KB的文件
+                            update_interval = 0.1  # 降低更新频率
+                            progress_steps = [0, 50, 100]  # 只在关键节点更新进度
+                        else:
+                            update_interval = 0.5
+                            progress_steps = range(0, 101, 10)  # 正常每10%更新一次
+                        
+                        # 只在指定的进度点和时间间隔更新
+                        if (progress in progress_steps and 
+                            current_time - last_update >= update_interval):
+                            actual_progress = min(20 + int(progress * 0.8), 100)
+                            await self.parse_records.update_one(
+                                {"_id": ObjectId(record_id)},
+                                {"$set": {"progress": actual_progress}}
+                            )
+                            self.last_progress_update[record_id] = current_time
+                    except Exception as e:
+                        print(f"Progress update failed: {str(e)}")
+                        # 进度更新失败不影响主流程
 
             try:
                 # 使用现有的解析逻辑
@@ -220,6 +236,9 @@ class ParseService:
                     save_path=save_path
                 )
 
+                # 立即设置初始进度
+                await update_progress(0)
+
                 # 执行解析，传入进度回调
                 parsed_file_path = parse.parse(
                     hparams,
@@ -230,7 +249,16 @@ class ParseService:
                 with open(parsed_file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                # 更新最终进度
+                # 创建新的简化文件名
+                new_filename = f"{base_filename}_parsed.txt"
+                new_file_path = os.path.join(os.path.dirname(parsed_file_path), new_filename)
+                
+                # 重命名文件
+                if os.path.exists(parsed_file_path):
+                    os.rename(parsed_file_path, new_file_path)
+                    parsed_file_path = new_file_path
+
+                # 确保设置最终进度
                 await update_progress(100)
 
                 return {
