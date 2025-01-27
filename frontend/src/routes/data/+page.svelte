@@ -43,12 +43,16 @@
     data: { progress: number, status: string, task_type: string };
   }
 
+  interface ParseHistoryResponse extends APIResponse {
+    data: { exists: number };
+  }
+
   interface UploadedFile {
     file_id: string;
     filename: string;
     file_type: string;
     size: number;
-    status: string; // Backend upload status: "pending", "processed"
+    status: string; // Backend upload status: "pending", "processed", "parsed"
     created_at: string;
     type: string;
     parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
@@ -61,7 +65,7 @@
     file_type: string;
     mime_type: string;
     size: number;
-    status: string; // Backend upload status: "pending", "processed"
+    status: string; // Backend upload status: "pending", "processed", "parsed"
     created_at: string;
     type: string;
     parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
@@ -209,6 +213,21 @@
     }
   }
 
+  async function checkParseHistory(filename: string): Promise<number> {
+    try {
+      const response = await axios.get<ParseHistoryResponse>(`http://127.0.0.1:8000/parse/phistory`, { params: { filename: filename } });
+      if (response.data.status === "success") {
+        return response.data.data.exists;
+      } else {
+        console.error("Error checking parse history:", response);
+        return 0; // Default to 0 if API call fails
+      }
+    } catch (error) {
+      console.error("Error checking parse history:", error);
+      return 0; // Default to 0 if API call fails
+    }
+  }
+
 
   async function fetchUploadedFiles(): Promise<void> {
     try {
@@ -217,12 +236,23 @@
       );
       if (response.data.status === "success") {
         // Reset parse status and progress when fetching new file list
-        uploadedFiles = response.data.data.map(file => ({
-          ...file,
-          parseStatus: file.parseStatus || "",
-          parseProgress: file.parseProgress || 0,
-          recordId: file.recordId || null
-        }));
+        uploadedFiles = response.data.data.map(async file => {
+          let status = file.status;
+          if (file.file_type === 'txt' || file.mime_type === 'text/plain' || file.file_type === 'unknown' || file.mime_type === 'application/octet-stream') { // Only check history for text files
+            const exists = await checkParseHistory(file.filename);
+            status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
+          }
+          return {
+            ...file,
+            status: status,
+            parseStatus: file.parseStatus || "",
+            parseProgress: file.parseProgress || 0,
+            recordId: file.recordId || null
+          };
+        });
+        // Resolve promises after mapping
+        uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
+
       } else {
         console.error("Error fetching uploaded files:", response);
         errorMessage = t("data.uploader.fetch_fail");
@@ -292,9 +322,9 @@
           if (status === "completed" || status === "failed") {
             clearInterval(parsingProgressIntervals[fileId]);
             delete parsingProgressIntervals[fileId];
-            if (status === "completed") { // Update upload status to "processed" after successful parse
+            if (status === "completed") {
               uploadedFiles = uploadedFiles.map(f =>
-                      f.file_id === fileId ? { ...f, status: "processed" } : f
+                      f.file_id === fileId ? { ...f, status: "parsed" } : f // Update status to "parsed" after successful parse
               );
             }
           }
@@ -317,20 +347,21 @@
     }, 2000); // Poll every 2 seconds
   }
 
-  async function deleteFile(fileId: string) { // New deleteFile API function
+  // --- API Functions ---
+  async function deleteFile(fileId: string) {
     loading = true;
     errorMessage = null;
     try {
-      // **Important**: Modify the URL and request method according to your backend API
-      // Assuming the backend delete file API is `/parse/files/{file_id}` and accepts DELETE request
+      // 修改为POST请求并正确传递file_id
       const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/parse/deletefiles`, // Corrected URL here
+              `http://127.0.0.1:8000/parse/deletefiles`, // 注意路径也需修正
               {
-                data: { file_id: fileId }, // Sending file_id in the request body
+                data: { file_id: fileId } // DELETE 请求通过 data 传参
               }
       );
+
       if (response.data.status === "success") {
-        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId); // Remove from frontend list
+        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId);
       } else {
         errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
         console.error("Error deleting file:", response);
@@ -342,8 +373,6 @@
       loading = false;
     }
   }
-
-
   // --- Upload Logic ---
   async function uploadAndProcessFile(file: File) {
     loading = true;
@@ -358,6 +387,12 @@
         console.log("File uploaded successfully, id is", response.data.file_id);
       }
       await fetchUploadedFiles(); // Refresh file list after each upload
+      // Auto parse the latest uploaded file after refresh
+      const latestFile = uploadedFiles.find(f => f.filename === file.name); // Find the uploaded file by filename
+      if (latestFile) {
+        parseFileForEntry(latestFile);
+      }
+
     } catch (error) {
       errorMessage = t("data.uploader.upload_fail_all");
       console.error("Upload failed:", error);
@@ -412,13 +447,17 @@
               <TableBody>
                 {#each uploadedFiles as file}
                   <tr>
-                    <TableBodyCell>{file.filename}</TableBodyCell>
+                    <TableBodyCell  style="overflow-x: auto; white-space: nowrap; max-width: 300px;">
+                      <div style="overflow-x: auto; white-space: nowrap;">{file.filename}</div>
+                    </TableBodyCell>
                     <TableBodyCell>{file.file_type || file.mime_type}</TableBodyCell>
                     <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
-                    <TableBodyCell>{file.created_at}</TableBodyCell>
-                    <TableBodyCell>{file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending")}</TableBodyCell>
+                    <TableBodyCell>{file.created_at.substring(0, 19)}</TableBodyCell>
                     <TableBodyCell>
-                      <Button size="xs" on:click={() => handleParseButtonClick(file)} disabled={file.parseStatus === 'processing' || file.parseStatus === 'completed' || file.status === 'processed'}>{t("data.uploader.parse_button")}</Button>
+                      {file.status === 'parsed' ? t("data.uploader.parsed") : (file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending"))}
+                    </TableBodyCell>
+                    <TableBodyCell>
+                      <Button size="xs" on:click={() => handleParseButtonClick(file)} disabled={file.parseStatus === 'processing' || file.parseStatus === 'completed' || file.status === 'parsed'}>{t("data.uploader.parse_button")}</Button>
                     </TableBodyCell>
                     <TableBodyCell>
                       <Button size="xs" color="red" on:click={() => handleDeleteButtonClick(file)}>{t("data.uploader.delete_button")}</Button> <!-- Delete button always shown -->
