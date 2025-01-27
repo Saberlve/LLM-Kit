@@ -11,6 +11,7 @@
     TableBodyCell,
     Input,
     Progressbar,
+    Modal,
   } from "flowbite-svelte";
 
   import { Dropzone } from "flowbite-svelte";
@@ -24,21 +25,21 @@
 
   // --- Types ---
 
-  interface UploadResponse {
+  interface APIResponse {
     status: "success" | "fail";
     message: string;
+    data: any;
+  }
+
+  interface UploadResponse extends APIResponse {
     data: { file_id: string };
   }
 
-  interface ParseResponse {
-    status: "success" | "fail";
-    message: string;
+  interface ParseResponse extends APIResponse {
     data: { record_id: string };
   }
 
-  interface TaskProgressResponse {
-    status: "success" | "fail";
-    message: string;
+  interface TaskProgressResponse extends APIResponse {
     data: { progress: number, status: string, task_type: string };
   }
 
@@ -69,9 +70,7 @@
   }
 
   type UnifiedFile = UploadedFile | UploadedBinaryFile;
-  interface UnifiedFileListResponse {
-    status: string;
-    message: string;
+  interface UnifiedFileListResponse extends APIResponse {
     data: UnifiedFile[];
   }
 
@@ -84,14 +83,18 @@
   $: stageEmpty = uploadedFiles.length == 0;
   let parsingProgressIntervals: { [fileId: string]: any } = {};
 
+  // Delete confirmation modal state
+  let showDeleteConfirmation = false;
+  let fileToDelete: UnifiedFile | null = null; // Store the file object to be deleted
 
   const uploaded_file_heads = [
     t("data.uploader.filename"),
     t("data.uploader.file_type"),
     t("data.uploader.size"),
     t("data.uploader.created_at"),
-    t("data.uploader.upload_status"), // 添加 upload status 列头
-    t("data.uploader.action")
+    t("data.uploader.upload_status"),
+    t("data.uploader.action"),
+    t("data.uploader.delete_action") // "Delete File" column header
   ]
 
 
@@ -134,6 +137,28 @@
     for (const file of files) {
       await uploadAndProcessFile(file);
     }
+  }
+
+  function handleParseButtonClick(file: UnifiedFile) {
+    parseFileForEntry(file);
+  }
+
+  function handleDeleteButtonClick(file: UnifiedFile) { // Modified: Takes file object
+    fileToDelete = file; // Store the file object
+    showDeleteConfirmation = true;
+  }
+
+  async function confirmDelete() {
+    if (fileToDelete && fileToDelete.file_id) { // Use file_id for deletion
+      await deleteFile(fileToDelete.file_id); // Call deleteFile API function
+    }
+    showDeleteConfirmation = false;
+    fileToDelete = null;
+  }
+
+  function cancelDelete() {
+    showDeleteConfirmation = false;
+    fileToDelete = null;
   }
 
 
@@ -292,6 +317,32 @@
     }, 2000); // Poll every 2 seconds
   }
 
+  async function deleteFile(fileId: string) { // New deleteFile API function
+    loading = true;
+    errorMessage = null;
+    try {
+      // **Important**: Modify the URL and request method according to your backend API
+      // Assuming the backend delete file API is `/parse/files/{file_id}` and accepts DELETE request
+      const response = await axios.delete<APIResponse>(
+              `http://127.0.0.1:8000/parse/parse/deletefiles`, // Corrected URL here
+              {
+                data: { file_id: fileId }, // Sending file_id in the request body
+              }
+      );
+      if (response.data.status === "success") {
+        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId); // Remove from frontend list
+      } else {
+        errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
+        console.error("Error deleting file:", response);
+      }
+    } catch (error) {
+      errorMessage = t("data.uploader.delete_fail_all");
+      console.error("Error deleting file:", error);
+    } finally {
+      loading = false;
+    }
+  }
+
 
   // --- Upload Logic ---
   async function uploadAndProcessFile(file: File) {
@@ -334,9 +385,6 @@
   });
 
 
-  function handleParseButtonClick(file: UnifiedFile) {
-    parseFileForEntry(file);
-  }
 </script>
 
 
@@ -372,10 +420,13 @@
                     <TableBodyCell>
                       <Button size="xs" on:click={() => handleParseButtonClick(file)} disabled={file.parseStatus === 'processing' || file.parseStatus === 'completed' || file.status === 'processed'}>{t("data.uploader.parse_button")}</Button>
                     </TableBodyCell>
+                    <TableBodyCell>
+                      <Button size="xs" color="red" on:click={() => handleDeleteButtonClick(file)}>{t("data.uploader.delete_button")}</Button> <!-- Delete button always shown -->
+                    </TableBodyCell>
                   </tr>
                   {#if file.parseStatus}
                     <tr>
-                      <td colspan="6">
+                      <td colspan="7">
                         <div class="flex flex-row items-center gap-2">
                           <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
                           {#if file.parseStatus === 'processing'}
@@ -438,3 +489,17 @@
     </div>
   </div>
 {/if}
+
+<!-- Delete Confirmation Modal -->
+<Modal bind:open={showDeleteConfirmation} size="xs" autoclose={false}>
+  <h3 slot="header" class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
+    {t("data.uploader.delete_confirmation_title")}
+  </h3>
+  <div class="my-4 text-gray-500 dark:text-gray-400">
+    <p>{t("data.uploader.delete_confirmation_message")}</p>
+  </div>
+  <div slot="footer">
+    <Button color="red" on:click={confirmDelete}>{t("data.uploader.delete_confirm_button")}</Button>
+    <Button color="gray" on:click={cancelDelete}>{t("data.uploader.delete_cancel_button")}</Button>
+  </div>
+</Modal>
