@@ -407,20 +407,21 @@
     }, 2000); // Poll every 2 seconds
   }
 
-  async function deleteFile(fileId: string) { // New deleteFile API function
+  // --- API Functions ---
+  async function deleteFile(fileId: string) {
     loading = true;
     errorMessage = null;
     try {
-      // **Important**: Modify the URL and request method according to your backend API
-      // Assuming the backend delete file API is `/parse/files/{file_id}` and accepts DELETE request
+      // 修改为POST请求并正确传递file_id
       const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/parse/deletefiles`, // Corrected URL here
+              `http://127.0.0.1:8000/parse/deletefiles`, // 注意路径也需修正
               {
-                data: { file_id: fileId }, // Sending file_id in the request body
+                data: { file_id: fileId } // DELETE 请求通过 data 传参
               }
       );
+
       if (response.data.status === "success") {
-        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId); // Remove from frontend list
+        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId);
       } else {
         errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
         console.error("Error deleting file:", response);
