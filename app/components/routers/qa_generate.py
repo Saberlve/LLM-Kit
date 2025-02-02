@@ -6,6 +6,7 @@ from app.components.models.schemas import (
     QAGenerateRequest, APIResponse, TexFile,
     TexContentRequest
 )
+import os
 from app.components.services.qa_generate_service import QAGenerateService
 from pydantic import BaseModel
 
@@ -58,8 +59,8 @@ async def get_tex_content(
 
 @router.post("/generate_qa")
 async def generate_qa_pairs(
-    request: QAGenerateRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: QAGenerateRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """生成问答对"""
     try:
@@ -69,18 +70,32 @@ async def generate_qa_pairs(
                 status_code=400,
                 detail="AK 和 SK 的数量必须相同"
             )
-            
+
         # 验证并行数量是否合理
         if request.parallel_num > len(request.AK):
             raise HTTPException(
                 status_code=400,
                 detail="并行数量不能大于 API 密钥对数量"
             )
-            
+        filename=request.filename
+        PARSED_FILES_DIR = "parsed_files\parsed_file"
+        parsed_filename = f"{filename}_parsed.txt"
+        # 读取文件内容
+        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+        if not os.path.isfile(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"文件 {request.filename} 未找到"
+            )
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+        # 调用生成问答对的服务
         service = QAGenerateService(db)
         result = await service.generate_qa_pairs(
-            content=request.content,
-            filename=request.filename,  # 添加文件名参数
+            content=content,
+            filename=request.filename,  # 保留文件名参数
             save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
@@ -88,7 +103,7 @@ async def generate_qa_pairs(
             model_name=request.model_name,
             domain=request.domain
         )
-        
+
         return APIResponse(
             status="success",
             message="QA pairs generated successfully",
@@ -97,6 +112,7 @@ async def generate_qa_pairs(
     except Exception as e:
         logger.error(f"生成问答对失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/generate_qa/history")
 async def get_qa_history(
