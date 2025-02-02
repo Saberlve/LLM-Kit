@@ -215,20 +215,28 @@
 
   async function checkParseHistory(filename: string): Promise<number> {
     try {
-      const response = await axios.get<ParseHistoryResponse>(`http://127.0.0.1:8000/parse/phistory`, { params: { filename: filename } });
-      if (response.data.status === "success") {
-        return response.data.data.exists;
+      // 打印文件名以便调试
+      console.log("Checking parse history for filename:", filename);
+
+      // 发送 POST 请求
+      const response = await axios.post(
+              "http://127.0.0.1:8000/parse/phistory",
+              { filename }, // 请求体
+              { headers: { "Content-Type": "application/json" } } // 设置 Content-Type
+      );
+
+      // 检查响应数据
+      if (response.data && typeof response.data.exists === "number") {
+        return response.data.exists; // 返回 exists 的值
       } else {
-        console.error("Error checking parse history:", response);
-        return 0; // Default to 0 if API call fails
+        console.error("Unexpected response format:", response);
+        return 0; // 默认返回 0
       }
     } catch (error) {
       console.error("Error checking parse history:", error);
-      return 0; // Default to 0 if API call fails
+      return 0; // 默认返回 0
     }
   }
-
-
   async function fetchUploadedFiles(): Promise<void> {
     try {
       const response = await axios.get<UnifiedFileListResponse>(
@@ -238,10 +246,8 @@
         // Reset parse status and progress when fetching new file list
         uploadedFiles = response.data.data.map(async file => {
           let status = file.status;
-          if (file.file_type === 'txt' || file.mime_type === 'text/plain' || file.file_type === 'unknown' || file.mime_type === 'application/octet-stream') { // Only check history for text files
-            const exists = await checkParseHistory(file.filename);
-            status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
-          }
+          const exists = await checkParseHistory(file.filename);
+          status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
           return {
             ...file,
             status: status,
