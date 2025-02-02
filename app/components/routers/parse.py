@@ -1,25 +1,25 @@
 import logging
-import os
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
+import re
+import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import ParseRequest, APIResponse, OCRRequest, FileUploadRequest
 from app.components.services.parse_service import ParseService
 from text_parse.parse import single_ocr
 from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
-import mimetypes
-from typing import List, Union
-from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile
+from bson import ObjectId
+from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 import os
+from typing import List, Dict, Any
 import mimetypes
 from loguru import logger
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-import os
+
 
 class UploadedFile(BaseModel):
     filename: str = Field(..., alias="filename")
@@ -82,7 +82,7 @@ async def upload_file(
 
         if existing_file:
             return APIResponse(
-                status="success", 
+                status="success",
                 message="File already exists",
                 data={"file_id": str(existing_file["_id"])}
             )
@@ -92,7 +92,7 @@ async def upload_file(
             content=request.content,
             file_type=request.file_type,
             size=len(request.content.encode('utf-8')),
-            status="to_parse"
+            status="pending"
         )
 
         result = await db.llm_kit.uploaded_files.insert_one(
@@ -206,39 +206,42 @@ async def parse_file(
         logger.error(f"解析文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+
 @router.post("/check-parsed-file")
 async def check_parsed_file(
-    request: FileIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FileIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """检查解析文件是否存在"""
     try:
         from bson import ObjectId
-        
+
         # 先在数据库中查找记录
         file_record = await db.llm_kit.uploaded_files.find_one(
             {"_id": ObjectId(request.file_id)}
         )
-        
+
         if not file_record:
             # 如果在文本文件集合中找不到，尝试在二进制文件集合中查找
             file_record = await db.llm_kit.uploaded_binary_files.find_one(
                 {"_id": ObjectId(request.file_id)}
             )
-        
+
         if file_record:
             return APIResponse(
                 status="success",
                 message="File check completed",
                 data={"exists": 1}
             )
-        
+
         return APIResponse(
             status="success",
             message="File not found",
             data={"exists": 0}
         )
-        
+
     except Exception as e:
         logger.error(f"检查文件是否存在失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -799,26 +802,132 @@ async def get_task_progress(
 
 @router.delete("/records")
 async def delete_record(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: RecordIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除解析记录"""
     try:
         from bson import ObjectId
         record_id = request.record_id
-        
+
         # 删除解析记录
         result = await db.llm_kit.parse_records.delete_one({"_id": ObjectId(record_id)})
-        
+
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
-            
+
         return APIResponse(
             status="success",
             message="Record deleted successfully",
             data={"record_id": record_id}
         )
-        
+
     except Exception as e:
         logger.error(f"删除记录失败 record_id: {record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class DeleteFileRequest(BaseModel):
+    file_id: str
+class UnifiedFileListResponse(BaseModel):
+    status: str
+    message: str
+    data: List[Dict[str, Any]]
+
+class UnifiedFileDeleteResponse(BaseModel):
+    status: str
+    message: str
+    data: Dict[str, Any] = {}
+@router.delete("/deletefiles")
+async def delete_uploaded_file(
+        request: DeleteFileRequest = Body(...),
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    """根据 file_id 删除上传的文件 (及数据库记录), file_id 从请求体中获取"""
+    file_id = request.file_id
+    print(file_id)
+    try:
+        # 验证 file_id 是否是有效的 ObjectId
+        try:
+            object_id = ObjectId(file_id)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file_id format")
+
+        # 尝试从文本文件集合中删除
+        text_delete_result = await db.llm_kit.uploaded_files.delete_one({"_id": object_id})
+        if text_delete_result.deleted_count > 0:
+            return UnifiedFileDeleteResponse(
+                status="success",
+                message=f"File with id '{file_id}' deleted from text files."
+            )
+
+        # 如果文本文件集合中没有找到，尝试从二进制文件集合中删除
+        binary_delete_result = await db.llm_kit.uploaded_binary_files.delete_one({"_id": object_id})
+        if binary_delete_result.deleted_count > 0:
+            return UnifiedFileDeleteResponse(
+                status="success",
+                message=f"File with id '{file_id}' deleted from binary files."
+            )
+
+        # 如果两个集合中都没有找到，则返回 404 Not Found
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File with id '{file_id}' not found")
+
+    except HTTPException as http_exc: # 捕获 HTTPException 直接 re-raise
+        raise http_exc
+    except Exception as e:
+        logger.error(f"删除文件 {file_id} 失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete file: {str(e)}")
+
+class FilenameRequest(BaseModel):
+    filename: str
+def check_parsed_file_exist(raw_filename: str) -> int:
+    """检查解析结果文件是否存在"""
+    parsed_dir = os.path.join("parsed_files", "parsed_file")
+    parsed_filename = f"{raw_filename}_parsed.txt"
+    target_path = os.path.join(parsed_dir, parsed_filename)
+    return 1 if os.path.isfile(target_path) else 0
+@router.post("/phistory")
+async def get_parse_history(request: FilenameRequest):  # 修改参数为模型
+    try:
+        filename = request.filename  # 从请求体获取filename
+
+        exists = check_parsed_file_exist(filename)
+
+        return {"status": "OK", "exists": exists}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+def clean_filename(filename: str) -> str:
+    """清洗解析后的文件名，示例：实验室.txt_parsed.txt -> 实验室"""
+    # 使用正则表达式移除 _parsed.txt 后缀
+    return re.sub(r'_parsed\.txt$', '', filename)
+
+@router.get("/parse_files")
+async def get_files():
+    files_info = []
+    PARSED_FILES_DIR = "parsed_files\parsed_file"
+    # 将相对路径转换为绝对路径
+    for filename in os.listdir(PARSED_FILES_DIR):
+        file_path = os.path.join(PARSED_FILES_DIR, filename)
+
+        if os.path.isfile(file_path):  # 只处理文件，忽略目录
+            # 获取文件信息
+            stat = os.stat(file_path)
+
+            # 清洗文件名
+            clean_name = clean_filename(filename)
+
+            # 获取文件类型
+            mime_type, _ = mimetypes.guess_type(filename)
+
+            files_info.append({
+                "name": clean_name,
+                "size": stat.st_size,  # 文件大小（字节）
+                "type": mime_type or "unknown",  # MIME 类型
+                "modification_time": datetime.fromtimestamp(
+                    stat.st_mtime
+                ).isoformat()  # ISO 格式时间
+            })
+
+    return files_info
+
