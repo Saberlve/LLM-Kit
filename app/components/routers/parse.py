@@ -92,7 +92,7 @@ async def upload_file(
             content=request.content,
             file_type=request.file_type,
             size=len(request.content.encode('utf-8')),
-            status="pending"
+            status="to_parse"
         )
 
         result = await db.llm_kit.uploaded_files.insert_one(
@@ -286,6 +286,53 @@ async def list_all_files(db: AsyncIOMotorClient = Depends(get_database)):
         logger.error(f"获取所有文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/upload/history", response_model=UnifiedFileListResponse)
+async def get_all_uploaded_files_info(db: AsyncIOMotorClient = Depends(get_database)):
+    """
+    查询所有已上传文件的信息，包括文本文件和二进制文件，按创建时间降序排序。
+    """
+    try:
+        # 查询文本文件集合，排除内容字段避免数据量过大
+        text_files_cursor = db.llm_kit.uploaded_files.find(projection={"content": 0})
+        # 查询二进制文件集合，同样不返回content字段
+        binary_files_cursor = db.llm_kit.uploaded_binary_files.find(projection={"content": 0})
+
+        text_files = []
+        async for doc in text_files_cursor:
+            text_files.append({
+                "file_id": str(doc.get("_id")),
+                "filename": doc.get("filename"),
+                "file_type": doc.get("file_type"),
+                "size": doc.get("size"),
+                "status": doc.get("status"),
+                "created_at": doc.get("created_at"),
+                "type": "text"  # 标识为文本文件
+            })
+
+        binary_files = []
+        async for doc in binary_files_cursor:
+            binary_files.append({
+                "file_id": str(doc.get("_id")),
+                "filename": doc.get("filename"),
+                "file_type": doc.get("file_type"),
+                "mime_type": doc.get("mime_type"),
+                "size": doc.get("size"),
+                "status": doc.get("status"),
+                "created_at": doc.get("created_at"),
+                "type": "binary"  # 标识为二进制文件
+            })
+
+        # 合并所有上传文件，并按照创建时间降序排序
+        all_files = sorted(text_files + binary_files, key=lambda x: x["created_at"], reverse=True)
+
+        return UnifiedFileListResponse(
+            status="success",
+            message="成功获取所有已上传文件的信息",
+            data=all_files
+        )
+    except Exception as e:
+        logger.error(f"获取文件信息失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/parse/history")
 async def get_parse_history(
@@ -629,7 +676,7 @@ async def upload_binary_file(
             file_type=file_type,
             mime_type=mime_type,
             size=len(content),
-            status="pending"
+            status="to_parse"
         )
 
         # 保存到数据库
@@ -646,7 +693,7 @@ async def upload_binary_file(
                 "file_type": file_type,
                 "mime_type": mime_type,
                 "size": len(content),
-                "status": "pending"
+                "status": "to_parse"
             }
         )
     except HTTPException as e:

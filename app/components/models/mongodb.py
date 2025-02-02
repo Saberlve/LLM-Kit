@@ -150,7 +150,7 @@ class UploadedFile(MongoBaseModel):
     content: str  # 文件内容
     file_type: str  # 文件类型
     size: int  # 文件大小(字节)
-    status: str = "pending"  # pending, processed
+    status: str = "to_parse"  # to_parse(待解析), pending(解析中), finish(解析完成)
 
 class UploadedBinaryFile(MongoBaseModel):
     """上传的二进制文件记录"""
@@ -159,4 +159,4 @@ class UploadedBinaryFile(MongoBaseModel):
     file_type: str  # 文件类型 (pdf, jpg, png等)
     mime_type: str  # MIME类型
     size: int  # 文件大小(字节)
-    status: str = "pending"  # pending, processed
+    status: str = "to_parse"  # to_parse(待解析), pending(解析中), finish(解析完成)

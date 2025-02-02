@@ -236,8 +236,16 @@ class ParseService:
                     save_path=save_path
                 )
 
-                # 立即设置初始进度
+                # 立即设置初始进度并更新状态为解析中
                 await update_progress(0)
+                await self.db.llm_kit.uploaded_files.update_one(
+                    {"filename": base_filename + "." + file_type},
+                    {"$set": {"status": "pending"}}
+                )
+                await self.db.llm_kit.uploaded_binary_files.update_one(
+                    {"filename": base_filename + "." + file_type},
+                    {"$set": {"status": "pending"}}
+                )
 
                 # 执行解析，传入进度回调
                 parsed_file_path = parse.parse(
@@ -261,16 +269,16 @@ class ParseService:
                 # 确保设置最终进度
                 await update_progress(100)
 
-                # 更新原始文件状态为completed
+                # 更新原始文件状态为finish
                 await self.db.llm_kit.uploaded_files.update_one(
                     {"filename": base_filename + "." + file_type},
-                    {"$set": {"status": "completed"}}
+                    {"$set": {"status": "finish"}}
                 )
 
                 # 同时更新二进制文件集合中的状态（如果存在）
                 await self.db.llm_kit.uploaded_binary_files.update_one(
                     {"filename": base_filename + "." + file_type},
-                    {"$set": {"status": "completed"}}
+                    {"$set": {"status": "finish"}}
                 )
 
                 return {
