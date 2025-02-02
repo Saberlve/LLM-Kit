@@ -8,7 +8,7 @@ from app.components.services.parse_service import ParseService
 from text_parse.parse import single_ocr
 from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status
+from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status,Request
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
@@ -931,3 +931,39 @@ async def get_files():
 
     return files_info
 
+
+class ParsedFileInfo(BaseModel):
+    filename: str
+    size: str
+    created_at: str
+    file_path: str
+
+
+def _convert_size(size_bytes: int) -> str:
+    """智能转换文件大小单位"""
+    if size_bytes == 0:
+        return "0B"
+
+    units = ("B", "KB", "MB", "GB")
+    unit_index = 0
+
+    while size_bytes >= 1024 and unit_index < len(units)-1:
+        size_bytes /= 1024
+        unit_index += 1
+
+    return f"{size_bytes:.2f} {units[unit_index]}"
+
+
+
+@router.post("/delete_files")
+async def delete_files(request: Request):
+    PARSED_FILES_DIR = "parsed_files\parsed_file"
+    files_to_delete = await request.json()
+    # Process deletion logic here
+    for filename in files_to_delete["files"]:
+        parsed_filename = f"{filename}_parsed.txt"
+        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return {"status": "success"}
+    return {"status": "failed"}
