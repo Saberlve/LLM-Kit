@@ -88,6 +88,10 @@ export default {
       uploaded_files:"A list of resolved files",
       type:"type",
       size:"size",
+      erine:'erine',
+      flash:'flash',
+      qwen:'qwen',
+      lite:'lite',
       delete_button:'delete',
       delete_confirmation_title:"Confirm the deletion",
       delete_confirmation_message:'Whether to delete or not',
@@ -125,6 +129,7 @@ export default {
       previous_step: "previous_step",
     },
     uploader: {
+      fetch_fail:'file_fetch_fail',
       title:'dataset_manage',
       col_filename: "Filename",
       upload_status:'status' ,

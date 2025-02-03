@@ -21,13 +21,25 @@
 	let modelName = '';
 	let domain = '';
     let savePath = ''; // 保存路径
+    let selectedModel = 'erine'; // Default model
+    $: parallelNum = 1;
+    $: numSKAKInputs = parallelNum;
+
+    $: updatedSKs = [...Array(numSKAKInputs).keys()].map(() => '');
+
+    let modelOptions = [
+		{ name: 'erine', secretKeyRequired: true },
+		{ name: 'flash', secretKeyRequired: false },
+		{ name: 'lite', secretKeyRequired: false },
+		{ name: 'qwen', secretKeyRequired: false },
+	];
     let SKs = []; // API 密钥
     let AKs = []; // API 密钥
     let errorModalVisible = false; // Flag to show the modal
     let errorTimeoutId: NodeJS.Timeout | null = null; // To store timeout ID
     const errorDuration = 500; // 5 seconds
+    $: showSKInputs = (selectedModel =='erine');
 
-    // 调整表头与后端字段对应
     let uploaded_file_heads = ["Name", "Type", "Size", "Modification Time"];
 
     // 切换文件选择状态
@@ -52,13 +64,7 @@
         }, errorDuration);
     };
 
-    const validateSKAK = () => {
-        if (parallelNum > SKs.length || parallelNum > AKs.length) {
-            errorMessage = t("data.construct.invalid_sk_ak");
-            return false;
-        }
-        return true;
-    };
+
 
     function formatFileSize(sizeInBytes: number): string {
         const sizeInKilobytes = sizeInBytes / 1024;
@@ -110,12 +116,9 @@
             );
 
             if (response.status === 200) {
-
-                selectedFiles = []; // Clear selected files
-                await fetchFiles(); // Refresh file list
-                showDeleteConfirmation = false; // Close the modal
-
-                // 2秒后自动清除成功消息
+                selectedFiles = [];
+                await fetchFiles();
+                showDeleteConfirmation = false;
                 setTimeout(() => {
                     successMessage = null;
                 }, 2000);
@@ -135,33 +138,39 @@
             errorMessage = t("data.construct.no_file_selected");
             return;
         }
-        if (!validateSKAK()) {
-            return;
-        }
+
         try {
             const selectedFileNames = selectedFiles.map(f => f.name);
-            const requestData = {
-                files: selectedFileNames,
-                parallel_num: parallelNum,
-                model_name: modelName,
-                domain: domain,
-                save_path: savePath || selectedFileNames[0], // Default to first filename
-                SK: SKs,
-                AK: AKs
-            };
-            const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa', requestData);
-            if (response.status === 200) {
-                dispatch('qaGenerated', response.data); // 向父组件发送成功事件
-                successMessage = t("data.construct.qa_generated_success"); // 清理成功消息
-                selectedFiles = [];
-                setTimeout(() => {
-                    successMessage = null;
-                }, 2000);
+            for (let i = 0; i < selectedFileNames.length; i++) {
+                const requestData = {
+                    filename: selectedFileNames[i],
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs  :[], //Handle empty array
+                    AK: AKs.length > 0 ? AKs : [],  // Ensure 'files' is an array
+                    parallel_num: parallelNum,
+                    model_name: selectedModel,
+                    domain: domain,
 
-                await fetchFiles();
-            } else {
-                const errorData = await response.json();
-                errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
+
+                };
+
+                const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa',requestData,{
+                    headers: {
+                        'Content-Type': 'application/json',
+                    } });
+                if (response.status === 200) {
+                    dispatch('qaGenerated', response.data);
+                    successMessage = t("data.construct.qa_generated_success");
+                    selectedFiles = [];
+                    setTimeout(() => {
+                        successMessage = null;
+                    }, 2000);
+
+                    await fetchFiles();
+                } else {
+                    const errorData = await response.json();
+                    errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
+                }
             }
         } catch (error) {
             console.error('Error generating QA pairs:', error);
@@ -169,6 +178,15 @@
             errorMessage = t('data.construct.qa_generation_network_error');
         }
     };
+    const handleModelChange = (event: Event) => {
+        const selectedOption = event.target as HTMLSelectElement;
+        selectedModel = selectedOption.value;
+        SKs = [];
+        AKs = [];
+        parallelNum = 1; // Reset parallelNum on model change
+    };
+
+
 </script>
 
 <ActionPageTitle returnTo="/data" title={t("data.construct.title")} />
@@ -246,17 +264,7 @@
                 class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
         />
     </div>
-    <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700">{t("data.construct.sk")}</label>
-        {#each Array(parallelNum) as _, i}
-            <input
-                    type="text"
-                    placeholder={`SK ${i + 1}`}
-                    bind:value={SKs[i]}
-                    class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            />
-        {/each}
-    </div>
+
 
     {#if errorModalVisible}
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-50">
@@ -266,17 +274,7 @@
         </div>
     {/if}
 
-    <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700">{t("data.construct.ak")}</label>
-        {#each Array(parallelNum) as _, i}
-            <input
-                    type="text"
-                    placeholder={`AK ${i + 1}`}
-                    bind:value={AKs[i]}
-                    class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-            />
-        {/each}
-    </div>
+
     <!-- Input field for savePath -->
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">{t("data.construct.save_path")}</label>
@@ -290,11 +288,39 @@
 
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">{t("data.construct.model_name")}</label>
-        <input
-                type="text"
-                bind:value={modelName}
-                class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-        />
+        <select bind:value={selectedModel} on:change={handleModelChange}
+                class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+            {#each modelOptions as option}
+                <option value={option.name}>{t(`data.construct.${option.name}`)}</option>
+            {/each}
+        </select>
+    </div>
+
+
+    <div class="mb-4">
+        {#if showSKInputs}
+            <label class="block text-sm font-medium text-gray-700">{t("data.construct.sk")}</label>
+            {#each Array(numSKAKInputs) as _, i}
+                <input
+                        type="text"
+                        placeholder={`AK ${i + 1}`}
+                        bind:value={SKs[i]}
+                        class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+            {/each}
+        {/if}
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700">{t("data.construct.ak")}</label>
+        {#each Array(numSKAKInputs) as _, i}
+            <input
+                    type="text"
+                    placeholder={`AK ${i + 1}`}
+                    bind:value={AKs[i]}
+                    class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            />
+        {/each}
     </div>
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">{t("data.construct.domain")}</label>
@@ -310,7 +336,7 @@
     <Button
             color="blue"
             on:click={generateQAPairs}
-            disabled={selectedFiles.length === 0 || !validateSKAK()}
+            disabled={selectedFiles.length === 0 }
     >
         {t("data.construct.generate_button")}
     </Button>

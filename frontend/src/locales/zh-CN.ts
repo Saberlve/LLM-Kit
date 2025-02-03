@@ -105,10 +105,15 @@ export default {
       no: "不"
     },
     uploader: {
+      fetch_fail:'文件获取失败',
       col_filename: "文件名",
       filename: "文件名",
       file_type: "文件类型",
       size: "文件大小",
+      erine:'erine',
+      flash:'flash',
+      qwen:'qwen',
+      lite:'lite',
       delete_fail:"删除失败",
       delete_fail_all:'删除失败',
       delete_confirm_button:"确认删除",
