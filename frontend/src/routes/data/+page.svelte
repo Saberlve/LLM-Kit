@@ -52,11 +52,11 @@
     filename: string;
     file_type: string;
     size: number;
-    status: string; // Backend upload status: "pending", "processed", "parsed"
+    status: string;
     created_at: string;
     type: string;
-    parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
-    parseProgress?: number; // 0-100
+    parseStatus?: string;
+    parseProgress?: number;
     recordId?: string | null;
   }
   interface UploadedBinaryFile {
@@ -65,11 +65,11 @@
     file_type: string;
     mime_type: string;
     size: number;
-    status: string; // Backend upload status: "pending", "processed", "parsed"
+    status: string;
     created_at: string;
     type: string;
-    parseStatus?: string; // Frontend parse status: "pending", "processing", "completed", "failed", ""
-    parseProgress?: number; // 0-100
+    parseStatus?: string;
+    parseProgress?: number;
     recordId?: string | null;
   }
 
@@ -87,9 +87,8 @@
   $: stageEmpty = uploadedFiles.length == 0;
   let parsingProgressIntervals: { [fileId: string]: any } = {};
 
-  // Delete confirmation modal state
   let showDeleteConfirmation = false;
-  let fileToDelete: UnifiedFile | null = null; // Store the file object to be deleted
+  let fileToDelete: UnifiedFile | null = null;
 
   const uploaded_file_heads = [
     t("data.uploader.filename"),
@@ -98,7 +97,7 @@
     t("data.uploader.created_at"),
     t("data.uploader.upload_status"),
     t("data.uploader.action"),
-    t("data.uploader.delete_action") // "Delete File" column header
+    t("data.uploader.delete_action")
   ]
 
 
@@ -121,7 +120,6 @@
   }
 
 
-  // --- Event Handlers ---
   async function dropHandle(event: DragEvent) {
     event.preventDefault();
     const filesInItems = Array.from(event.dataTransfer.items)
@@ -147,14 +145,14 @@
     parseFileForEntry(file);
   }
 
-  function handleDeleteButtonClick(file: UnifiedFile) { // Modified: Takes file object
-    fileToDelete = file; // Store the file object
+  function handleDeleteButtonClick(file: UnifiedFile) {
+    fileToDelete = file;
     showDeleteConfirmation = true;
   }
 
   async function confirmDelete() {
-    if (fileToDelete && fileToDelete.file_id) { // Use file_id for deletion
-      await deleteFile(fileToDelete.file_id); // Call deleteFile API function
+    if (fileToDelete && fileToDelete.file_id) {
+      await deleteFile(fileToDelete.file_id);
     }
     showDeleteConfirmation = false;
     fileToDelete = null;
@@ -207,7 +205,6 @@
         });
       }
     } catch (error) {
-      // Error reading the file
       console.error(`Error processing file ${file.name}:`, error);
       throw error;
     }
@@ -215,35 +212,32 @@
 
   async function checkParseHistory(filename: string): Promise<number> {
     try {
-      // 打印文件名以便调试
-      console.log("Checking parse history for filename:", filename);
-
-      // 发送 POST 请求
       const response = await axios.post(
               "http://127.0.0.1:8000/parse/phistory",
-              { filename }, // 请求体
-              { headers: { "Content-Type": "application/json" } } // 设置 Content-Type
+              { filename },
+              { headers: { "Content-Type": "application/json" } }
       );
 
       // 检查响应数据
       if (response.data && typeof response.data.exists === "number") {
-        return response.data.exists; // 返回 exists 的值
+        return response.data.exists;
       } else {
         console.error("Unexpected response format:", response);
-        return 0; // 默认返回 0
+        return 0;
       }
     } catch (error) {
       console.error("Error checking parse history:", error);
-      return 0; // 默认返回 0
+      return 0;
     }
   }
+
   async function fetchUploadedFiles(): Promise<void> {
     try {
       const response = await axios.get<UnifiedFileListResponse>(
               `http://127.0.0.1:8000/parse/files/all`
       );
       if (response.data.status === "success") {
-        // Reset parse status and progress when fetching new file list
+
         uploadedFiles = response.data.data.map(async file => {
           let status = file.status;
           const exists = await checkParseHistory(file.filename);
@@ -256,7 +250,7 @@
             recordId: file.recordId || null
           };
         });
-        // Resolve promises after mapping
+
         uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
 
       } else {
@@ -308,7 +302,8 @@
   }
 
   async function fetchTaskProgress(recordId: string): Promise<TaskProgressResponse> {
-    return await axios.get<TaskProgressResponse>(`http://127.0.0.1:8000/parse/task/progress`, { params: { record_id: recordId } }); // Send record_id as query parameter
+
+     return await axios.get<TaskProgressResponse>(`http://127.0.0.1:8000/parse/task/progress`, { params: { record_id: recordId } }); // Send record_id as query parameter
   }
 
   function startPollingParsingProgress(fileId: string, recordId: string) {
@@ -330,7 +325,7 @@
             delete parsingProgressIntervals[fileId];
             if (status === "completed") {
               uploadedFiles = uploadedFiles.map(f =>
-                      f.file_id === fileId ? { ...f, status: "parsed" } : f // Update status to "parsed" after successful parse
+                      f.file_id === fileId ? { ...f, status: "parsed" } : f
               );
             }
           }
@@ -350,7 +345,7 @@
                 f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
         );
       }
-    }, 2000); // Poll every 2 seconds
+    }, 200);
   }
 
   // --- API Functions ---
@@ -360,9 +355,9 @@
     try {
       // 修改为POST请求并正确传递file_id
       const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/deletefiles`, // 注意路径也需修正
+              `http://127.0.0.1:8000/parse/deletefiles`,
               {
-                data: { file_id: fileId } // DELETE 请求通过 data 传参
+                data: { file_id: fileId }
               }
       );
 
@@ -392,9 +387,9 @@
       } else {
         console.log("File uploaded successfully, id is", response.data.file_id);
       }
-      await fetchUploadedFiles(); // Refresh file list after each upload
-      // Auto parse the latest uploaded file after refresh
-      const latestFile = uploadedFiles.find(f => f.filename === file.name); // Find the uploaded file by filename
+      await fetchUploadedFiles();
+
+      const latestFile = uploadedFiles.find(f => f.filename === file.name);
       if (latestFile) {
         parseFileForEntry(latestFile);
       }

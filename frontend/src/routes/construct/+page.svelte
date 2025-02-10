@@ -17,11 +17,10 @@
 	let showDeleteConfirmation = false;
 	let filesLoaded = false;
 	let successMessage = null;
-	let parallelNum = 1; // 并行数量
-	let modelName = '';
+	let parallelNum = 1;
 	let domain = '';
-    let savePath = ''; // 保存路径
-    let selectedModel = 'erine'; // Default model
+    let savePath = '';
+    let selectedModel = 'erine';
     $: parallelNum = 1;
     $: numSKAKInputs = parallelNum;
 
@@ -33,31 +32,33 @@
 		{ name: 'lite', secretKeyRequired: false },
 		{ name: 'qwen', secretKeyRequired: false },
 	];
-    let SKs = []; // API 密钥
-    let AKs = []; // API 密钥
-    let errorModalVisible = false; // Flag to show the modal
-    let errorTimeoutId: NodeJS.Timeout | null = null; // To store timeout ID
-    const errorDuration = 500; // 5 seconds
+    let SKs = [];
+    let AKs = [];
+    let errorModalVisible = false;
+    let errorTimeoutId: NodeJS.Timeout | null = null;
+    const errorDuration = 500;
     $: showSKInputs = (selectedModel =='erine');
 
-    let uploaded_file_heads = ["Name", "Type", "Size", "Modification Time"];
+    let uploaded_file_heads = [t("data.uploader.filename"),
+        t("data.uploader.file_type"),
+        t("data.uploader.size"),
+        t("data.uploader.created_at"),
+        t("data.construct.upload_status")
+    ];
 
-    // 切换文件选择状态
+
     const toggleSelection = (file) => {
-        console.log("Toggling selection for", file.name); // Debugging
+        console.log("Toggling selection for", file.name);
         selectedFiles = selectedFiles.includes(file)
             ? selectedFiles.filter(f => f !== file)
             : [...selectedFiles, file];
     };
 
     const handleError = (error: any) => {
-        // Extract error message from Axios error object or use a default if needed
         let errorMessageToShow = (error.response && error.response.data && error.response.data.detail) || t("data.construct.qa_generation_network_error");
         errorModalVisible = true;
         errorMessage = errorMessageToShow;
-        clearTimeout(errorTimeoutId); // Clear any existing timeout
-
-        // Set a timeout to automatically hide the modal
+        clearTimeout(errorTimeoutId);
         errorTimeoutId = setTimeout(() => {
             errorModalVisible = false;
             errorMessage = null;
@@ -93,12 +94,31 @@
                 return;
             }
             const data = await response.json();
-            uploadedFiles = data;
+
+            const filesWithStatus = await Promise.all(data.map(async (file) => {
+                try {
+                    const statusResponse = await axios.post('http://127.0.0.1:8000/qa/qashistory', {
+                        filename: file.name
+                    });
+                    return {
+                        ...file,
+                        status: statusResponse.data.exists === 1
+                            ? t("data.construct.status_generated")
+                            : t("data.construct.status_generating")
+                    };
+                } catch (error) {
+                    console.error('Error fetching status for file', file.name, error);
+                    return { ...file, status: t("data.construct.status_unknown") };
+                }
+            }));
+
+            uploadedFiles = filesWithStatus;
         } catch (error) {
             errorMessage = 'Failed to load files';
             console.error("Error fetching files:", error);
         }
     };
+
 
     // 删除选中文件
     const deleteSelectedFiles = async () => {
@@ -142,42 +162,90 @@
         try {
             const selectedFileNames = selectedFiles.map(f => f.name);
             for (let i = 0; i < selectedFileNames.length; i++) {
-                const requestData = {
-                    filename: selectedFileNames[i],
+                const filename = selectedFileNames[i];
+                // 1. Convert to LaTeX
+                const toTexRequestData = {
+                    filename: filename,
+                    content: "", // Since the backend reads the file, pass an empty string
                     save_path: savePath || selectedFileNames[0],
-                    SK: showSKInputs ? SKs  :[], //Handle empty array
+                    SK: showSKInputs ? SKs : new Array(AKs.length).fill('a'), //Handle empty array
+                    AK: AKs.length > 0 ? AKs : [], // Ensure 'files' is an array
+                    parallel_num: parallelNum,
+                    model_name: selectedModel,
+                };
+
+                try {
+                    const toTexResponse = await axios.post('http://127.0.0.1:8000/to_tex/to_tex', toTexRequestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (toTexResponse.status !== 200) {
+                        const errorData = await toTexResponse.json();
+                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
+                        return; // Stop processing this file
+                    }
+
+                    // Process the successful LaTeX conversion if needed (e.g., display a message)
+
+                } catch (toTexError) {
+                    console.error('Error converting to LaTeX:', toTexError);
+                    handleError(toTexError);
+                    errorMessage = t('data.construct.latex_conversion_network_error');
+                    return; // Stop processing this file
+                }
+
+                // 2. Generate QA Pairs (only if LaTeX conversion was successful)
+                const requestData = {
+                    filename: filename,
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs  :new Array(AKs.length).fill('a'), //Handle empty array
                     AK: AKs.length > 0 ? AKs : [],  // Ensure 'files' is an array
                     parallel_num: parallelNum,
                     model_name: selectedModel,
                     domain: domain,
-
-
                 };
 
-                const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa',requestData,{
-                    headers: {
-                        'Content-Type': 'application/json',
-                    } });
-                if (response.status === 200) {
-                    dispatch('qaGenerated', response.data);
-                    successMessage = t("data.construct.qa_generated_success");
-                    selectedFiles = [];
-                    setTimeout(() => {
-                        successMessage = null;
-                    }, 2000);
+                try {
+                    const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa', requestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
 
-                    await fetchFiles();
-                } else {
-                    const errorData = await response.json();
-                    errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
+                    if (response.status === 200) {
+                        dispatch('qaGenerated', response.data);
+                        successMessage = t("data.construct.qa_generated_success");
+                        selectedFiles = []; //clear all selected files after success
+                        setTimeout(() => {
+                            successMessage = null;
+                        }, 2000);
+
+                        await fetchFiles();
+                    } else {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
+                        return;  // Stop processing this file
+                    }
+
+                } catch (error) {
+                    console.error('Error generating QA pairs:', error);
+                    handleError(error);
+                    errorMessage = t('data.construct.qa_generation_network_error');
+                    return; // Stop processing this file
                 }
             }
         } catch (error) {
-            console.error('Error generating QA pairs:', error);
+            // This catch block should handle errors outside of the file processing loop
+            console.error('Unexpected error in generateQAPairs:', error);
             handleError(error);
-            errorMessage = t('data.construct.qa_generation_network_error');
+            errorMessage = t('data.construct.unexpected_error'); //Generic error
+        } finally {
+            selectedFiles = [];
         }
     };
+
     const handleModelChange = (event: Event) => {
         const selectedOption = event.target as HTMLSelectElement;
         selectedModel = selectedOption.value;
@@ -185,6 +253,7 @@
         AKs = [];
         parallelNum = 1; // Reset parallelNum on model change
     };
+
 
 
 </script>
@@ -214,7 +283,7 @@
                         <TableHead>
                             <TableHeadCell></TableHeadCell>
                             {#each uploaded_file_heads as head}
-                                <TableHeadCell>{t(`data.construct.${head.toLowerCase().replace(' ', '_')}`)}</TableHeadCell>
+                                <TableHeadCell>{head.toLowerCase().replace(' ', '_')}</TableHeadCell>
                             {/each}
                         </TableHead>
                         <TableBody>
@@ -232,6 +301,14 @@
                                     <TableBodyCell>{formatFileSize(file.size)} </TableBodyCell>
                                     <TableBodyCell>
                                         {new Date(file.modification_time).toLocaleString()}
+                                    </TableBodyCell>
+                                    <TableBodyCell>
+				                        <span class="px-2 py-1 text-sm rounded-full"
+                                              class:bg-green-100={file.status === t("data.construct.status_generated")}
+                                              class:bg-yellow-100={file.status === t("data.construct.status_generating")}
+                                              class:bg-gray-100={file.status === t("data.construct.status_unknown")}>
+                                            {file.status}
+                                        </span>
                                     </TableBodyCell>
                                 </tr>
                             {/each}
@@ -254,7 +331,6 @@
         </Button>
     </div>
 
-    <!-- Input for parallel_num, model_name, and domain -->
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">{t("data.construct.parallel_num")}</label>
         <input
@@ -275,7 +351,6 @@
     {/if}
 
 
-    <!-- Input field for savePath -->
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700">{t("data.construct.save_path")}</label>
         <input
@@ -303,7 +378,7 @@
             {#each Array(numSKAKInputs) as _, i}
                 <input
                         type="text"
-                        placeholder={`AK ${i + 1}`}
+                        placeholder={`SK ${i + 1}`}
                         bind:value={SKs[i]}
                         class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />
@@ -332,7 +407,6 @@
     </div>
 
 
-    <!-- Button for generating QA pairs -->
     <Button
             color="blue"
             on:click={generateQAPairs}
@@ -341,7 +415,7 @@
         {t("data.construct.generate_button")}
     </Button>
     {#if showDeleteConfirmation}
-        <!-- Confirm Delete Modal -->
+
         <div class="fixed inset-0 z-50 flex justify-center items-center bg-gray-800 bg-opacity-50">
             <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
                 <h3 class="text-xl font-bold mb-4">{t("data.uploader.delete_confirmation_title")}</h3>
