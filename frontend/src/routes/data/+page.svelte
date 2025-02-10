@@ -118,7 +118,6 @@
   $: stageEmpty = uploadedFiles.length == 0;
   let parsingProgressIntervals: { [fileId: string]: any } = {};
 
-  // Delete confirmation modal state
   let showDeleteConfirmation = false;
   let fileToDelete: UnifiedFile | null = null; // Store the file object to be deleted
   let showDeleteConfirmation = false;
@@ -188,8 +187,8 @@
   }
 
   async function confirmDelete() {
-    if (fileToDelete && fileToDelete.file_id) { // Use file_id for deletion
-      await deleteFile(fileToDelete.file_id); // Call deleteFile API function
+    if (fileToDelete && fileToDelete.file_id) {
+      await deleteFile(fileToDelete.file_id);
     }
     showDeleteConfirmation = false;
     fileToDelete = null;
@@ -414,9 +413,9 @@
     try {
       // 修改为POST请求并正确传递file_id
       const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/deletefiles`, // 注意路径也需修正
+              `http://127.0.0.1:8000/parse/deletefiles`,
               {
-                data: { file_id: fileId } // DELETE 请求通过 data 传参
+                data: { file_id: fileId }
               }
       );
 
