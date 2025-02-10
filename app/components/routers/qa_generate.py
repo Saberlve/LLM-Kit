@@ -186,3 +186,40 @@ async def delete_qa_record(
     except Exception as e:
         logger.error(f"删除问答记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+class FilenameRequest(BaseModel):
+    filename: str
+def check_parsed_file_exist(raw_filename: str) -> int:
+    """检查解析结果文件是否存在"""
+    parsed_dir = os.path.join("result", "qas")
+    raw_filename = raw_filename.split('.')[0]
+    parsed_filename = f"{raw_filename}_qa.json"
+    target_path = os.path.join(parsed_dir, parsed_filename)
+    return 1 if os.path.isfile(target_path) else 0
+
+
+@router.post("/qashistory")
+async def get_parse_history(request: FilenameRequest):
+    try:
+        print(request)
+        filename = request.filename 
+
+        exists = check_parsed_file_exist(filename)
+        print(exists)
+        return {"status": "OK", "exists": exists}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/delete_file")
+async def delete_files(request: Request):
+    PARSED_FILES_DIR = "result\qas"
+    files_to_delete = await request.json()
+    for filename in files_to_delete["files"]:
+        filename = filename.split('.')[0]
+        parsed_filename = f"{filename}_qa.json"
+        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return {"status": "success"}
+    return {"status": "failed"}
