@@ -8,6 +8,7 @@
 	import axios from "axios";
 	import { onMount } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { goto } from '$app/navigation';
 	const dispatch = createEventDispatcher();
 
 	const t: any = getContext("t");
@@ -39,7 +40,7 @@
     const errorDuration = 500;
     $: showSKInputs = (selectedModel =='erine');
 
-    let uploaded_file_heads = [t("data.uploader.filename"),
+    let uploaded_file_heads = [t("data.construct.filename"),
         t("data.uploader.file_type"),
         t("data.uploader.size"),
         t("data.uploader.created_at"),
@@ -254,11 +255,39 @@
         parallelNum = 1; // Reset parallelNum on model change
     };
 
+    const deleteQaFile = async (filename: string) => {
+        try {
+            const response = await axios.post('http://127.0.0.1:8000/qa/delete_file', {
+                filename: filename
+            });
+            if (response.status === 200) {
+                successMessage = t("data.construct.qa_delete_success");
+                setTimeout(() => {
+                    successMessage = null;
+                }, 2000);
+                await fetchFiles(); // Refresh file list to update status
+            } else {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || t("data.construct.qa_delete_failed");
+            }
+        } catch (error) {
+            console.error('Error deleting QA file:', error);
+            handleError(error);
+            errorMessage = t("data.construct.qa_delete_network_error");
+        }
+    };
+
+    const previewQaFile = (filename: string) => {
+        goto(`/construct/qa-preview?filename=${filename}`); // Navigate to preview page
+    };
+    const previewRawFile = (filename: string) => {
+        goto(`/construct/raw-preview?filename=${filename}`); // Navigate to raw preview page
+    };
 
 
 </script>
 
-<ActionPageTitle returnTo="/data" title={t("data.construct.title")} />
+<ActionPageTitle returnTo="/construct/" title={t("data.construct.title")} />
 
 <div class="w-full flex flex-col">
     {#if errorMessage}
@@ -296,19 +325,33 @@
                                             on:change={() => toggleSelection(file)}
                                         />
                                     </TableBodyCell>
-                                    <TableBodyCell>{file.name}</TableBodyCell>
+                                    <TableBodyCell>
+                                        <Button color="blue" size="xs" on:click={() => previewRawFile(file.name)}>
+                                            {file.name}
+                                        </Button>
+                                    </TableBodyCell>
                                     <TableBodyCell>{file.type}</TableBodyCell>
                                     <TableBodyCell>{formatFileSize(file.size)} </TableBodyCell>
                                     <TableBodyCell>
                                         {new Date(file.modification_time).toLocaleString()}
                                     </TableBodyCell>
                                     <TableBodyCell>
+                                        {#if file.status === t("data.construct.status_generated")}
+                                            <Button color="green" size="xs" on:click={() => previewQaFile(file.name)}>
+                                                {t("data.construct.status_generated")}
+                                            </Button>
+                                        {:else}
 				                        <span class="px-2 py-1 text-sm rounded-full"
-                                              class:bg-green-100={file.status === t("data.construct.status_generated")}
                                               class:bg-yellow-100={file.status === t("data.construct.status_generating")}
                                               class:bg-gray-100={file.status === t("data.construct.status_unknown")}>
                                             {file.status}
                                         </span>
+                                        {/if}
+                                        {#if file.status === t("data.construct.status_generated")}
+                                            <Button color="red" size="xs" on:click={() => deleteQaFile(file.name)}>
+                                                {t("data.construct.delete_qa_button")}
+                                            </Button>
+                                        {/if}
                                     </TableBodyCell>
                                 </tr>
                             {/each}
@@ -434,3 +477,9 @@
         </div>
     {/if}
 </div>
+
+<style>
+    .space-x-2 > * + * {
+        margin-left: 0.5rem;
+    }
+</style>
