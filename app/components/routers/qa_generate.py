@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends,Request
+from fastapi import APIRouter, HTTPException, Depends,Request,Query
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import (
@@ -9,7 +9,7 @@ from app.components.models.schemas import (
 import os
 from app.components.services.qa_generate_service import QAGenerateService
 from pydantic import BaseModel
-
+import json
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -201,8 +201,8 @@ def check_parsed_file_exist(raw_filename: str) -> int:
 @router.post("/qashistory")
 async def get_parse_history(request: FilenameRequest):
     try:
-        print(request)
-        filename = request.filename 
+
+        filename = request.filename
 
         exists = check_parsed_file_exist(filename)
         print(exists)
@@ -212,14 +212,52 @@ async def get_parse_history(request: FilenameRequest):
 
 
 @router.post("/delete_file")
-async def delete_files(request: Request):
+async def delete_files(request: FilenameRequest):
     PARSED_FILES_DIR = "result\qas"
-    files_to_delete = await request.json()
-    for filename in files_to_delete["files"]:
-        filename = filename.split('.')[0]
-        parsed_filename = f"{filename}_qa.json"
-        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
-        if os.path.exists(file_path):
+    filename = request.filename
+    print(filename)
+    filename = filename.split('.')[0]
+    parsed_filename = f"{filename}_qa.json"
+    file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+    if os.path.exists(file_path):
             os.remove(file_path)
             return {"status": "success"}
     return {"status": "failed"}
+
+
+@router.get("/get_qa_content")
+async def get_qa_content(filename: str = Query(..., title="Filename")):
+    """获取QA文件内容"""
+    try:
+        parsed_dir = os.path.join("result", "qas")
+        raw_filename = filename.split('.')[0]
+        parsed_filename = f"{raw_filename}_qa.json"
+        target_path = os.path.join(parsed_dir, parsed_filename)
+        if not os.path.isfile(target_path):
+            raise HTTPException(status_code=404, detail="QA file not found")
+        with open(target_path, 'r', encoding='utf-8') as f:
+            content = json.load(f)
+        return content
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="QA file not found")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Failed to decode QA file content")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_raw_content")
+async def get_raw_content(filename: str = Query(..., title="Filename")):
+    """获取原始文件内容"""
+    try:
+        PARSED_FILES_DIR = "parsed_files/parsed_file"
+        target_filename = f"{filename}_parsed.txt"
+        target_path = os.path.join(PARSED_FILES_DIR, target_filename)
+        if not os.path.isfile(target_path):
+            raise HTTPException(status_code=404, detail="Raw file not found")
+        with open(target_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Raw file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
