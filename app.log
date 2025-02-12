@@ -978,3 +978,82 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
 Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6hszq690.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-02-03 23:14:33,146 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679eb92bb16ffeec45bdb37d, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpyh056nds.txt' -> './parsed_files\\parsed_file\\33_parsed.txt'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpyh056nds.txt' -> './parsed_files\\parsed_file\\33_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 436, in parse_specific_file
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\routers\parse.py", line 398, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 310, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpyh056nds.txt' -> './parsed_files\\parsed_file\\33_parsed.txt'
+2025-02-03 23:23:48,745 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 81, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 23:25:40,100 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Invalid control character at: line 1 column 27 (char 26)
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 81, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Invalid control character at: line 1 column 27 (char 26)
+2025-02-03 23:26:47,900 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: argument of type 'NoneType' is not iterable
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 39, in _process_chunk_with_api
+    results.append(self._clean_result(tex_text))
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 48, in _clean_result
+    start_index = max(text.find('```') + 3 if '```' in text else -1, 0)
+TypeError: argument of type 'NoneType' is not iterable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: argument of type 'NoneType' is not iterable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 66, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: argument of type 'NoneType' is not iterable

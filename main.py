@@ -6,8 +6,7 @@ from app.components.core.database import init_db, get_database
 from datetime import datetime, timezone
 import logging
 from fastapi.responses import JSONResponse
-from app.components.models.schemas import ErrorLogResponse, ErrorLogsListResponse
-from bson import ObjectId
+from app.components.models.schemas import  ErrorLogsListResponse
 
 logging.basicConfig(
     level=logging.INFO,
