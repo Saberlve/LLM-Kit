@@ -3334,3 +3334,35 @@ Traceback (most recent call last):
   File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
     raise Exception("No QA pairs generated")
 Exception: No QA pairs generated
+2025-02-13 19:54:00,852 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-13 19:57:00,722 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 400: 并行数量不能大于 API 密钥对数量
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 80, in generate_qa_pairs
+    raise HTTPException(
+fastapi.exceptions.HTTPException: 400: 并行数量不能大于 API 密钥对数量
+2025-02-13 19:58:59,582 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-13 20:03:44,141 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated

@@ -76,7 +76,7 @@ def split_text_into_chunks(parallel_num, text: str) -> list:
 
 def extract_qa(response):
     start_i = response.find('{')
-    end_i = response.rfind('}') + 1
+    end_i = response.find('}') + 1
     qa_pairs = []
     while end_i != 0:
         try:

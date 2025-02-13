@@ -215,7 +215,6 @@ class QAGenerateService:
             )
 
             try:
-                print(content)
                 chunks = json.loads(content)
                 # 并行处理所有文本块，传入generation_id用于更新进度
                 qa_pairs = await self.process_chunks_parallel(
