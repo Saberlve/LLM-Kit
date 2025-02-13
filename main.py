@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.components.routers import parse, to_tex, qa_generate, quality, qa_dedup
+from app.components.routers import parse, to_tex, qa_generate, quality, qa_dedup, cot_generate
 from app.components.core.database import init_db, get_database
 from datetime import datetime, timezone
 import logging
@@ -135,6 +135,7 @@ app.include_router(to_tex.router, prefix="/to_tex", tags=["to_tex"])
 app.include_router(qa_generate.router, prefix="/qa", tags=["qa_generate"])
 app.include_router(quality.router, prefix="/quality", tags=["quality"])
 app.include_router(qa_dedup.router, prefix="/dedup", tags=["qa_dedup"])
+app.include_router(cot_generate.router, prefix="/cot", tags=["cot_generate"])
 
 # 健康检查接口
 @app.get("/")

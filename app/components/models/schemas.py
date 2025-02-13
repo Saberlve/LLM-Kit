@@ -24,6 +24,12 @@ class QAGenerateRequest(BaseRequest):
     model_name: str
     domain: str
 
+class COTGenerateRequest(BaseRequest):
+    content: str
+    filename: str
+    model_name: str
+    domain: str = "医学"
+
 class DedupRequest(BaseModel):
     quality_file_ids: List[str]
     dedup_by_answer: bool = False

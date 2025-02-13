@@ -23,9 +23,11 @@ def generate_erine(text, API_KEY, SECRET_KEY,prompt_choice):
     )
 
     # system = """Output standard and clean json format {{"question":<question>, "answer":<answer>}}"""
-
-    content = PROMPT_DICT[prompt_choice]
-    content = content.format(text)
+    if prompt_choice == 'ToCOT':
+        content=text
+    else:
+        content = PROMPT_DICT[prompt_choice]
+        content = content.format(text)
     # print(prompt)
 
     payload = json.dumps(

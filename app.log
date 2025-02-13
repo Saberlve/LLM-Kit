@@ -3366,3 +3366,296 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
     raise Exception("No QA pairs generated")
 Exception: No QA pairs generated
+2025-02-13 21:00:14,416 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 23, in generate_cot
+    prompt = begin_prompt.format(text=content)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 55, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 48, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:00:56,008 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 23, in generate_cot
+    prompt = begin_prompt.format(text=content)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 55, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 49, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:01:01,810 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 23, in generate_cot
+    prompt = begin_prompt.format(text=content)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 55, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 49, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:04:01,107 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:04:01,108 - app.components.services.cot_generate_service - ERROR - 生成COT失败：'\n"推理"'
+2025-02-13 21:04:01,108 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 38, in generate_cot
+    prompt = begin_prompt.format(text=content)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 55, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 82, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:05:11,135 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:05:11,135 - app.components.services.cot_generate_service - ERROR - 生成COT失败：'\n"推理"'
+2025-02-13 21:05:11,135 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 38, in generate_cot
+    prompt = begin_prompt.format(text=content)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 55, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 82, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:06:11,761 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:06:13,409 - app.components.services.cot_generate_service - ERROR - 调用API失败：'ToCOT'
+2025-02-13 21:06:13,409 - app.components.services.cot_generate_service - ERROR - 生成COT失败：调用生成API失败：'ToCOT'
+2025-02-13 21:06:13,409 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: 调用生成API失败：'ToCOT'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 43, in generate_cot
+    response = generate(prompt, model_name, 'ToCOT', ak, sk)
+  File "D:\Code\Python\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\Code\Python\LLM-Kit\model_api\erine\erine.py", line 27, in generate_erine
+    content = PROMPT_DICT[prompt_choice]
+KeyError: 'ToCOT'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 47, in generate_cot
+    raise Exception(f"调用生成API失败：{str(e)}")
+Exception: 调用生成API失败：'ToCOT'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 82, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: 调用生成API失败：'ToCOT'
+2025-02-13 21:07:41,056 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:08:03,117 - app.components.services.cot_generate_service - ERROR - JSON解析失败：Expecting value: line 1 column 1 (char 0)，原始响应：根据给定的任务背景，我将扮演医学专家，针对用户提出的问题进行分析和回答。假设用户的问题是：“我经常感到疲劳，是不是得了什么病？”我将按照要求的JSON结构进行回答。
+
+```json
+{
+    "推理": [
+        {
+            "action": "分析",
+            "title": "分析用户症状",
+            "content": "用户经常感到疲劳，这是一个非特异性的症状，可能是多种疾病的表现。可能的疾病包括但不限于贫血、甲状腺问题（如甲状腺功能减退）、慢性疲劳综合症、糖尿病、睡眠质量差等。"
+        },
+        {
+            "action": "建议进一步检查",
+            "title": "提出进一步检查的建议",
+            "content": "建议用户及时前往医院进行详细的体检和相关检查，如血常规、甲状腺功能检查、血糖监测等，以便找出潜在的健康问题。"
+        },
+        {
+            "action": "分析潜在病因",
+            "title": "考虑潜在病因",
+            "content": "疲劳可能是生活方式因素如缺乏运动、饮食不当、压力过大等引起的。在就医检查的同时，用户也应反思自己的生活习惯，并作出相应的调整。"
+        },
+        {
+            "action": "安慰与鼓励",
+            "title": "心理关怀与建议",
+          "content": "在医学检查的同时，也要关注用户的心理状态，可能存在的焦虑或抑郁情绪也会引发疲劳感。鼓励用户保持乐观心态，适当锻炼，充足休息。无论结果如何，都要勇敢面对并积极寻求解决方法。"
+        },
+        {
+            "action": "最终总结",
+            "content": "总的来说，经常感到疲劳可能是多种原因导致的，建议用户尽快就医检查，并在生活中做出相应调整。同时，保持积极的心态对于身体健康也是至关重要的。"
+        },
+        {
+            "action": "验证",
+            "content": "在进行了医学检查并得知确切结果后，与用户再次沟通，根据医生的诊断和建议，共同制定治疗方案，并对用户的康复情况进行跟踪和验证。"
+        }
+    ]
+}
+```
+以上是我针对用户提出的问题进行的推理和回答。作为医学专家，我会充分结合医学知识，从多个角度对用户的问题进行深入分析，并提供专业建议。希望这样的回答能够满足用户的需求，并为用户的健康提供帮助。
+2025-02-13 21:08:03,117 - app.components.services.cot_generate_service - ERROR - 生成COT失败：API返回的结果格式不正确
+2025-02-13 21:08:03,117 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: API返回的结果格式不正确
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 51, in generate_cot
+    cot_result = json.loads(response)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 54, in generate_cot
+    raise Exception("API返回的结果格式不正确")
+Exception: API返回的结果格式不正确
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 82, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: API返回的结果格式不正确
+2025-02-13 21:09:00,881 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:09:19,814 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\string_cot.json
+2025-02-13 21:09:52,136 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:10:12,592 - app.components.services.cot_generate_service - ERROR - 生成COT失败：string indices must be integers
+2025-02-13 21:10:12,592 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 52, in generate_cot
+    cot_result = extract_qa(response['result'])
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 83, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: string indices must be integers
+2025-02-13 21:11:24,879 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:11:29,697 - app.components.services.cot_generate_service - ERROR - 生成COT失败：string indices must be integers
+2025-02-13 21:11:29,699 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 51, in generate_cot
+    print(json.loads(response['result']))
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 83, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: string indices must be integers
+2025-02-13 21:11:41,334 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:12:01,005 - app.components.services.cot_generate_service - ERROR - 生成COT失败：string indices must be integers
+2025-02-13 21:12:01,006 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 51, in generate_cot
+    print(json.loads(response['result']))
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 83, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: string indices must be integers
+2025-02-13 21:15:11,517 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:15:37,577 - app.components.services.cot_generate_service - ERROR - JSON解析失败：Expecting value: line 1 column 1 (char 0)，原始响应：根据给定的任务背景，我将扮演医学专家，针对用户的问题进行推理并撰写一篇专业而易于理解的医学建议。输出将遵循提供的JSON结构。
+
+假设用户问题为：“我最近经常出现头痛、失眠和焦虑的症状，可能是什么原因导致的？”
+
+```json
+{
+    "推理": [
+        {
+            "action": "分析",
+            "title": "症状分析",
+            "content": "头痛、失眠和焦虑是常见的症状，可能由多种原因引起。头痛可能与压力、眼部问题、视力问题或脑部疾病有关。失眠可能是由于压力、焦虑、抑郁、睡眠环境不佳或生活习惯不规律等因素导致。焦虑可能是心理或情感问题，也可能由身体疾病引起。"
+        },
+        {
+            "action": "分析",
+            "title": "可能的原因",
+            "content": "结合这些常见症状，可能存在的原因有很多。如神经性头痛、原发性头痛、慢性压力导致的头痛等。失眠可能与工作学习压力过大、睡眠环境不舒适有关。焦虑可能由于工作或生活的压力较大或心理方面因素造成。"
+        },
+        {
+            "action": "建议",
+            "title": "初步的自我调整建议",
+            "content": "首先，尝试调整生活方式，保持规律的作息时间和睡眠习惯。避免过度疲劳和压力过大，可以适当进行一些运动如散步、瑜伽等来缓解压力。保持良好的饮食习惯，避免摄入过多的咖啡因和酒精等刺激性物质。如果头痛严重，可以尝试一些轻度的止痛药物来缓解症状。"
+        },
+        {
+            "action": "最终总结",
+            "content": "综上，您的头痛、失眠和焦虑症状可能由多种原因导致，建议您前往医院就诊进行详细检查以确定具体原因，并根据医生的建议进行相应的治疗和管理。同时，保持良好的生活习惯和心态对缓解症状非常重要。"
+        },
+        {
+            "action": "验证",
+            "content": "建议您尽快就医进行专业的检查和治疗，以获得准确的诊断和治疗方案。医生会根据您的具体情况进行相关的检查和评估，确定症状的具体原因并制定合适的治疗计划。"
+        }
+    ]
+}
+```
+2025-02-13 21:15:37,577 - app.components.services.cot_generate_service - ERROR - 生成COT失败：API返回的结果格式不正确
+2025-02-13 21:15:37,577 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: API返回的结果格式不正确
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 52, in generate_cot
+    cot_result = extract_qa(json.loads(response))
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 55, in generate_cot
+    raise Exception("API返回的结果格式不正确")
+Exception: API返回的结果格式不正确
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 54, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 83, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: API返回的结果格式不正确
+2025-02-13 21:19:03,524 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:19:29,077 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\string_cot.json
+2025-02-13 21:19:47,831 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\string_cot_cot.json
+2025-02-13 21:19:47,831 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-13 21:19:50,095 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\string_cot_cot.json
+2025-02-13 21:19:50,095 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-13 21:19:55,152 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\string_cot_cot.json
+2025-02-13 21:19:55,152 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-13 21:20:36,535 - app.components.services.cot_generate_service - INFO - 成功删除文件：result\cot\string_cot.json
+2025-02-13 21:24:34,251 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\string_cot.json
+2025-02-13 21:24:34,251 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-13 21:24:45,505 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
+2025-02-13 21:25:09,115 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\string_cot.json

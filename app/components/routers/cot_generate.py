@@ -50,7 +50,6 @@ async def generate_cot(
             text=request.content,
             domain=request.domain
         )
-
         service = COTGenerateService(db)
         result = await service.generate_cot(
             content=request.content,

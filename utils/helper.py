@@ -88,17 +88,17 @@ def extract_qa(response):
     return qa_pairs
 
 
-def generate(text, Model_Name,  prompt_choice, API_KEY, SECRET_KEY=None):
+def generate(text, Model_Name, prompt_choice, API_KEY, SECRET_KEY=None):
+    # 转换为小写并赋值
+    model_name = Model_Name.lower()
 
-    Model_Name.lower()
-
-    if Model_Name == "erine":
+    if model_name == "erine":
         return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
-    elif Model_Name == "flash":
+    elif model_name == "flash":
         return generate_flash(text, API_KEY, prompt_choice)
-    elif Model_Name == "lite":
+    elif model_name == "lite":
         return generate_lite(text, API_KEY, prompt_choice)
-    elif Model_Name == "qwen":
+    elif model_name == "qwen":
         return generate_Qwen(text, API_KEY, prompt_choice)
     else:
-        print("您输入的模型名字有误！请重新输入。")
+        raise ValueError(f"不支持的模型名称：{Model_Name}，支持的模型包括：erine, flash, lite, qwen")
