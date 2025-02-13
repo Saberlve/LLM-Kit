@@ -42,8 +42,9 @@ def generate_erine(text, API_KEY, SECRET_KEY,prompt_choice):
     headers = {"Content-Type": "application/json"}
 
     response = requests.request("POST", url, headers=headers, data=payload)
-    
+    print(response.content)
     response = json.loads(response.text)
+    print(response)
     return response["result"]
        
         

@@ -6,6 +6,7 @@ from app.components.models.schemas import (
     ToTexRequest, APIResponse, ParsedFileListResponse, 
     ParsedContentResponse
 )
+import os
 from app.components.services.to_tex_service import ToTexService
 from pydantic import BaseModel
 
@@ -62,9 +63,34 @@ async def convert_to_latex(
 ):
     """将文本内容转换为LaTeX格式"""
     try:
+
+        filename=request.filename
+        PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+        raw_filename = filename.split('.')[0]
+        parsed_filename1 = f"{raw_filename}.json"
+        # 读取文件内容
+        file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
+        if  os.path.isfile(file_path1):
+            return APIResponse(
+                status="success",
+                message="内容已成功转换为LaTeX格式",
+                data={"a":"aaa"}
+            )
+        PARSED_FILES_DIR = "parsed_files\parsed_file"
+        parsed_filename = f"{filename}_parsed.txt"
+        # 读取文件内容
+        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+        if not os.path.isfile(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"文件 {request.filename} 未找到"
+            )
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
         service = ToTexService(db)
         result = await service.convert_to_latex(
-            content=request.content,
+            content=content,
             filename=request.filename,
             save_path=request.save_path,
             SK=request.SK,

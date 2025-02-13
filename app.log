@@ -978,6 +978,2127 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 302, in parse_content
     raise Exception(f"Parse content failed: {str(e)}")
 Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6hszq690.txt' -> './parsed_files\\parsed_file\\ceshi.txt_parsed.txt'
+2025-02-02 15:22:22,931 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679754fdadd4bb7aa21a9bdb, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpx3b0kemk.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpx3b0kemk.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 439, in parse_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 401, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 310, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpx3b0kemk.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+2025-02-02 15:28:00,065 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679754fdadd4bb7aa21a9bdb, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmps6ytk_ma.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmps6ytk_ma.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 439, in parse_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 401, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 310, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmps6ytk_ma.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+2025-02-02 15:33:14,950 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679754fdadd4bb7aa21a9bdb, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpsjjws8kr.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpsjjws8kr.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 439, in parse_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 401, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 310, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpsjjws8kr.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+2025-02-02 15:34:34,811 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679754fdadd4bb7aa21a9bdb, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6pjufkj4.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
+    os.rename(parsed_file_path, new_file_path)
+FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6pjufkj4.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 439, in parse_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 401, in parse_specific_file
+    parse_result = await service.parse_content(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\parse_service.py", line 310, in parse_content
+    raise Exception(f"Parse content failed: {str(e)}")
+Exception: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmp6pjufkj4.txt' -> './parsed_files\\parsed_file\\实验室.txt_parsed.txt'
+2025-02-02 15:34:37,129 - app.components.routers.parse - ERROR - OCR 文件失败 file_id: 67974fc9fa4d348d8cb85139, 错误: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 506, in ocr_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 479, in ocr_specific_file
+    ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
+  File "D:\pyproject\test2\LLM-Kit\text_parse\parse.py", line 11, in single_ocr
+    from modelscope import AutoModel, AutoTokenizer
+ImportError: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+2025-02-02 16:39:38,795 - app.components.routers.parse - ERROR - OCR 文件失败 file_id: 679f2f4ada61f2ea0b417409, 错误: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 506, in ocr_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 479, in ocr_specific_file
+    ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
+  File "D:\pyproject\test2\LLM-Kit\text_parse\parse.py", line 11, in single_ocr
+    from modelscope import AutoModel, AutoTokenizer
+ImportError: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+2025-02-02 20:53:00,831 - app.components.routers.parse - ERROR - OCR 文件失败 file_id: 679f2f4ada61f2ea0b417409, 错误: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 506, in ocr_specific_file
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\parse.py", line 479, in ocr_specific_file
+    ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
+  File "D:\pyproject\test2\LLM-Kit\text_parse\parse.py", line 11, in single_ocr
+    from modelscope import AutoModel, AutoTokenizer
+ImportError: cannot import name 'AutoModel' from 'modelscope' (C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\modelscope\__init__.py)
+2025-02-03 18:41:17,209 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 98, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "D:\APPS\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "D:\APPS\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\APPS\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 19:11:38,939 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 98, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "D:\APPS\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "D:\APPS\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\APPS\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 19:12:55,239 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 98, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "D:\APPS\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "D:\APPS\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\APPS\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 19:47:27,362 - root - ERROR - Global exception: 'QAGenerateRequest' object has no attribute 'body'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 65, in generate_qa_pairs
+    |     print("Received request body:", await request.body())  # 打印原始请求体
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 891, in __getattr__
+    |     raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+    | AttributeError: 'QAGenerateRequest' object has no attribute 'body'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 65, in generate_qa_pairs
+    print("Received request body:", await request.body())  # 打印原始请求体
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 891, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'QAGenerateRequest' object has no attribute 'body'
+
+2025-02-03 19:57:28,129 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 97, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "D:\APPS\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "D:\APPS\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\APPS\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 19:59:00,465 - app.components.routers.qa_generate - ERROR - 生成问答对失败: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 219, in generate_qa_pairs
+    chunks = json.loads(content)
+  File "D:\APPS\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "D:\APPS\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\APPS\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-02-03 20:13:53,382 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 338, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in generate_qa_pairs
+    [chunk.get("chunk", "") for chunk in chunks],
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in <listcomp>
+    [chunk.get("chunk", "") for chunk in chunks],
+AttributeError: 'str' object has no attribute 'get'
+2025-02-03 20:15:16,283 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 20:16:24,464 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 338, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in generate_qa_pairs
+    [chunk.get("chunk", "") for chunk in chunks],
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in <listcomp>
+    [chunk.get("chunk", "") for chunk in chunks],
+AttributeError: 'str' object has no attribute 'get'
+2025-02-03 20:17:26,941 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 338, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in generate_qa_pairs
+    [chunk.get("chunk", "") for chunk in chunks],
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 223, in <listcomp>
+    [chunk.get("chunk", "") for chunk in chunks],
+AttributeError: 'str' object has no attribute 'get'
+2025-02-03 20:22:07,804 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 20:23:55,723 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 20:58:43,868 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 104, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:16:18,585 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:21:19,625 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:27:55,085 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:32:01,727 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:32:04,955 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:32:29,812 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-03 21:40:07,098 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-04 20:11:38,228 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-04 20:13:42,072 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 100, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 339, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 234, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated
+2025-02-04 20:15:12,417 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:18,031 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:18,032 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:18,034 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:18,037 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:18,040 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:27,342 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:29,177 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:29,179 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:29,183 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:29,186 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:29,190 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:15:31,029 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:22:51,791 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 47, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:33:53,796 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:34:35,256 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:35:23,616 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:39:59,201 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:42:53,299 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:43:21,750 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-04 20:46:24,305 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: AK和SK数量必须相同
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 135, in convert_to_latex
+    assert len(AK) == len(SK), 'AK和SK数量必须相同'
+AssertionError: AK和SK数量必须相同
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: AK和SK数量必须相同
+2025-02-04 20:46:50,121 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: list index out of range
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 161, in convert_to_latex
+    futures = [
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 166, in <listcomp>
+    SK[i],
+IndexError: list index out of range
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: list index out of range
+2025-02-04 20:51:11,343 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: list index out of range
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 161, in convert_to_latex
+    futures = [
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 166, in <listcomp>
+    SK[i],
+IndexError: list index out of range
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: list index out of range
+2025-02-04 20:51:37,417 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: list index out of range
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 161, in convert_to_latex
+    futures = [
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 166, in <listcomp>
+    SK[i],
+IndexError: list index out of range
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: list index out of range
+2025-02-04 20:55:17,807 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 102, in generate
+    return generate_Qwen(text, API_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\Qwen\Qwen.py", line 35, in generate_Qwen
+    return response.json()['choices'][0]['message']['content']
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: string indices must be integers
+2025-02-04 20:55:50,045 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 102, in generate
+    return generate_Qwen(text, API_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\Qwen\Qwen.py", line 35, in generate_Qwen
+    return response.json()['choices'][0]['message']['content']
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: string indices must be integers
+2025-02-04 20:56:18,781 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: string indices must be integers
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 102, in generate
+    return generate_Qwen(text, API_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\Qwen\Qwen.py", line 35, in generate_Qwen
+    return response.json()['choices'][0]['message']['content']
+TypeError: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: string indices must be integers
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 81, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: string indices must be integers
+2025-02-10 21:32:45,483 - asyncio - ERROR - Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "D:\APPS\lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\APPS\lib\asyncio\proactor_events.py", line 162, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+2025-02-11 19:57:22,339 - root - ERROR - Global exception: 'files'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 218, in delete_files
+    |     for filename in files_to_delete["files"]:
+    | KeyError: 'files'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 218, in delete_files
+    for filename in files_to_delete["files"]:
+KeyError: 'files'
+
+2025-02-11 19:58:35,203 - root - ERROR - Global exception: 'dict' object has no attribute 'split'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 218, in delete_files
+    |     filename = filename.split('.')[0]
+    | AttributeError: 'dict' object has no attribute 'split'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 218, in delete_files
+    filename = filename.split('.')[0]
+AttributeError: 'dict' object has no attribute 'split'
+
+2025-02-11 19:58:58,068 - root - ERROR - Global exception: 'dict' object has no attribute 'split'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 219, in delete_files
+    |     filename = filename.split('.')[0]
+    | AttributeError: 'dict' object has no attribute 'split'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 219, in delete_files
+    filename = filename.split('.')[0]
+AttributeError: 'dict' object has no attribute 'split'
+
+2025-02-11 19:59:39,009 - root - ERROR - Global exception: 'dict' object has no attribute 'split'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 219, in delete_files
+    |     filename = filename.split('.')[0]
+    | AttributeError: 'dict' object has no attribute 'split'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 219, in delete_files
+    filename = filename.split('.')[0]
+AttributeError: 'dict' object has no attribute 'split'
+
+2025-02-11 20:02:24,577 - root - ERROR - Global exception: 'FilenameRequest' object has no attribute 'split'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 220, in delete_files
+    |     filename = filename.split('.')[0]
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 891, in __getattr__
+    |     raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+    | AttributeError: 'FilenameRequest' object has no attribute 'split'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 220, in delete_files
+    filename = filename.split('.')[0]
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 891, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'FilenameRequest' object has no attribute 'split'
+
+2025-02-11 20:03:21,872 - root - ERROR - Global exception: 'Request' object has no attribute 'filename'
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 217, in delete_files
+    |     filename = await request.filename
+    | AttributeError: 'Request' object has no attribute 'filename'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 217, in delete_files
+    filename = await request.filename
+AttributeError: 'Request' object has no attribute 'filename'
+
+2025-02-11 20:05:14,644 - root - ERROR - Global exception: object str can't be used in 'await' expression
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 178, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    |     raise exc
+    |   File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    |     response = await call_next(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    |     raise app_exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    |     response = await f(request)
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 217, in delete_files
+    |     filename = await request.filename
+    | TypeError: object str can't be used in 'await' expression
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 177, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "D:\APPS\lib\contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 179, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 55, in dispatch
+    raise exc
+  File "D:\pyproject\test2\LLM-Kit\main.py", line 27, in dispatch
+    response = await call_next(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 154, in call_next
+    raise app_exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\base.py", line 141, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 217, in delete_files
+    filename = await request.filename
+TypeError: object str can't be used in 'await' expression
+
 2025-02-03 23:14:33,146 - app.components.routers.parse - ERROR - 解析文件失败 file_id: 679eb92bb16ffeec45bdb37d, 错误: Parse content failed: [WinError 183] 当文件已存在时，无法创建该文件。: './parsed_files\\parsed_file\\tmpyh056nds.txt' -> './parsed_files\\parsed_file\\33_parsed.txt'
 Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\parse_service.py", line 266, in parse_content
@@ -1057,3 +3178,159 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
     raise Exception(f"转换失败: {str(e)}")
 Exception: 转换失败: 处理文本块失败: argument of type 'NoneType' is not iterable
+2025-02-13 18:45:54,943 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 转换失败: 处理文本块失败: 'result'
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 38, in _process_chunk_with_api
+    tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
+  File "D:\pyproject\test2\LLM-Kit\utils\helper.py", line 96, in generate
+    return generate_erine(text, API_KEY, SECRET_KEY, prompt_choice)
+  File "D:\pyproject\test2\LLM-Kit\model_api\erine\erine.py", line 48, in generate_erine
+    return response["result"]
+KeyError: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 261, in convert_to_latex
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 173, in convert_to_latex
+    results.extend(future.result())
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 451, in result
+    return self.__get_result()
+  File "D:\APPS\lib\concurrent\futures\_base.py", line 403, in __get_result
+    raise self._exception
+  File "D:\APPS\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 43, in _process_chunk_with_api
+    raise Exception(f"处理文本块失败: {str(e)}")
+Exception: 处理文本块失败: 'result'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 80, in convert_to_latex
+    result = await service.convert_to_latex(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\to_tex_service.py", line 266, in convert_to_latex
+    raise Exception(f"转换失败: {str(e)}")
+Exception: 转换失败: 处理文本块失败: 'result'
+2025-02-13 18:46:34,974 - asyncio - ERROR - Exception in callback _ProactorReadPipeTransport._loop_reading(<_OverlappedF...ed result=881>)
+handle: <Handle _ProactorReadPipeTransport._loop_reading(<_OverlappedF...ed result=881>)>
+Traceback (most recent call last):
+  File "D:\APPS\lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "D:\APPS\lib\asyncio\proactor_events.py", line 320, in _loop_reading
+    self._data_received(data, length)
+  File "D:\APPS\lib\asyncio\proactor_events.py", line 270, in _data_received
+    self._protocol.data_received(data)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\uvicorn\protocols\http\h11_impl.py", line 172, in data_received
+    self.handle_events()
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\uvicorn\protocols\http\h11_impl.py", line 181, in handle_events
+    self.send_400_response(msg)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\uvicorn\protocols\http\h11_impl.py", line 298, in send_400_response
+    output = self.conn.send(event)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\h11\_connection.py", line 512, in send
+    data_list = self.send_with_data_passthrough(event)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\h11\_connection.py", line 537, in send_with_data_passthrough
+    self._process_event(self.our_role, event)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\h11\_connection.py", line 272, in _process_event
+    self._cstate.process_event(role, type(event), server_switch_event)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\h11\_state.py", line 293, in process_event
+    self._fire_event_triggered_transitions(role, _event_type)
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\h11\_state.py", line 311, in _fire_event_triggered_transitions
+    raise LocalProtocolError(
+h11._util.LocalProtocolError: can't handle event type Response when role=SERVER and state=CLOSED
+2025-02-13 19:07:24,981 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 194, in generate_qa_pairs
+    generation = QAGeneration(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+2025-02-13 19:09:43,848 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 1 validation error for APIResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value='', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/dict_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 74, in convert_to_latex
+    return APIResponse(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for APIResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value='', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/dict_type
+2025-02-13 19:11:45,275 - app.components.routers.to_tex - ERROR - LaTeX转换失败: 1 validation error for APIResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value=' aaa', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/dict_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\to_tex.py", line 74, in convert_to_latex
+    return APIResponse(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for APIResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value=' aaa', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.10/v/dict_type
+2025-02-13 19:13:24,312 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 194, in generate_qa_pairs
+    generation = QAGeneration(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+2025-02-13 19:17:00,459 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 194, in generate_qa_pairs
+    generation = QAGeneration(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+2025-02-13 19:18:24,897 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 194, in generate_qa_pairs
+    generation = QAGeneration(
+  File "C:\Users\30812\AppData\Roaming\Python\Python310\site-packages\pydantic\main.py", line 214, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for QAGeneration
+source_text
+  Input should be a valid string [type=string_type, input_value=[{'id': 1, 'chunk': "\\do...期的相关介绍）'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.10/v/string_type
+2025-02-13 19:21:11,685 - app.components.routers.qa_generate - ERROR - 生成问答对失败: No QA pairs generated
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 101, in generate_qa_pairs
+    result = await service.generate_qa_pairs(
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 337, in generate_qa_pairs
+    raise e
+  File "D:\pyproject\test2\LLM-Kit\app\components\services\qa_generate_service.py", line 232, in generate_qa_pairs
+    raise Exception("No QA pairs generated")
+Exception: No QA pairs generated

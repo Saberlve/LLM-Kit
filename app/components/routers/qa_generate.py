@@ -24,7 +24,7 @@ class RecordIDRequest(BaseModel):
 
 @router.get("/tex_files", response_model=APIResponse)
 async def get_tex_files(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取所有已转换的tex文件列表"""
     try:
@@ -41,8 +41,8 @@ async def get_tex_files(
 
 @router.post("/tex_content", response_model=APIResponse)
 async def get_tex_content(
-    request: TexContentRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: TexContentRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定tex文件的内容"""
     try:
@@ -82,8 +82,9 @@ async def generate_qa_pairs(
                 detail="并行数量不能大于 API 密钥对数量"
             )
         filename=request_body.filename
-        PARSED_FILES_DIR = "parsed_files\parsed_file"
-        parsed_filename = f"{filename}_parsed.txt"
+        PARSED_FILES_DIR = f"{filename}\\tex_files"
+        raw_filename = filename.split('.')[0]
+        parsed_filename = f"{raw_filename}.json"
         # 读取文件内容
         file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
         if not os.path.isfile(file_path):
@@ -117,10 +118,10 @@ async def generate_qa_pairs(
         logger.error(f"生成问答对失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-    
+
 @router.get("/generate_qa/history")
 async def get_qa_history(
-    db: AsyncIOMotorClient = Depends(get_database)
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取问答对生成历史记录"""
     try:
@@ -136,17 +137,17 @@ async def get_qa_history(
 
 @router.post("/generate_qa/progress")
 async def get_qa_progress(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: RecordIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取问答对生成进度"""
     try:
         from bson import ObjectId
         record = await db.llm_kit.qa_generations.find_one({"_id": ObjectId(request.record_id)})
-        
+
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
-        
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
@@ -161,28 +162,28 @@ async def get_qa_progress(
 
 @router.delete("/qa_records")
 async def delete_qa_record(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: RecordIDRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """根据ID删除问答生成记录及相关问答对"""
     try:
         from bson import ObjectId
-        
+
         # 删除生成记录
         result = await db.llm_kit.qa_generations.delete_one({"_id": ObjectId(request.record_id)})
-        
+
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
-            
+
         # 删除相关的问答对
         await db.llm_kit.qa_pairs.delete_many({"generation_id": ObjectId(request.record_id)})
-        
+
         return APIResponse(
             status="success",
             message="QA record and related pairs deleted successfully",
             data={"record_id": request.record_id}
         )
-        
+
     except Exception as e:
         logger.error(f"删除问答记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -213,15 +214,23 @@ async def get_parse_history(request: FilenameRequest):
 
 @router.post("/delete_file")
 async def delete_files(request: FilenameRequest):
+    '''删除构造文件'''
     PARSED_FILES_DIR = "result\qas"
     filename = request.filename
-    print(filename)
+    PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+
     filename = filename.split('.')[0]
     parsed_filename = f"{filename}_qa.json"
     file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+
+    parsed_filename1 = f"{filename}.json"
+    file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
+
     if os.path.exists(file_path):
-            os.remove(file_path)
-            return {"status": "success"}
+        os.remove(file_path)
+        if os.path.exists(file_path1):
+            os.remove(file_path1)
+        return {"status": "success"}
     return {"status": "failed"}
 
 

@@ -132,7 +132,7 @@ class ToTexService:
     ):
         try:
             # 验证输入
-            assert len(AK) == len(SK), 'AK和SK数量必须相同'
+            #assert len(AK) == len(SK), 'AK和SK数量必须相同'
             assert len(AK) >= parallel_num, '请提供足够的AK和SK'
 
             # 创建保存目录
@@ -183,7 +183,7 @@ class ToTexService:
 
                 # 生成简化的保存路径
                 tex_file_path = os.path.join(
-                    save_path, 
+                    save_path,
                     'tex_files', 
                     f'{base_filename}.json'  # 修改为.json后缀
                 )

@@ -886,6 +886,8 @@ def check_parsed_file_exist(raw_filename: str) -> int:
     parsed_filename = f"{raw_filename}_parsed.txt"
     target_path = os.path.join(parsed_dir, parsed_filename)
     return 1 if os.path.isfile(target_path) else 0
+
+
 @router.post("/phistory")
 async def get_parse_history(request: FilenameRequest):  # 修改参数为模型
     try:
@@ -898,8 +900,6 @@ async def get_parse_history(request: FilenameRequest):  # 修改参数为模型
         raise HTTPException(status_code=500, detail=str(e))
 
 def clean_filename(filename: str) -> str:
-    """清洗解析后的文件名，示例：实验室.txt_parsed.txt -> 实验室"""
-    # 使用正则表达式移除 _parsed.txt 后缀
     return re.sub(r'_parsed\.txt$', '', filename)
 
 @router.get("/parse_files")
