@@ -3659,3 +3659,111 @@ Exception: 生成COT失败: API返回的结果格式不正确
 2025-02-13 21:24:34,251 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
 2025-02-13 21:24:45,505 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：string
 2025-02-13 21:25:09,115 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\string_cot.json
+2025-02-13 21:37:57,696 - app.components.services.to_tex_service - ERROR - 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+2025-02-13 21:37:57,697 - app.components.routers.to_tex - ERROR - 获取解析内容失败: 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 102, in get_parsed_content
+    "_id": ObjectId(file_id),
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 105, in __init__
+    self.__validate(oid)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 193, in __validate
+    _raise_invalid_id(oid)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 38, in _raise_invalid_id
+    raise InvalidId(
+bson.errors.InvalidId: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 48, in get_parsed_content
+    content = await service.get_parsed_content(request.file_id)
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 121, in get_parsed_content
+    raise Exception(f"获取解析内容失败: {str(e)}")
+Exception: 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+2025-02-13 21:37:59,395 - app.components.services.to_tex_service - ERROR - 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+2025-02-13 21:37:59,395 - app.components.routers.to_tex - ERROR - 获取解析内容失败: 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 102, in get_parsed_content
+    "_id": ObjectId(file_id),
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 105, in __init__
+    self.__validate(oid)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 193, in __validate
+    _raise_invalid_id(oid)
+  File "C:\Users\WSX\.conda\envs\pytorch\lib\site-packages\bson\objectid.py", line 38, in _raise_invalid_id
+    raise InvalidId(
+bson.errors.InvalidId: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\to_tex.py", line 48, in get_parsed_content
+    content = await service.get_parsed_content(request.file_id)
+  File "D:\Code\Python\LLM-Kit\app\components\services\to_tex_service.py", line 121, in get_parsed_content
+    raise Exception(f"获取解析内容失败: {str(e)}")
+Exception: 获取解析内容失败: 'TET.txt' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+2025-02-13 21:39:13,736 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：model，文件名：string
+2025-02-13 21:39:13,736 - app.components.services.cot_generate_service - ERROR - 生成COT失败：'\n"推理"'
+2025-02-13 21:39:13,736 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 168, in generate_cot
+    cot_results = await self.process_chunks_parallel(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 118, in process_chunks_parallel
+    result = await task
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 90, in process_single_chunk
+    result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain, begin_prompt)
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 68, in process_chunk_with_api
+    prompt = begin_prompt.format(text=text, domain=domain)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 73, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 214, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:39:48,900 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：model，文件名：string
+2025-02-13 21:39:48,900 - app.components.services.cot_generate_service - ERROR - 生成COT失败：'\n"推理"'
+2025-02-13 21:39:48,900 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 168, in generate_cot
+    cot_results = await self.process_chunks_parallel(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 118, in process_chunks_parallel
+    result = await task
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 90, in process_single_chunk
+    result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain, begin_prompt)
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 68, in process_chunk_with_api
+    prompt = begin_prompt.format(text=text)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 73, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 214, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'
+2025-02-13 21:40:12,233 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：model，文件名：string
+2025-02-13 21:40:12,238 - app.components.services.cot_generate_service - ERROR - 生成COT失败：'\n"推理"'
+2025-02-13 21:40:12,238 - app.components.routers.cot_generate - ERROR - 生成COT失败: 生成COT失败: '\n"推理"'
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 169, in generate_cot
+    cot_results = await self.process_chunks_parallel(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 119, in process_chunks_parallel
+    result = await task
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 91, in process_single_chunk
+    result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain, begin_prompt)
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 69, in process_chunk_with_api
+    prompt = begin_prompt.format(text=text)
+KeyError: '\n"推理"'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Code\Python\LLM-Kit\app\components\routers\cot_generate.py", line 73, in generate_cot
+    result = await service.generate_cot(
+  File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 215, in generate_cot
+    raise Exception(f"生成COT失败: {str(e)}")
+Exception: 生成COT失败: '\n"推理"'

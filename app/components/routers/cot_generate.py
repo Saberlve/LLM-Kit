@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
-from app.components.models.schemas import APIResponse
+from app.components.models.schemas import APIResponse, COTGenerateRequest
 from app.components.services.cot_generate_service import COTGenerateService
 from pydantic import BaseModel
 
@@ -10,12 +10,16 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 PROMPT_TEMPLATE = """
+以下是用户的问题或描述：
 {text}
-# 你是一位经验丰富的{domain}专家，同时一个专业的用户问题分析师，同时也擅长markdown的专业使用；你也擅长专业的{domain}文章写作，拥有极高的文学素养。擅长针对用户提出的{domain}相关问题进行深入分析和专业解答。你的目标受众可能是{domain}专业人士、患者或普通用户，因此回答既要专业又易于理解。
-# ##任务背景 
-# - 我们团队要完成一个复杂的{domain}推理任务 
-# - 我们现在已经有了一个具体的用户问题，我们要针对用户问题给一个完善的回答，整篇文章围绕用户问题来展开，这篇文章是对用户问题的作答。 
-# - 首先你需要根据用户的问题，并充分结合你广博又扎实的{domain}知识，从更全面、更多样的角度来分析用户的问题（尽可能多的给出用户可能患的病情或尽可能多的给出解决方案），之后根据你认为最有可能的情况为用户撰写一篇分析深入、逻辑严谨、论述完整、关怀到位的{domain}建议！并给出你的分析过程。
+
+你是一位经验丰富的{domain}专家，同时一个专业的用户问题分析师，同时也擅长markdown的专业使用；你也擅长专业的{domain}文章写作，拥有极高的文学素养。擅长针对用户提出的{domain}相关问题进行深入分析和专业解答。你的目标受众可能是{domain}专业人士、患者或普通用户，因此回答既要专业又易于理解。
+
+##任务背景 
+- 我们团队要完成一个复杂的{domain}推理任务 
+- 我们现在已经有了一个具体的用户问题，我们要针对这段内容给一个完善的回答，整篇文章围绕这个内容来展开。
+- 首先你需要根据上述内容，并充分结合你广博又扎实的{domain}知识，从更全面、更多样的角度来分析问题（尽可能多的给出可能的情况或解决方案），之后根据你认为最有可能的情况撰写一篇分析深入、逻辑严谨、论述完整、关怀到位的{domain}建议！并给出你的分析过程。
+
 输出格式必须严格遵循以下 JSON 结构：
 '''json
 {{
@@ -40,24 +44,41 @@ class GenerateCOTRequest(BaseModel):
 
 @router.post("/generate")
 async def generate_cot(
-    request: GenerateCOTRequest,
+    request: COTGenerateRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """生成COT推理"""
     try:
-        # 替换提示词中的domain
+        # 验证 AK 和 SK 数量是否匹配
+        if len(request.AK) != len(request.SK):
+            raise HTTPException(
+                status_code=400,
+                detail="AK 和 SK 的数量必须相同"
+            )
+
+        # 验证并行数量是否合理
+        if request.parallel_num > len(request.AK):
+            raise HTTPException(
+                status_code=400,
+                detail="并行数量不能大于 API 密钥对数量"
+            )
+
+        # 替换提示词中的domain，保留text占位符供后续替换
         begin_prompt = PROMPT_TEMPLATE.format(
-            text=request.content,
+            text="{text}",  # 保留text占位符
             domain=request.domain
         )
+        
         service = COTGenerateService(db)
         result = await service.generate_cot(
             content=request.content,
             filename=request.filename,
             model_name=request.model_name,
-            ak=request.ak,
-            sk=request.sk,
-            begin_prompt=begin_prompt
+            ak_list=request.AK,
+            sk_list=request.SK,
+            parallel_num=request.parallel_num,
+            begin_prompt=begin_prompt,
+            domain=request.domain
         )
 
         return APIResponse(

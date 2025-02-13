@@ -4,6 +4,7 @@ from utils.helper import generate, extract_qa
 import json
 import os
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +58,80 @@ class COTGenerateService:
     def __init__(self, db: AsyncIOMotorClient):
         self.db = db
 
+    async def process_chunk_with_api(self, text: str, ak: str, sk: str, model_name: str, domain: str, begin_prompt: str):
+        """处理单个文本块并生成COT"""
+        max_retries = 5
+        
+        for attempt in range(max_retries):
+            try:
+                # 构造提示词
+                print(begin_prompt)
+                prompt = begin_prompt.replace('{text}',text)
+                
+                # 调用API
+                response = generate(prompt, model_name, 'ToCOT', ak, sk)
+                result = extract(response)
+                return result
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"处理文本块失败: {str(e)}")
+                    raise
+        return None
+
+    async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list, 
+                                    parallel_num: int, model_name: str, domain: str, begin_prompt: str):
+        """并行处理多个文本块"""
+        tasks = set()
+        total_chunks = len(chunks)
+        processed_chunks = 0
+        results = []
+
+        async def process_single_chunk(chunk, ak, sk):
+            nonlocal processed_chunks
+            result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain, begin_prompt)
+            processed_chunks += 1
+            return result
+
+        for i, chunk in enumerate(chunks):
+            ak = ak_list[i % len(ak_list)]
+            sk = sk_list[i % len(sk_list)]
+            
+            if len(tasks) >= parallel_num:
+                # 等待一个任务完成后再添加新任务
+                done, pending = await asyncio.wait(
+                    tasks, 
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                for task in done:
+                    result = await task
+                    if result:
+                        results.append(result)
+                tasks = pending
+            
+            task = asyncio.create_task(process_single_chunk(chunk, ak, sk))
+            tasks.add(task)
+        
+        # 等待所有剩余任务完成
+        if tasks:
+            done, _ = await asyncio.wait(tasks)
+            for task in done:
+                result = await task
+                if result:
+                    results.append(result)
+                    
+        return results
+
     async def generate_cot(
             self,
             content: str,
             filename: str,
             model_name: str,
-            ak: str,
-            sk: str,
-            begin_prompt: str
+            ak_list: list,
+            sk_list: list,
+            parallel_num: int,
+            begin_prompt: str,
+            domain: str = "医学"
     ):
         """生成COT推理并保存"""
         try:
@@ -77,32 +144,51 @@ class COTGenerateService:
                 raise ValueError("文件名不能为空")
             if not model_name or not model_name.strip():
                 raise ValueError("模型名称不能为空")
-            if not ak or not sk:
+            if not ak_list or not sk_list:
                 raise ValueError("API密钥不能为空")
+            if len(ak_list) != len(sk_list):
+                raise ValueError("AK和SK的数量必须相同")
+            if parallel_num > len(ak_list):
+                raise ValueError("并行数量不能大于API密钥对数量")
 
-            # 构造提示词
-            prompt = begin_prompt
-            logger.debug(f"构造的提示词：{prompt}")
-
-            # 调用API
+            # 解析JSON内容获取chunks
             try:
-                response = generate(prompt, model_name, 'ToCOT', ak, sk)
-                logger.debug(f"API响应：{response}")
-            except Exception as e:
-                logger.error(f"调用API失败：{str(e)}")
-                raise Exception(f"调用生成API失败：{str(e)}")
-
-            # 解析JSON响应
-            try:
-                print(response)
-                cot_result = extract(response)
+                content_json = json.loads(content)
+                chunks = [item.get("chunk", "") for item in content_json if item.get("chunk")]
             except json.JSONDecodeError as e:
-                logger.error(f"JSON解析失败：{str(e)}，原始响应：{response}")
-                raise Exception("API返回的结果格式不正确")
+                logger.error(f"解析内容JSON失败：{str(e)}")
+                raise ValueError("输入内容必须是有效的JSON格式")
+            except Exception as e:
+                logger.error(f"处理输入内容失败：{str(e)}")
+                raise
 
-            if not cot_result:
+            if not chunks:
+                raise ValueError("没有找到有效的文本块")
+
+            # 并行处理所有文本块
+            cot_results = await self.process_chunks_parallel(
+                chunks,
+                ak_list,
+                sk_list,
+                parallel_num,
+                model_name,
+                domain,
+                begin_prompt
+            )
+
+            if not cot_results:
                 logger.error("生成结果为空")
                 raise Exception("No COT result generated")
+
+            # 构建最终结果数组
+            final_results = []
+            for i, result in enumerate(cot_results):
+                if result and "推理" in result:
+                    final_results.append({
+                        "id": i + 1,
+                        "content": chunks[i],
+                        "result": result
+                    })
 
             # 构建保存路径
             try:
@@ -113,7 +199,7 @@ class COTGenerateService:
 
                 # 保存结果到文件
                 with open(final_save_path, 'w', encoding='utf-8') as f:
-                    json.dump(cot_result, f, ensure_ascii=False, indent=4)
+                    json.dump(final_results, f, ensure_ascii=False, indent=4)
                 logger.info(f"COT结果已保存到：{final_save_path}")
             except Exception as e:
                 logger.error(f"保存文件失败：{str(e)}")
@@ -121,7 +207,7 @@ class COTGenerateService:
 
             return {
                 "filename": os.path.basename(final_save_path),
-                "cot_result": cot_result
+                "cot_result": final_results
             }
 
         except Exception as e:
@@ -136,7 +222,7 @@ class COTGenerateService:
 
             parsed_dir = os.path.join("result", "cot")
             raw_filename = filename.split('.')[0]
-            parsed_filename = f"{raw_filename}_cot.json"
+            parsed_filename = f"{raw_filename}"
             target_path = os.path.join(parsed_dir, parsed_filename)
             
             if not os.path.isfile(target_path):
