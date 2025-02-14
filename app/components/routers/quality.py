@@ -15,6 +15,9 @@ class FilenameRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str
 
+class FilenameRequest(BaseModel):
+    filename: str
+
 @router.post("/quality")
 async def evaluate_and_optimize_qa(
     request: QualityControlRequest,
@@ -96,19 +99,20 @@ async def get_qa_content(
         logger.error(f"获取问答对文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/quality/progress")
 async def get_quality_progress(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FilenameRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取质量控制进度"""
     try:
-        from bson import ObjectId
-        record = await db.llm_kit.quality_generations.find_one({"_id": ObjectId(request.record_id)})
-        
+        # 查询质量控制记录
+        record = await db.llm_kit.quality_generations.find_one({"input_file": request.filename})
+
         if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
-        
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的质量控制记录未找到")
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",

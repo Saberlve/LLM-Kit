@@ -15,6 +15,9 @@ class FileIDRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str
 
+class FilenameRequest(BaseModel):
+    filename: str
+
 @router.post("/deduplicate_qa")
 async def deduplicate_qa(
     request: DedupRequest,
@@ -54,21 +57,22 @@ async def get_dedup_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/dedup/progress")
 async def get_dedup_progress(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FilenameRequest,
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取去重进度"""
     try:
-        from bson import ObjectId
+        # 查询去重记录
         record = await db.llm_kit.dedup_records.find_one(
-            {"_id": ObjectId(request.record_id)}
+            {"input_file": request.filename}
         )
-        
+
         if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
-        
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的去重记录未找到")
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",

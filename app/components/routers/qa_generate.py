@@ -22,6 +22,9 @@ class FilenameRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str
 
+class FilenameRequest(BaseModel):
+    filename: str
+
 @router.get("/tex_files", response_model=APIResponse)
 async def get_tex_files(
         db: AsyncIOMotorClient = Depends(get_database)
@@ -135,18 +138,19 @@ async def get_qa_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/generate_qa/progress")
 async def get_qa_progress(
-        request: RecordIDRequest,
+        request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取问答对生成进度"""
     try:
-        from bson import ObjectId
-        record = await db.llm_kit.qa_generations.find_one({"_id": ObjectId(request.record_id)})
+        # 查询进度记录
+        record = await db.llm_kit.qa_generations.find_one({"input_file": request.filename})
 
         if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的进度记录未找到")
 
         return APIResponse(
             status="success",

@@ -19,6 +19,9 @@ class FileIDRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str
 
+class FileNameRequest(BaseModel):
+    filename: str
+
 @router.get("/parsed_files")
 async def get_parsed_files(
     db: AsyncIOMotorClient = Depends(get_database)
@@ -125,19 +128,20 @@ async def get_tex_history(
         error_message = f"Failed to retrieve LaTeX conversion history: {str(e)}"
         raise HTTPException(status_code=500, detail=error_message)
 
+
 @router.post("/to_tex/progress")
 async def get_tex_progress(
-    request: RecordIDRequest,
-    db: AsyncIOMotorClient = Depends(get_database)
+        request: FileNameRequest,  # 修改请求模型
+        db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取LaTeX转换进度"""
     try:
-        from bson import ObjectId
-        record = await db.llm_kit.tex_records.find_one({"_id": ObjectId(request.record_id)})
-        
+        # 查询进度记录
+        record = await db.llm_kit.tex_records.find_one({"input_file": request.filename})
+
         if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
-        
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的进度记录未找到")
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",

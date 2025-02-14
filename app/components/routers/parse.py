@@ -58,6 +58,9 @@ class FileIDRequest(BaseModel):
 class RecordIDRequest(BaseModel):
     record_id: str = Field(..., description="Record ID to retrieve progress for")
 
+class FilenameRequest(BaseModel):
+    filename: str
+
 @router.post("/upload")
 async def upload_file(
         request: FileUploadRequest,
@@ -771,19 +774,21 @@ async def get_binary_file_content(
         logger.error(f"获取二进制文件内容失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/task/progress")
 async def get_task_progress(
-        request: RecordIDRequest,
+        request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取任务进度"""
     try:
-        from bson import ObjectId
-        record_id = request.record_id
-        record = await db.llm_kit.parse_records.find_one({"_id": ObjectId(record_id)})
+        # 查询记录
+        record = await db.llm_kit.parse_records.find_one(
+            {"input_file": request.filename}
+        )
 
         if not record:
-            raise HTTPException(status_code=404, detail="Record not found")
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的进度记录未找到")
 
         return APIResponse(
             status="success",
