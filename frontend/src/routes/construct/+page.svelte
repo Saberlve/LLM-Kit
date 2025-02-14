@@ -15,16 +15,20 @@
     let errorMessage = null;
     let uploadedFiles = [];
     let selectedFiles = [];
+    let selectedFiles1 = [];
+    let domain1 = '';
     let showDeleteConfirmation = false;
     let filesLoaded = false;
     let successMessage = null;
     let parallelNum = 1;
+    let parallelNum1 = 1;
     let domain = '';
     let savePath = '';
     let selectedModel = 'erine';
-    $: parallelNum = 1;
+    $: parallelNum = parseInt(String(parallelNum), 10) || 1;
+    $: parallelNum1 = parseInt(String(parallelNum), 10) || 1;
     $: numSKAKInputs = parallelNum;
-
+    $: numSKAKInputs1 = parallelNum1;
     $: updatedSKs = [...Array(numSKAKInputs).keys()].map(() => '');
 
     let modelOptions = [
@@ -35,10 +39,13 @@
     ];
     let SKs = [];
     let AKs = [];
+    let SKs1 = [];
+    let AKs1 = [];
     let errorModalVisible = false;
     let errorTimeoutId: NodeJS.Timeout | null = null;
     const errorDuration = 500;
     $: showSKInputs = (selectedModel =='erine');
+    $: showSKInputs1 = (selectedModel =='erine');
 
     let uploaded_file_heads = [t("data.construct.filename"),
         t("data.uploader.file_type"),
@@ -49,6 +56,7 @@
 
     let selectAllChecked = false;
     $: selectedFiles = selectedFiles;
+    $: selectedFiles1= selectedFiles;
     let isGeneratingQA = false;
     let isGeneratingCOT = false;
 
@@ -77,7 +85,7 @@
         } else {
             console.log("selectAllChecked is FALSE - Attempting to DESELECT ALL files.");
             selectedFiles = [];
-            console.log("selectedFiles AFTER deselect ALL:", selectedFiles);
+            console.log("selectedFiles AFTER deselect ALL files.");
         }
 
         updateSelectAllCheckbox();
@@ -142,19 +150,23 @@
                     const statusResponse = await axios.post('http://127.0.0.1:8000/qa/qashistory', {
                         filename: file.name
                     });
+                    const statusResponse1 = await axios.post('http://127.0.0.1:8000/cot/cothistory', {
+                        filename: file.name
+                    });
                     return {
                         ...file,
-                        status: statusResponse.data.exists === 1
-                            ? t("data.construct.status_generated")
-                            : t("data.construct.status_generating")
+                        status:{1:statusResponse.data.exists,2:statusResponse1.data.exists}
+
                     };
                 } catch (error) {
                     console.error('Error fetching status for file', file.name, error);
-                    return { ...file, status: t("data.construct.status_unknown") };
+                    return { ...file, status:{1:-1,2:-1} };
                 }
             }));
 
+
             uploadedFiles = filesWithStatus;
+
             updateSelectAllCheckbox(); // Update "select all" checkbox after loading files
         } catch (error) {
             errorMessage = 'Failed to load files';
@@ -297,7 +309,9 @@
         selectedModel = selectedOption.value;
         SKs = [];
         AKs = [];
-        parallelNum = 1; // Reset parallelNum on model change
+        SKs1 = [];
+        AKs1 = [];
+        parallelNum = 1;
     };
 
     const deleteQaFile = async (filename: string) => {
@@ -340,21 +354,55 @@
         successMessage = t("data.construct.cot_generating_wait"); // Inform user to wait
         setTimeout(() => { successMessage = null; }, 5000);
 
+
         try {
             const selectedFileNames = selectedFiles.map(f => f.name);
             for (let i = 0; i < selectedFileNames.length; i++) {
                 const filename = selectedFileNames[i];
-
-                const requestData = {
+                const toTexRequestData = {
                     filename: filename,
+                    content: "",
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs1 : new Array(AKs1.length).fill('a'),
+                    AK: AKs1.length > 0 ? AKs1 : [],
+                    parallel_num: parallelNum,
                     model_name: selectedModel,
-                    ak: AKs.length > 0 ? AKs[0] : 'a', // Assuming single AK/SK for COT, or adjust as needed
-                    sk: showSKInputs ? (SKs.length > 0 ? SKs[0] : 'a') : 'a', // Assuming single AK/SK for COT, or adjust as needed
-                    content: domain,
                 };
 
                 try {
-                    const response = await axios.post('http://127.0.0.1:8000/cot/generate', requestData, {
+                    const toTexResponse = await axios.post('http://127.0.0.1:8000/to_tex/to_tex', toTexRequestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (toTexResponse.status !== 200) {
+                        const errorData = await toTexResponse.json();
+                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
+                        return;
+                    }
+
+                } catch (toTexError) {
+                    console.error('Error converting to LaTeX:', toTexError);
+                    handleError(toTexError);
+                    errorMessage = t('data.construct.latex_conversion_network_error');
+                    return;
+                }
+
+
+                const requestData1 = {
+                    filename: filename,
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs1  :new Array(AKs1.length).fill('a'), //Handle empty array
+                    AK: AKs1.length > 0 ? AKs1 : [],  // Ensure 'files' is an array
+                    parallel_num: parallelNum1,
+                    model_name: selectedModel,
+                    domain: domain1,
+                };
+
+
+                try {
+                    const response = await axios.post('http://127.0.0.1:8000/cot/generate', requestData1, {
                         headers: {
                             'Content-Type': 'application/json',
                         }
@@ -370,7 +418,8 @@
                         }, 2000);
                         await fetchFiles(); // Refresh file status
                     } else {
-                        const errorData = await response.json();
+
+                        const errorData = await response.JSON();
                         errorMessage = errorData.detail || t('data.construct.cot_generation_failed');
                         return;
                     }
@@ -486,18 +535,22 @@
                                                     {new Date(file.modification_time).toLocaleString()}
                                                 </TableBodyCell>
                                                 <TableBodyCell>
-                                                    {#if file.status === t("data.construct.status_generated")}
+                                                    {#if file.status[1]===1 }
                                                         <Button color="green" size="xs" on:click={() => previewQaFile(file.name)}>
                                                             {t("data.construct.status_generated")}
                                                         </Button>
                                                     {:else}
                                                         <span class="px-2 py-1 text-sm rounded-full"
-                                                              class:bg-yellow-100={file.status === t("data.construct.status_generating")}
-                                                              class:bg-gray-100={file.status === t("data.construct.status_unknown")}>
-                                                            {file.status}
+                                                              class:bg-yellow-100={file.status[1]===0}
+                                                              class:bg-gray-100={file.status[1]===-1}>
+                                                            {#if file.status[1] === 0}
+                                                                {t("data.construct.status_generating")}
+                                                            {:else}
+                                                                {t("data.construct.status_unknown")}
+                                                            {/if}
                                                         </span>
                                                     {/if}
-                                                    {#if file.status === t("data.construct.status_generated")}
+                                                    {#if file.status[1]===1}
                                                         <Button color="red" size="xs" on:click={() => deleteQaFile(file.name)}>
                                                             {t("data.construct.delete_qa_button")}
                                                         </Button>
@@ -677,7 +730,7 @@
                                                 <TableBodyCell>
                                                     <input
                                                             type="checkbox"
-                                                            checked={selectedFiles.includes(file)}
+                                                            checked={selectedFiles1.includes(file)}
                                                             on:change={() => toggleSelection(file)}
                                                     />
                                                 </TableBodyCell>
@@ -692,20 +745,24 @@
                                                     {new Date(file.modification_time).toLocaleString()}
                                                 </TableBodyCell>
                                                 <TableBodyCell>
-                                                    {#if file.status === t("data.construct.status_generated")}
-                                                        <Button color="green" size="xs" on:click={() => previewCotFile(file.name)}>
+                                                    {#if file.status[2]===1 }
+                                                        <Button color="green" size="xs" on:click={() => previewQaFile(file.name)}>
                                                             {t("data.construct.status_generated")}
                                                         </Button>
                                                     {:else}
                                                         <span class="px-2 py-1 text-sm rounded-full"
-                                                              class:bg-yellow-100={file.status === t("data.construct.status_generating")}
-                                                              class:bg-gray-100={file.status === t("data.construct.status_unknown")}>
-                                                            {file.status}
+                                                              class:bg-yellow-100={file.status[2]===0}
+                                                              class:bg-gray-100={file.status[2]===-1}>
+                                                            {#if file.status[2] === 0}
+                                                                {t("data.construct.status_generating")}
+                                                            {:else}
+                                                                {t("data.construct.status_unknown")}
+                                                            {/if}
                                                         </span>
                                                     {/if}
-                                                    {#if file.status === t("data.construct.status_generated")}
+                                                    {#if file.status[2]===1}
                                                         <Button color="red" size="xs" on:click={() => deleteCotFile(file.name)}>
-                                                            {t("data.construct.delete_qa_button")}  <!-- Reusing label, consider cot specific label -->
+                                                            {t("data.construct.delete_qa_button")}
                                                         </Button>
                                                     {/if}
                                                 </TableBodyCell>
@@ -720,9 +777,9 @@
                                         on:click={() => {
                                         showDeleteConfirmation = true;
                                     }}
-                                        disabled={selectedFiles.length === 0}
+                                        disabled={selectedFiles1.length === 0}
                                 >
-                                    {t("data.construct.delete_button")} ({selectedFiles.length})
+                                    {t("data.construct.delete_button")} ({selectedFiles1.length})
                                 </Button>
                             </div>
                         </AccordionItem>
@@ -734,7 +791,7 @@
                                     <input
                                             type="number"
                                             min="1"
-                                            bind:value={parallelNum}
+                                            bind:value={parallelNum1}
                                             class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                     />
                                 </div>
@@ -751,14 +808,14 @@
                                 </div>
 
 
-                                {#if showSKInputs}
+                                {#if showSKInputs1}
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">{t("data.construct.sk")}</label>
-                                        {#each Array(1) as _, i}  <!-- Assuming single SK for COT -->
+                                        {#each Array(numSKAKInputs1) as _, i}
                                             <input
                                                     type="text"
                                                     placeholder={`SK ${i + 1}`}
-                                                    bind:value={SKs[i]}
+                                                    bind:value={SKs1[i]}
                                                     class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                             />
                                         {/each}
@@ -767,11 +824,11 @@
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">{t("data.construct.ak")}</label>
-                                    {#each Array(1) as _, i}  <!-- Assuming single AK for COT -->
+                                    {#each Array(numSKAKInputs1) as _, i}
                                         <input
                                                 type="text"
                                                 placeholder={`AK ${i + 1}`}
-                                                bind:value={AKs[i]}
+                                                bind:value={AKs1[i]}
                                                 class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                         />
                                     {/each}
@@ -780,7 +837,8 @@
                                     <label class="block text-sm font-medium text-gray-700">{t("data.construct.domain")}</label>
                                     <input
                                             type="text"
-                                            bind:value={domain}
+                                            bind:value={domain1}
+                                            placeholder={`如: 医疗`}
                                             class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                     />
                                 </div>
@@ -789,12 +847,12 @@
                                 <Button
                                         color="blue"
                                         on:click={generateCOTs}
-                                        disabled={selectedFiles.length === 0 || isGeneratingCOT}
+                                        disabled={selectedFiles1.length === 0 || isGeneratingCOT}
                                 >
                                     {#if isGeneratingCOT}
-                                        {t("data.construct.generating_button_text")}  <!-- Reusing label -->
+                                        {t("data.construct.generating_button_text")}
                                     {:else}
-                                        {t("data.construct.generate_cot_button")}  <!-- New label for COT generate -->
+                                        {t("data.construct.generate_button")}
                                     {/if}
                                 </Button>
                             </div>
@@ -821,7 +879,7 @@
             <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
                 <h3 class="text-xl font-bold mb-4">{t("data.uploader.delete_confirmation_title")}</h3>
                 <p class="mb-4">
-                    {t("data.uploader.delete_confirmation_message", { count: selectedFiles.length })}
+                    {t("data.uploader.delete_confirmation_message", { count: selectedFiles.length+ selectedFiles1.length})}
                 </p>
                 <div class="flex justify-end gap-3">
                     <Button color="red" on:click={deleteSelectedFiles}>
