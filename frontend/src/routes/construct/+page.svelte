@@ -339,6 +339,11 @@
     const previewQaFile = (filename: string) => {
         goto(`/construct/qa-preview?filename=${filename}`); // Navigate to preview page
     };
+
+    const previewcotFile = (filename: string) => {
+        goto(`/construct/cot-preview?filename=${filename}`); // Navigate to preview page
+    };
+
     const previewRawFile = (filename: string) => {
         goto(`/construct/raw-preview?filename=${filename}`); // Navigate to raw preview page
     };
@@ -746,7 +751,7 @@
                                                 </TableBodyCell>
                                                 <TableBodyCell>
                                                     {#if file.status[2]===1 }
-                                                        <Button color="green" size="xs" on:click={() => previewQaFile(file.name)}>
+                                                        <Button color="green" size="xs" on:click={() => previewcotFile(file.name)}>
                                                             {t("data.construct.status_generated")}
                                                         </Button>
                                                     {:else}
