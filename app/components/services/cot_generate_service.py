@@ -245,7 +245,7 @@ class COTGenerateService:
 
             parsed_dir = os.path.join("result", "cot")
             raw_filename = filename.split('.')[0]
-            parsed_filename = f"{raw_filename}"
+            parsed_filename = f"{raw_filename}_cot.json"
             target_path = os.path.join(parsed_dir, parsed_filename)
             
             if os.path.exists(target_path):

@@ -3767,3 +3767,33 @@ Traceback (most recent call last):
   File "D:\Code\Python\LLM-Kit\app\components\services\cot_generate_service.py", line 215, in generate_cot
     raise Exception(f"生成COT失败: {str(e)}")
 Exception: 生成COT失败: '\n"推理"'
+2025-02-14 18:38:44,859 - app.components.routers.cot_generate - ERROR - 生成COT失败: object of type 'NoneType' has no len()
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\cot_generate.py", line 53, in generate_cot
+    if len(request.AK) != len(request.SK):
+TypeError: object of type 'NoneType' has no len()
+2025-02-14 18:40:57,917 - app.components.routers.cot_generate - ERROR - 生成COT失败: object of type 'NoneType' has no len()
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\cot_generate.py", line 53, in generate_cot
+    if len(request.AK) != len(request.SK):
+TypeError: object of type 'NoneType' has no len()
+2025-02-14 19:04:41,721 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 19:04:41,723 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-14 19:04:42,856 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 19:04:42,857 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-14 19:27:22,315 - app.components.services.cot_generate_service - ERROR - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 19:27:22,316 - app.components.services.cot_generate_service - ERROR - 获取COT内容失败：COT file not found
+2025-02-14 20:29:50,072 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 20:29:53,769 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 20:30:42,948 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 20:30:50,662 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\字符串中获得中文
+2025-02-14 20:46:06,520 - app.components.routers.cot_generate - ERROR - 生成COT失败: 404: 文件 哈尔滨工业大学.txt 未找到
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\cot_generate.py", line 81, in generate_cot
+    raise HTTPException(
+fastapi.exceptions.HTTPException: 404: 文件 哈尔滨工业大学.txt 未找到
+2025-02-14 20:53:02,885 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：哈尔滨工业大学.txt
+2025-02-14 20:53:39,306 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\哈尔滨工业大学_cot.json
+2025-02-14 21:01:55,690 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\字符串中获得中文
+2025-02-14 21:04:21,787 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\哈尔滨工业大学
+2025-02-14 21:04:30,784 - app.components.services.cot_generate_service - INFO - 文件不存在：result\cot\哈尔滨工业大学
