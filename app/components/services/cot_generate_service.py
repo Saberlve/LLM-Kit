@@ -247,9 +247,17 @@ class COTGenerateService:
             raw_filename = filename.split('.')[0]
             parsed_filename = f"{raw_filename}_cot.json"
             target_path = os.path.join(parsed_dir, parsed_filename)
-            
+
+            PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+
+            parsed_filename1 = f"{raw_filename}.json"
+            file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
+
+
             if os.path.exists(target_path):
                 os.remove(target_path)
+                if os.path.exists(file_path1):
+                    os.remove(file_path1)
                 logger.info(f"成功删除文件：{target_path}")
                 return True
             logger.info(f"文件不存在：{target_path}")

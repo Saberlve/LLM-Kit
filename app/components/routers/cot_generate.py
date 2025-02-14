@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends,Query
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import APIResponse, COTGenerateRequest
@@ -108,24 +108,30 @@ async def generate_cot(
         logger.error(f"生成COT失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/content/{filename}")
-async def get_cot_content(
-    filename: str,
-    db: AsyncIOMotorClient = Depends(get_database)
-):
-    """获取COT文件内容"""
-    try:
-        service = COTGenerateService(db)
-        content = await service.get_cot_content(filename)
-        return APIResponse(
-            status="success",
-            message="Content retrieved successfully",
-            data=content
-        )
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="COT file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+class FilenameRequest(BaseModel):
+    filename: str
+@router.post("/content")
+async def get_cot_content( request: FilenameRequest):
+   # filename: str,
+    #db: AsyncIOMotorClient = Depends(get_database)
+
+   """获取COT文件内容"""
+   try:
+       parsed_dir = os.path.join("result", "cot")
+       raw_filename = request.filename.split('.')[0]
+       parsed_filename = f"{raw_filename}_cot.json"
+       target_path = os.path.join(parsed_dir, parsed_filename)
+       if not os.path.isfile(target_path):
+           raise HTTPException(status_code=404, detail="COT file not found")
+       with open(target_path, 'r', encoding='utf-8') as f:
+           content = json.load(f)
+       return content
+   except FileNotFoundError:
+       raise HTTPException(status_code=404, detail="QA file not found")
+   except json.JSONDecodeError:
+       raise HTTPException(status_code=500, detail="Failed to decode QA file content")
+   except Exception as e:
+       raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/file/{filename}")
 async def delete_cot_file(
@@ -136,6 +142,7 @@ async def delete_cot_file(
     try:
         service = COTGenerateService(db)
         result = await service.delete_cot_file(filename)
+
         if result:
             return APIResponse(
                 status="success",
