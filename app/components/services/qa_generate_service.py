@@ -190,18 +190,26 @@ class QAGenerateService:
             # 获取不带扩展名的文件名
             base_filename = filename.rsplit('.', 1)[0]
 
-            # 创建生成记录
-            generation = QAGeneration(
-                input_file=filename,
-                save_path=save_path,
-                model_name=model_name,
-                domain=domain,
-                status="processing",
-                source_text=content,
-                progress=0
-            )
-            result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
-            generation_id = result.inserted_id
+            # 检查是否已有记录，如果有，重置进度
+            existing_record = await self.qa_generations.find_one({"input_file": filename})
+            if existing_record:
+                await self.qa_generations.update_one(
+                    {"_id": existing_record["_id"]},
+                    {"$set": {"status": "processing", "progress": 0}}
+                )
+            else:
+                # 创建新记录
+                generation = QAGeneration(
+                    input_file=filename,
+                    save_path=save_path,
+                    model_name=model_name,
+                    domain=domain,
+                    status="processing",
+                    source_text=content,
+                    progress=0  # 初始化进度为 0
+                )
+                result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
+                generation_id = result.inserted_id
 
             # 更新原始文件状态为processing
             await self.db.llm_kit.uploaded_files.update_one(
@@ -233,7 +241,7 @@ class QAGenerateService:
                 # 构建简化的保存路径和文件名
                 save_dir_path = os.path.join('result', 'qas')
                 os.makedirs(save_dir_path, exist_ok=True)
-                
+
                 # 使用简化的文件名格式：原文件名_qa.json
                 final_save_path = os.path.join(
                     save_dir_path,
@@ -252,7 +260,8 @@ class QAGenerateService:
                     {"_id": generation_id},
                     {"$set": {
                         "status": "completed",
-                        "save_path": final_save_path
+                        "save_path": final_save_path,
+                        "progress": 100  # 处理完成，进度设为 100%
                     }}
                 )
 
@@ -309,7 +318,7 @@ class QAGenerateService:
                     {"input_file": filename, "_id": {"$ne": generation_id}},
                     {"$set": {"status": "overwritten"}}
                 )
-                
+
                 await self.qa_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {"status": "completed"}}
@@ -349,7 +358,7 @@ class QAGenerateService:
                     )
                 except Exception as db_error:
                     print(f"Failed to update generation status: {str(db_error)}")
-            raise
+            raise Exception(f"QA generation failed: {str(e)}")
 
     async def get_qa_records(self):
         """获取最近一次的问答对生成历史记录"""

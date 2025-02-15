@@ -116,7 +116,7 @@ class QADedupService:
             original_pairs = []
             source_texts = []
             input_filenames = []
-            
+
             for file_id in file_ids:
                 quality_content = await self.get_quality_content(file_id)
                 source_texts.append(json.dumps(quality_content["content"]))
@@ -125,27 +125,35 @@ class QADedupService:
 
             # 获取第一个文件名作为基础名
             base_filename = input_filenames[0].rsplit('.', 1)[0]
-            
+
             # 使用简化的文件名格式：原文件名_dedup.json
             output_file = os.path.join(self.base_output_dir, f"{base_filename}_dedup.json")
             deleted_pairs_file = os.path.join(self.base_output_dir, f"{base_filename}_dedup_deleted.json")
 
-            # 创建去重记录
-            dedup_record = DedupRecord(
-                input_file=input_filenames,
-                output_file=output_file,
-                deleted_pairs_file=deleted_pairs_file,
-                dedup_by_answer=dedup_by_answer,
-                threshold=dedup_threshold,
-                min_answer_length=min_answer_length,
-                status="processing",
-                source_text="\n".join(source_texts),
-                original_count=len(original_pairs),
-                kept_count=0,
-                progress=0
-            )
-            result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
-            record_id = result.inserted_id
+            # 检查是否已有记录，如果有，重置进度
+            existing_record = await self.dedup_records.find_one({"input_file": input_filenames})
+            if existing_record:
+                await self.dedup_records.update_one(
+                    {"_id": existing_record["_id"]},
+                    {"$set": {"status": "processing", "progress": 0}}
+                )
+            else:
+                # 创建去重记录
+                dedup_record = DedupRecord(
+                    input_file=input_filenames,
+                    output_file=output_file,
+                    deleted_pairs_file=deleted_pairs_file,
+                    dedup_by_answer=dedup_by_answer,
+                    threshold=dedup_threshold,
+                    min_answer_length=min_answer_length,
+                    status="processing",
+                    source_text="\n".join(source_texts),
+                    original_count=len(original_pairs),
+                    kept_count=0,
+                    progress=0  # 初始化进度为 0
+                )
+                result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
+                record_id = result.inserted_id
 
             # 创建临时文件保存合并的问答对
             temp_input_file = os.path.join(self.base_output_dir, f"temp_input_{str(record_id)}.json")

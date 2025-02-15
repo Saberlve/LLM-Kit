@@ -107,17 +107,27 @@ async def get_quality_progress(
 ):
     """获取质量控制进度"""
     try:
-        # 查询质量控制记录
+        # 查询进度记录
         record = await db.llm_kit.quality_generations.find_one({"input_file": request.filename})
 
         if not record:
             raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的质量控制记录未找到")
 
+        # 如果文件状态为已完成，重置进度为 0 并更新数据库
+        if record.get("status") == "completed":
+            await db.llm_kit.quality_generations.update_one(
+                {"input_file": request.filename},
+                {"$set": {"status": "processing", "progress": 0}}
+            )
+            progress = 0
+        else:
+            progress = record.get("progress", 0)
+
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
             data={
-                "progress": record.get("progress", 0),
+                "progress": progress,
                 "status": record.get("status", "processing")
             }
         )

@@ -132,7 +132,6 @@ class ToTexService:
     ):
         try:
             # 验证输入
-            #assert len(AK) == len(SK), 'AK和SK数量必须相同'
             assert len(AK) >= parallel_num, '请提供足够的AK和SK'
 
             # 创建保存目录
@@ -141,19 +140,30 @@ class ToTexService:
             # 获取不带扩展名的文件名
             base_filename = filename.rsplit('.', 1)[0]
 
-            # 创建初始记录
-            record = TexConversionRecord(
-                input_file=filename,
-                status="processing",
-                model_name=model_name,
-                save_path=save_path
-            )
-            result = await self.tex_records.insert_one(record.dict(by_alias=True))
-            record_id = result.inserted_id
+            # 检查是否已有记录，如果有，重置进度
+            existing_record = await self.tex_records.find_one({"input_file": filename})
+            if existing_record:
+                await self.tex_records.update_one(
+                    {"_id": existing_record["_id"]},
+                    {"$set": {"status": "processing", "progress": 0}}
+                )
+            else:
+                # 创建新记录
+                record = TexConversionRecord(
+                    input_file=filename,
+                    status="processing",
+                    model_name=model_name,
+                    save_path=save_path,
+                    progress=0  # 初始化进度为 0
+                )
+                result = await self.tex_records.insert_one(record.dict(by_alias=True))
+                record_id = result.inserted_id
 
             try:
                 # 切分文本
                 text_chunks = split_text_into_chunks(parallel_num, content)
+                total_chunks = len(text_chunks)
+                processed_chunks = 0
 
                 # 并行处理文本块
                 results = []
@@ -162,8 +172,8 @@ class ToTexService:
                         executor.submit(
                             self._process_chunk_with_api,
                             chunk,
-                            AK[i],
-                            SK[i],
+                            AK[i % len(AK)],
+                            SK[i % len(SK)],
                             model_name
                         )
                         for i, chunk in enumerate(text_chunks)
@@ -171,6 +181,14 @@ class ToTexService:
 
                     for future in as_completed(futures):
                         results.extend(future.result())
+                        processed_chunks += 1
+                        # 计算当前进度
+                        progress = int((processed_chunks / total_chunks) * 100)
+                        # 更新进度信息到数据库
+                        await self.tex_records.update_one(
+                            {"input_file": filename},
+                            {"$set": {"progress": progress}}
+                        )
 
                 # 合并所有LaTeX内容
                 combined_tex = '\n'.join(results)
@@ -184,7 +202,7 @@ class ToTexService:
                 # 生成简化的保存路径
                 tex_file_path = os.path.join(
                     save_path,
-                    'tex_files', 
+                    'tex_files',
                     f'{base_filename}.json'  # 修改为.json后缀
                 )
                 os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
@@ -195,12 +213,13 @@ class ToTexService:
 
                 # 更新原始记录状态
                 await self.tex_records.update_one(
-                    {"_id": record_id},
+                    {"input_file": filename},
                     {
                         "$set": {
                             "status": "completed",
                             "content": data_to_save,  # 使用JSON格式的数据
-                            "save_path": tex_file_path
+                            "save_path": tex_file_path,
+                            "progress": 100  # 处理完成，进度设为 100%
                         }
                     }
                 )
@@ -239,10 +258,11 @@ class ToTexService:
             except Exception as e:
                 # 更新转换记录状态为failed
                 await self.tex_records.update_one(
-                    {"_id": record_id},
+                    {"input_file": filename},
                     {"$set": {
                         "status": "failed",
-                        "error_message": str(e)
+                        "error_message": str(e),
+                        "progress": 0  # 处理失败，进度设为 0
                     }}
                 )
 

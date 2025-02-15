@@ -25,7 +25,7 @@ class QAGenerateRequest(BaseRequest):
     domain: str
 
 class COTGenerateRequest(BaseRequest):
-    #content: str
+    content: str
     filename: str
     model_name: str
     domain: str = "医学"

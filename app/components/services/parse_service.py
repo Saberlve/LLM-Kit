@@ -175,14 +175,14 @@ class ParseService:
             raise Exception(f"Failed to get records: {str(e)}")
 
     async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str],
-                          parallel_num: int = 4, record_id: str = None):
+                            parallel_num: int = 4, record_id: str = None):
         """解析文件内容"""
         try:
             # 获取文件类型并验证
             file_type = filename.split('.')[-1].lower()
             base_filename = filename.rsplit('.', 1)[0]  # 获取不带扩展名的文件名
             print(f"Processing file type: {file_type}")
-            
+
             supported_types = ['tex', 'txt', 'json', 'pdf']
             if not file_type:
                 raise ValueError("File type is missing")
@@ -192,7 +192,7 @@ class ParseService:
 
             # 创建临时文件
             with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False,
-                                           encoding='utf-8') as temp_file:
+                                             encoding='utf-8') as temp_file:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
 
@@ -203,7 +203,7 @@ class ParseService:
                     try:
                         current_time = time.time()
                         last_update = self.last_progress_update.get(record_id, 0)
-                        
+
                         # 对于小文件，减少进度更新频率
                         content_length = len(content)
                         if content_length < 1024:  # 小于1KB的文件
@@ -212,10 +212,10 @@ class ParseService:
                         else:
                             update_interval = 0.5
                             progress_steps = range(0, 101, 10)  # 正常每10%更新一次
-                        
+
                         # 只在指定的进度点和时间间隔更新
-                        if (progress in progress_steps and 
-                            current_time - last_update >= update_interval):
+                        if (progress in progress_steps and
+                                current_time - last_update >= update_interval):
                             actual_progress = min(20 + int(progress * 0.8), 100)
                             await self.parse_records.update_one(
                                 {"_id": ObjectId(record_id)},
@@ -260,7 +260,7 @@ class ParseService:
                 # 创建新的简化文件名
                 new_filename = f"{base_filename}_parsed.txt"
                 new_file_path = os.path.join(os.path.dirname(parsed_file_path), new_filename)
-                
+
                 # 重命名文件
                 if os.path.exists(parsed_file_path):
                     os.rename(parsed_file_path, new_file_path)
@@ -304,7 +304,7 @@ class ParseService:
                 {"filename": base_filename + "." + file_type},
                 {"$set": {"status": "failed"}}
             )
-            
+
             import traceback
             await self._log_error(str(e), "parse_content", traceback.format_exc())
             raise Exception(f"Parse content failed: {str(e)}")

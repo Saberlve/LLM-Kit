@@ -45,21 +45,29 @@ class QualityService:
             # 获取不带扩展名的文件名
             base_filename = filename.rsplit('.', 1)[0]
 
-            # 创建生成记录
-            generation = QualityControlGeneration(
-                input_file=filename,
-                save_path=save_path,
-                model_name=model_name,
-                status="processing",
-                source_text=json.dumps(content, ensure_ascii=False),
-                progress=0
-            )
-            result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
-            generation_id = result.inserted_id
+            # 检查是否已有记录，如果有，重置进度
+            existing_record = await self.quality_generations.find_one({"input_file": filename})
+            if existing_record:
+                await self.quality_generations.update_one(
+                    {"_id": existing_record["_id"]},
+                    {"$set": {"status": "processing", "progress": 0}}
+                )
+            else:
+                # 创建新记录
+                generation = QualityControlGeneration(
+                    input_file=filename,
+                    save_path=save_path,
+                    model_name=model_name,
+                    status="processing",
+                    source_text=json.dumps(content, ensure_ascii=False),
+                    progress=0  # 初始化进度为 0
+                )
+                result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
+                generation_id = result.inserted_id
 
             # 创建保存目录
             os.makedirs(save_path, exist_ok=True)
-            
+
             # 将问答对分成parallel_num份进行并行处理
             chunk_size = len(content) // parallel_num
             if chunk_size == 0:
@@ -76,11 +84,11 @@ class QualityService:
                 # 创建临时文件路径
                 chunk_path = os.path.join(save_path, f"temp_chunk_{i}.json")
                 chunk_paths.append(chunk_path)
-                
+
                 # 保存chunk到临时文件
                 with open(chunk_path, 'w', encoding='utf-8') as f:
                     json.dump(chunk, f, ensure_ascii=False, indent=4)
-                
+
                 hparams = HyperParams(
                     file_path=chunk_path,
                     save_path=save_path,
@@ -93,10 +101,10 @@ class QualityService:
                     max_attempts=max_attempts,
                     domain=domain
                 )
-                
+
                 generator = QAQualityGenerator(chunk_path, hparams)
                 tasks.append(generator.iterate_optim_qa())
-                
+
                 # 更新进度
                 processed_chunks += 1
                 progress = int((processed_chunks / total_chunks) * 100)
@@ -121,9 +129,9 @@ class QualityService:
                     os.remove(temp_path)
                 # 同时删除QAQualityGenerator生成的结果文件
                 result_path = os.path.join(
-                    'result', 
-                    'qas_iterated', 
-                    f"qa_iteratedfor_{os.path.basename(temp_path).split('.')[0]}", 
+                    'result',
+                    'qas_iterated',
+                    f"qa_iteratedfor_{os.path.basename(temp_path).split('.')[0]}",
                     os.path.basename(temp_path)
                 )
                 if os.path.exists(result_path):

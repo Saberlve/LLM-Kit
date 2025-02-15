@@ -136,7 +136,7 @@ async def parse_file(
             file_type=latest_file['file_type'],
             save_path=request.save_path,
             task_type="parse",
-            progress=0
+            progress=0  # 初始化进度为 0
         )
         result = await db.llm_kit.parse_records.insert_one(
             parse_record.dict(by_alias=True)
@@ -775,28 +775,35 @@ async def get_binary_file_content(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/task/progress")
-async def get_task_progress(
+@router.post("/parse/progress")
+async def get_parse_progress(
         request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取任务进度"""
+    """获取解析进度"""
     try:
-        # 查询记录
-        record = await db.llm_kit.parse_records.find_one(
-            {"input_file": request.filename}
-        )
+        # 查询进度记录
+        record = await db.llm_kit.parse_records.find_one({"input_file": request.filename})
 
         if not record:
-            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的进度记录未找到")
+            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的解析记录未找到")
+
+        # 如果文件状态为已完成，重置进度为 0 并更新数据库
+        if record.get("status") == "completed":
+            await db.llm_kit.parse_records.update_one(
+                {"input_file": request.filename},
+                {"$set": {"status": "processing", "progress": 0}}
+            )
+            progress = 0
+        else:
+            progress = record.get("progress", 0)
 
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
             data={
-                "progress": record.get("progress", 0),
-                "status": record.get("status", "processing"),
-                "task_type": record.get("task_type", "parse")
+                "progress": progress,
+                "status": record.get("status", "processing")
             }
         )
     except Exception as e:
