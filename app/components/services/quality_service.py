@@ -50,8 +50,16 @@ class QualityService:
             if existing_record:
                 await self.quality_generations.update_one(
                     {"_id": existing_record["_id"]},
-                    {"$set": {"status": "processing", "progress": 0}}
+                    {
+                        "$set": {
+                            "status": "processing",
+                            "progress": 0,
+                            "model_name": model_name,
+                            "save_path": save_path
+                        }
+                    }
                 )
+                generation_id = existing_record["_id"]
             else:
                 # 创建新记录
                 generation = QualityControlGeneration(
@@ -185,13 +193,16 @@ class QualityService:
                 {"$set": {"status": "overwritten"}}
             )
 
-            # 更新当前记录状态
+            # 完成时设置状态和进度
             await self.quality_generations.update_one(
                 {"_id": generation_id},
-                {"$set": {
-                    "status": "completed",
-                    "save_path": final_save_path
-                }}
+                {
+                    "$set": {
+                        "status": "completed",
+                        "save_path": final_save_path,
+                        "progress": 100
+                    }
+                }
             )
 
             return {
@@ -208,10 +219,12 @@ class QualityService:
             if generation_id:
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {
-                        "status": "failed",
-                        "error_message": str(e)
-                    }}
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "error_message": str(e)
+                        }
+                    }
                 )
             raise Exception(f"Quality control failed: {str(e)}")
 

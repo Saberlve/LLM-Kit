@@ -131,32 +131,21 @@ async def get_tex_history(
 
 @router.post("/to_tex/progress")
 async def get_tex_progress(
-        request: FileNameRequest,  # 修改请求模型
+        request: FileNameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取LaTeX转换进度"""
     try:
-        # 查询进度记录
         record = await db.llm_kit.tex_records.find_one({"input_file": request.filename})
-
+        
         if not record:
             raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的进度记录未找到")
-
-        # 如果文件状态为已完成，重置进度为 0 并更新数据库
-        if record.get("status") == "completed":
-            await db.llm_kit.tex_records.update_one(
-                {"input_file": request.filename},
-                {"$set": {"status": "processing", "progress": 0}}
-            )
-            progress = 0
-        else:
-            progress = record.get("progress", 0)
-
+            
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
             data={
-                "progress": progress,
+                "progress": record.get("progress", 0),
                 "status": record.get("status", "processing")
             }
         )

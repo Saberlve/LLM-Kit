@@ -195,8 +195,14 @@ class QAGenerateService:
             if existing_record:
                 await self.qa_generations.update_one(
                     {"_id": existing_record["_id"]},
-                    {"$set": {"status": "processing", "progress": 0}}
+                    {"$set": {
+                        "status": "processing",
+                        "progress": 0,
+                        "model_name": model_name,
+                        "domain": domain
+                    }}
                 )
+                generation_id = existing_record["_id"]
             else:
                 # 创建新记录
                 generation = QAGeneration(
@@ -332,12 +338,20 @@ class QAGenerateService:
                 }
 
             except Exception as e:
-                # 更新原始文件状态为failed
+                # 发生错误时只更新状态，保持当前进度
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
+                )
+                
+                # 保持原有的错误处理逻辑
                 await self.db.llm_kit.uploaded_files.update_one(
                     {"filename": filename},
                     {"$set": {"status": "failed"}}
                 )
-                # 同时更新二进制文件的状态（如果存在）
                 await self.db.llm_kit.uploaded_binary_files.update_one(
                     {"filename": filename},
                     {"$set": {"status": "failed"}}

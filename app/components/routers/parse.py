@@ -788,21 +788,11 @@ async def get_parse_progress(
         if not record:
             raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的解析记录未找到")
 
-        # 如果文件状态为已完成，重置进度为 0 并更新数据库
-        if record.get("status") == "completed":
-            await db.llm_kit.parse_records.update_one(
-                {"input_file": request.filename},
-                {"$set": {"status": "processing", "progress": 0}}
-            )
-            progress = 0
-        else:
-            progress = record.get("progress", 0)
-
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
             data={
-                "progress": progress,
+                "progress": record.get("progress", 0),
                 "status": record.get("status", "processing")
             }
         )

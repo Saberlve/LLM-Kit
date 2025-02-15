@@ -131,6 +131,20 @@ class ToTexService:
             model_name: str
     ):
         try:
+            # 每次开始转换时，创建或更新记录，强制设置初始进度为0
+            await self.tex_records.update_one(
+                {"input_file": filename},
+                {
+                    "$set": {
+                        "status": "processing",
+                        "progress": 0,
+                        "model_name": model_name,
+                        "save_path": save_path
+                    }
+                },
+                upsert=True  # 如果记录不存在则创建
+            )
+
             # 验证输入
             assert len(AK) >= parallel_num, '请提供足够的AK和SK'
 
@@ -211,15 +225,15 @@ class ToTexService:
                 with open(tex_file_path, 'w', encoding='utf-8') as json_file:
                     json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
-                # 更新原始记录状态
+                # 完成时设置状态和进度
                 await self.tex_records.update_one(
                     {"input_file": filename},
                     {
                         "$set": {
                             "status": "completed",
-                            "content": data_to_save,  # 使用JSON格式的数据
+                            "content": data_to_save,
                             "save_path": tex_file_path,
-                            "progress": 100  # 处理完成，进度设为 100%
+                            "progress": 100
                         }
                     }
                 )
@@ -249,21 +263,16 @@ class ToTexService:
                 await self.tex_records.insert_one(saved_file_record)
 
                 return {
-                    "record_id": str(record_id),
                     "filename": os.path.basename(tex_file_path),
                     "save_path": tex_file_path,
-                    "content": data_to_save  # 返回值也使用JSON格式
+                    "content": data_to_save
                 }
 
             except Exception as e:
-                # 更新转换记录状态为failed
+                # 发生错误时保持当前进度，只更新状态
                 await self.tex_records.update_one(
                     {"input_file": filename},
-                    {"$set": {
-                        "status": "failed",
-                        "error_message": str(e),
-                        "progress": 0  # 处理失败，进度设为 0
-                    }}
+                    {"$set": {"status": "failed", "error_message": str(e)}}
                 )
 
                 # 更新上传文件的状态为failed

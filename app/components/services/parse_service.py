@@ -180,8 +180,21 @@ class ParseService:
         try:
             # 获取文件类型并验证
             file_type = filename.split('.')[-1].lower()
-            base_filename = filename.rsplit('.', 1)[0]  # 获取不带扩展名的文件名
-            print(f"Processing file type: {file_type}")
+            base_filename = filename.rsplit('.', 1)[0]
+
+            # 检查是否已有记录，如果有，重置进度
+            if record_id:
+                await self.parse_records.update_one(
+                    {"_id": ObjectId(record_id)},
+                    {
+                        "$set": {
+                            "status": "processing",
+                            "progress": 0,
+                            "file_type": file_type,
+                            "save_path": save_path
+                        }
+                    }
+                )
 
             supported_types = ['tex', 'txt', 'json', 'pdf']
             if not file_type:
@@ -224,7 +237,6 @@ class ParseService:
                             self.last_progress_update[record_id] = current_time
                     except Exception as e:
                         print(f"Progress update failed: {str(e)}")
-                        # 进度更新失败不影响主流程
 
             try:
                 # 使用现有的解析逻辑
@@ -281,6 +293,20 @@ class ParseService:
                     {"$set": {"status": "finish"}}
                 )
 
+                # 完成时设置状态和进度
+                if record_id:
+                    await self.parse_records.update_one(
+                        {"_id": ObjectId(record_id)},
+                        {
+                            "$set": {
+                                "status": "completed",
+                                "progress": 100,
+                                "content": content,
+                                "parsed_file_path": parsed_file_path
+                            }
+                        }
+                    )
+
                 return {
                     "content": content,
                     "parsed_file_path": parsed_file_path
@@ -295,16 +321,20 @@ class ParseService:
                     del self.last_progress_update[record_id]
 
         except Exception as e:
-            # 发生错误时更新状态为failed
-            await self.db.llm_kit.uploaded_files.update_one(
-                {"filename": base_filename + "." + file_type},
-                {"$set": {"status": "failed"}}
-            )
-            await self.db.llm_kit.uploaded_binary_files.update_one(
-                {"filename": base_filename + "." + file_type},
-                {"$set": {"status": "failed"}}
-            )
+            # 发生错误时只更新状态，保持当前进度
+            if record_id:
+                await self.parse_records.update_one(
+                    {"_id": ObjectId(record_id)},
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "error_message": str(e)
+                        }
+                    }
+                )
+            raise e
 
-            import traceback
-            await self._log_error(str(e), "parse_content", traceback.format_exc())
-            raise Exception(f"Parse content failed: {str(e)}")
+    except Exception as e:
+        import traceback
+        await self._log_error(str(e), "parse_content", traceback.format_exc())
+        raise Exception(f"Parse content failed: {str(e)}")

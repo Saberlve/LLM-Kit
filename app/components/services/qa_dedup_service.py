@@ -135,8 +135,17 @@ class QADedupService:
             if existing_record:
                 await self.dedup_records.update_one(
                     {"_id": existing_record["_id"]},
-                    {"$set": {"status": "processing", "progress": 0}}
+                    {
+                        "$set": {
+                            "status": "processing",
+                            "progress": 0,
+                            "dedup_by_answer": dedup_by_answer,
+                            "threshold": dedup_threshold,
+                            "min_answer_length": min_answer_length
+                        }
+                    }
                 )
+                record_id = existing_record["_id"]
             else:
                 # 创建去重记录
                 dedup_record = DedupRecord(
@@ -239,10 +248,18 @@ class QADedupService:
                     "deleted_count": len(original_pairs) - len(kept_pairs)
                 }
 
-            finally:
-                # 清理临时文件
-                if os.path.exists(temp_input_file):
-                    os.remove(temp_input_file)
+            except Exception as e:
+                # 发生错误时只更新状态，保持当前进度
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "error_message": str(e)
+                        }
+                    }
+                )
+                raise e
 
         except Exception as e:
             import traceback
@@ -250,7 +267,12 @@ class QADedupService:
             if record_id:
                 await self.dedup_records.update_one(
                     {"_id": record_id},
-                    {"$set": {"status": "failed"}}
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "error_message": str(e)
+                        }
+                    }
                 )
             raise Exception(f"Deduplication failed: {str(e)}")
 
