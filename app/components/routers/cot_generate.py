@@ -1,10 +1,12 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends,Query
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import APIResponse, COTGenerateRequest
 from app.components.services.cot_generate_service import COTGenerateService
 from pydantic import BaseModel
+import os
+import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -50,6 +52,7 @@ async def generate_cot(
     """生成COT推理"""
     try:
         # 验证 AK 和 SK 数量是否匹配
+
         if len(request.AK) != len(request.SK):
             raise HTTPException(
                 status_code=400,
@@ -68,10 +71,25 @@ async def generate_cot(
             text="{text}",  # 保留text占位符
             domain=request.domain
         )
-        
+        filename=request.filename
+        PARSED_FILES_DIR = f"{filename}\\tex_files"
+        raw_filename = filename.split('.')[0]
+        parsed_filename = f"{raw_filename}.json"
+        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+
+        if not os.path.isfile(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"文件 {request.filename} 未找到"
+            )
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+
         service = COTGenerateService(db)
         result = await service.generate_cot(
-            content=request.content,
+            #content=request.content,
+            content=content,
             filename=request.filename,
             model_name=request.model_name,
             ak_list=request.AK,
@@ -90,24 +108,30 @@ async def generate_cot(
         logger.error(f"生成COT失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/content/{filename}")
-async def get_cot_content(
-    filename: str,
-    db: AsyncIOMotorClient = Depends(get_database)
-):
-    """获取COT文件内容"""
-    try:
-        service = COTGenerateService(db)
-        content = await service.get_cot_content(filename)
-        return APIResponse(
-            status="success",
-            message="Content retrieved successfully",
-            data=content
-        )
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="COT file not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+class FilenameRequest(BaseModel):
+    filename: str
+@router.post("/content")
+async def get_cot_content( request: FilenameRequest):
+   # filename: str,
+    #db: AsyncIOMotorClient = Depends(get_database)
+
+   """获取COT文件内容"""
+   try:
+       parsed_dir = os.path.join("result", "cot")
+       raw_filename = request.filename.split('.')[0]
+       parsed_filename = f"{raw_filename}_cot.json"
+       target_path = os.path.join(parsed_dir, parsed_filename)
+       if not os.path.isfile(target_path):
+           raise HTTPException(status_code=404, detail="COT file not found")
+       with open(target_path, 'r', encoding='utf-8') as f:
+           content = json.load(f)
+       return content
+   except FileNotFoundError:
+       raise HTTPException(status_code=404, detail="QA file not found")
+   except json.JSONDecodeError:
+       raise HTTPException(status_code=500, detail="Failed to decode QA file content")
+   except Exception as e:
+       raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/file/{filename}")
 async def delete_cot_file(
@@ -118,6 +142,7 @@ async def delete_cot_file(
     try:
         service = COTGenerateService(db)
         result = await service.delete_cot_file(filename)
+
         if result:
             return APIResponse(
                 status="success",
@@ -128,5 +153,30 @@ async def delete_cot_file(
                 status="success",
                 message="File not found"
             )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class FilenameRequest(BaseModel):
+    filename: str
+def check_parsed_file_exist(raw_filename: str) -> int:
+    """检查解析结果文件是否存在"""
+    filename=raw_filename
+    PARSED_FILES_DIR = "result\cot"
+    raw_filename = filename.split('.')[0]
+    parsed_filename = f"{raw_filename}_cot.json"
+    file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+    return 1 if os.path.isfile(file_path) else 0
+
+
+@router.post("/cothistory")
+async def get_parse_history(request: FilenameRequest):
+    try:
+
+        filename = request.filename
+
+        exists = check_parsed_file_exist(filename)
+        print(exists)
+        return {"status": "OK", "exists": exists}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
