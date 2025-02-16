@@ -134,18 +134,14 @@ class ToTexService:
             model_name: str
     ):
         try:
-            # 每次开始转换时，创建或更新记录，强制设置初始进度为0
+            # 初始化进度为0
             await self.tex_records.update_one(
                 {"input_file": filename},
-                {
-                    "$set": {
-                        "status": "processing",
-                        "progress": 0,
-                        "model_name": model_name,
-                        "save_path": save_path
-                    }
-                },
-                upsert=True  # 如果记录不存在则创建
+                {"$set": {
+                    "status": "processing",
+                    "progress": 0
+                }},
+                upsert=True
             )
 
             # 验证输入
@@ -177,12 +173,23 @@ class ToTexService:
                 record_id = result.inserted_id
 
             try:
+                # 文本预处理阶段 - 10%
+                await self.tex_records.update_one(
+                    {"input_file": filename},
+                    {"$set": {"progress": 10}}
+                )
+
                 # 切分文本
                 text_chunks = split_text_into_chunks(parallel_num, content)
                 total_chunks = len(text_chunks)
                 processed_chunks = 0
 
-                # 创建任务列表
+                # 创建任务列表 - 20%
+                await self.tex_records.update_one(
+                    {"input_file": filename},
+                    {"$set": {"progress": 20}}
+                )
+
                 tasks = []
                 for i, chunk in enumerate(text_chunks):
                     task = self._process_chunk_with_api(
@@ -197,22 +204,33 @@ class ToTexService:
                 results = []
                 loop = asyncio.get_event_loop()
                 
-                # 使用线程池执行同步任务，并在每个任务完成后更新进度
+                # 文本处理阶段 - 20% to 80%
                 for i, future in enumerate(asyncio.as_completed([
                     loop.run_in_executor(self.executor, task) for task in tasks
                 ])):
                     chunk_result = await future
                     results.extend(chunk_result)
                     
-                    # 更新进度
+                    # 更新进度 - 即使只有一个chunk也会有渐进的进度
                     processed_chunks += 1
-                    progress = int((processed_chunks / total_chunks) * 100)
+                    if total_chunks == 1:
+                        # 如果只有一个chunk，分多个步骤显示进度
+                        progress_steps = [30, 40, 50, 60, 70]
+                        progress = progress_steps[min(len(progress_steps)-1, i)]
+                    else:
+                        # 多个chunks时的正常进度计算
+                        progress = int(20 + (processed_chunks / total_chunks * 60))
                     
-                    # 立即更新数据库中的进度
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {"$set": {"progress": progress}}
                     )
+
+                # 准备保存 - 90%
+                await self.tex_records.update_one(
+                    {"input_file": filename},
+                    {"$set": {"progress": 90}}
+                )
 
                 # 合并所有LaTeX内容
                 combined_tex = '\n'.join(results)
@@ -235,7 +253,7 @@ class ToTexService:
                 with open(tex_file_path, 'w', encoding='utf-8') as json_file:
                     json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
-                # 完成时设置状态和进度
+                # 完成 - 100%
                 await self.tex_records.update_one(
                     {"input_file": filename},
                     {

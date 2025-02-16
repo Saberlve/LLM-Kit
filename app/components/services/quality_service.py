@@ -79,6 +79,12 @@ class QualityService:
                 generation_id = result.inserted_id
 
             try:
+                # 初始化阶段 - 10%
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": 10}}
+                )
+
                 # 创建保存目录
                 os.makedirs(save_path, exist_ok=True)
                 total_qas = len(content)
@@ -102,6 +108,12 @@ class QualityService:
                 # 创建质量控制器实例
                 quality_generator = QAQualityGenerator(content, hparams)
 
+                # 任务准备阶段 - 20%
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": 20}}
+                )
+
                 # 创建任务列表
                 tasks = []
                 for i, qa in enumerate(content):
@@ -111,14 +123,14 @@ class QualityService:
                         qa,
                         i,
                         content,
-                        AK[0],  # 使用第一对AK/SK
+                        AK[0],
                         SK[0]
                     )
                     tasks.append(task)
 
-                # 使用as_completed处理任务，实时更新进度
+                # 处理阶段 - 20% to 80%
                 optimized_qas = []
-                for future in asyncio.as_completed(tasks):
+                for i, future in enumerate(asyncio.as_completed(tasks)):
                     try:
                         result = await future
                         if result:
@@ -127,11 +139,16 @@ class QualityService:
                             else:
                                 optimized_qas.append(result)
                         
-                        # 更新进度
+                        # 更新进度 - 处理小数据时的特殊处理
                         processed_qas += 1
-                        progress = int((processed_qas / total_qas) * 100)
+                        if total_qas == 1:
+                            # 单个QA时的进度点
+                            progress_steps = [30, 40, 50, 60, 70]
+                            progress = progress_steps[min(len(progress_steps)-1, i)]
+                        else:
+                            # 多个QA的正常进度计算
+                            progress = int(20 + (processed_qas / total_qas * 60))
                         
-                        # 立即更新数据库中的进度
                         await self.quality_generations.update_one(
                             {"_id": generation_id},
                             {"$set": {"progress": progress}}
@@ -139,6 +156,12 @@ class QualityService:
                     except Exception as e:
                         logger.error(f"处理QA对失败: {str(e)}")
                         continue
+
+                # 保存准备阶段 - 90%
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": 90}}
+                )
 
                 # 使用简化的文件名格式：原文件名_quality.json
                 final_save_path = os.path.join(
@@ -188,7 +211,7 @@ class QualityService:
                     {"$set": {"status": "overwritten"}}
                 )
 
-                # 完成时设置状态和进度
+                # 完成 - 100%
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
                     {

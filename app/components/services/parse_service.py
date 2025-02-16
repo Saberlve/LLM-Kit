@@ -20,6 +20,10 @@ import asyncio
 
 import time
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ParseService:
 
@@ -216,27 +220,44 @@ class ParseService:
                     try:
                         current_time = time.time()
                         last_update = self.last_progress_update.get(record_id, 0)
-
-                        # 对于小文件，减少进度更新频率
                         content_length = len(content)
-                        if content_length < 1024:  # 小于1KB的文件
-                            update_interval = 0.1  # 降低更新频率
-                            progress_steps = [0, 50, 100]  # 只在关键节点更新进度
-                        else:
-                            update_interval = 0.5
-                            progress_steps = range(0, 101, 10)  # 正常每10%更新一次
 
-                        # 只在指定的进度点和时间间隔更新
-                        if (progress in progress_steps and
-                                current_time - last_update >= update_interval):
-                            actual_progress = min(20 + int(progress * 0.8), 100)
-                            await self.parse_records.update_one(
-                                {"_id": ObjectId(record_id)},
-                                {"$set": {"progress": actual_progress}}
-                            )
-                            self.last_progress_update[record_id] = current_time
+                        # 小文件的进度处理（小于1KB）
+                        if content_length < 1024:
+                            # 预定义的进度点，确保平滑过渡
+                            progress_steps = [
+                                10,  # 初始化
+                                20,  # 文件准备
+                                30, 40, 50, 60, 70,  # 处理阶段
+                                90,  # 保存准备
+                                100  # 完成
+                            ]
+                            
+                            # 根据原始进度映射到预定义的进度点
+                            step_index = min(len(progress_steps)-1, int(progress/12))
+                            adjusted_progress = progress_steps[step_index]
+                            
+                            # 每0.1秒更新一次
+                            if current_time - last_update >= 0.1:
+                                await self.parse_records.update_one(
+                                    {"_id": ObjectId(record_id)},
+                                    {"$set": {"progress": adjusted_progress}}
+                                )
+                                self.last_progress_update[record_id] = current_time
+                        else:
+                            # 大文件的进度处理
+                            # 将原始进度(0-100)映射到处理阶段(20-80)
+                            adjusted_progress = int(20 + (progress * 0.6))
+                            
+                            # 每0.5秒更新一次
+                            if current_time - last_update >= 0.5:
+                                await self.parse_records.update_one(
+                                    {"_id": ObjectId(record_id)},
+                                    {"$set": {"progress": adjusted_progress}}
+                                )
+                                self.last_progress_update[record_id] = current_time
                     except Exception as e:
-                        print(f"Progress update failed: {str(e)}")
+                        logger.error(f"Progress update failed: {str(e)}")
 
             try:
                 # 使用现有的解析逻辑

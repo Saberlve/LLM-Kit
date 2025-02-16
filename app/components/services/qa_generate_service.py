@@ -57,36 +57,46 @@ class QAGenerateService:
         processed_chunks = 0
         loop = asyncio.get_event_loop()
 
-        # 创建任务列表
+        # 初始化阶段 - 10%
+        await self.qa_generations.update_one(
+            {"_id": generation_id},
+            {"$set": {"progress": 10}}
+        )
+
+        # 任务准备 - 20%
         tasks = []
         for i, chunk in enumerate(chunks):
             ak = ak_list[i % len(ak_list)]
             sk = sk_list[i % len(sk_list)]
-            
-            # 将同步的API调用放入线程池
             task = loop.run_in_executor(
                 self.executor,
                 self.process_chunk_with_api,
-                chunk,
-                ak,
-                sk,
-                model_name,
-                domain
+                chunk, ak, sk, model_name, domain
             )
             tasks.append(task)
 
-        # 使用as_completed处理任务，实时更新进度
-        for future in asyncio.as_completed(tasks):
+        await self.qa_generations.update_one(
+            {"_id": generation_id},
+            {"$set": {"progress": 20}}
+        )
+
+        # 处理阶段 - 20% to 80%
+        for i, future in enumerate(asyncio.as_completed(tasks)):
             try:
                 result = await future
                 if result:
                     qa_pairs.extend(result)
                 
-                # 更新进度
+                # 更新进度 - 处理小文本时的特殊处理
                 processed_chunks += 1
-                progress = int((processed_chunks / total_chunks) * 100)
+                if total_chunks == 1:
+                    # 单个chunk时的进度点
+                    progress_steps = [30, 40, 50, 60, 70]
+                    progress = progress_steps[min(len(progress_steps)-1, i)]
+                else:
+                    # 多个chunks的正常进度计算
+                    progress = int(20 + (processed_chunks / total_chunks * 60))
                 
-                # 立即更新数据库中的进度
                 await self.qa_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {"progress": progress}}
@@ -94,6 +104,12 @@ class QAGenerateService:
             except Exception as e:
                 logger.error(f"处理文本块失败: {str(e)}")
                 continue
+
+        # 保存准备 - 90%
+        await self.qa_generations.update_one(
+            {"_id": generation_id},
+            {"$set": {"progress": 90}}
+        )
 
         return qa_pairs
 

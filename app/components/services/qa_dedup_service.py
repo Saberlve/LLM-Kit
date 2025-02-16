@@ -164,21 +164,41 @@ class QADedupService:
                 record_id = result.inserted_id
 
             try:
+                # 初始化阶段 - 10%
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {"progress": 10}}
+                )
+
                 # 创建临时文件保存合并的问答对
                 temp_input_file = os.path.join(self.base_output_dir, f"temp_input_{str(record_id)}.json")
                 with open(temp_input_file, 'w', encoding='utf-8') as f:
                     json.dump(original_pairs, f, ensure_ascii=False, indent=4)
+
+                # 任务准备阶段 - 20%
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {"progress": 20}}
+                )
 
                 # 创建进度更新回调
                 async def progress_callback(progress: int):
                     current_time = time.time()
                     last_update = self.last_progress_update.get(str(record_id), 0)
                     
-                    # 保持原有的节流逻辑
                     if current_time - last_update >= 0.5:
+                        # 将原始进度(0-100)映射到处理阶段(20-80)
+                        adjusted_progress = int(20 + (progress * 0.6))
+                        
+                        # 如果数据量小，使用预设的进度点
+                        if len(original_pairs) <= 5:  # 假设5对以下算小数据量
+                            progress_steps = [30, 40, 50, 60, 70]
+                            step_index = min(len(progress_steps)-1, int(progress/20))
+                            adjusted_progress = progress_steps[step_index]
+                        
                         await self.dedup_records.update_one(
                             {"_id": record_id},
-                            {"$set": {"progress": progress}}
+                            {"$set": {"progress": adjusted_progress}}
                         )
                         self.last_progress_update[str(record_id)] = current_time
 
@@ -207,6 +227,12 @@ class QADedupService:
                     self.executor,
                     deduplicator.process_qa_file,
                     hparams
+                )
+
+                # 保存准备阶段 - 90%
+                await self.dedup_records.update_one(
+                    {"_id": record_id},
+                    {"$set": {"progress": 90}}
                 )
 
                 # 保存保留的问答对
@@ -246,7 +272,7 @@ class QADedupService:
                     if deleted_records:
                         await self.deleted_pairs.insert_many(deleted_records)
 
-                # 更新去重记录
+                # 完成 - 100%
                 await self.dedup_records.update_one(
                     {"_id": record_id},
                     {
