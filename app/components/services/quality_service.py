@@ -6,7 +6,11 @@ from app.components.models.mongodb import QAQualityRecord, QualityControlGenerat
 import json
 import os
 from typing import List
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import logging
 
+logger = logging.getLogger(__name__)
 
 class QualityService:
     def __init__(self, db: AsyncIOMotorClient):
@@ -16,6 +20,7 @@ class QualityService:
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
         self.qa_generations = db.llm_kit.qa_generations  # 添加对qa_generations的引用
         self.qa_pairs = db.llm_kit.qa_pairs  # 添加对qa_pairs的引用
+        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -73,36 +78,20 @@ class QualityService:
                 result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
                 generation_id = result.inserted_id
 
-            # 创建保存目录
-            os.makedirs(save_path, exist_ok=True)
+            try:
+                # 创建保存目录
+                os.makedirs(save_path, exist_ok=True)
+                total_qas = len(content)
+                processed_qas = 0
+                loop = asyncio.get_event_loop()
 
-            # 将问答对分成parallel_num份进行并行处理
-            chunk_size = len(content) // parallel_num
-            if chunk_size == 0:
-                chunk_size = 1
-            qa_chunks = [content[i:i + chunk_size] for i in range(0, len(content), chunk_size)]
-
-            # 为每个chunk创建参数
-            tasks = []
-            chunk_paths = []
-            total_chunks = len(qa_chunks)
-            processed_chunks = 0
-
-            for i, chunk in enumerate(qa_chunks):
-                # 创建临时文件路径
-                chunk_path = os.path.join(save_path, f"temp_chunk_{i}.json")
-                chunk_paths.append(chunk_path)
-
-                # 保存chunk到临时文件
-                with open(chunk_path, 'w', encoding='utf-8') as f:
-                    json.dump(chunk, f, ensure_ascii=False, indent=4)
-
+                # 创建 hparams 对象
                 hparams = HyperParams(
-                    file_path=chunk_path,
+                    file_path=filename,
                     save_path=save_path,
-                    SK=[SK[i % len(SK)]],
-                    AK=[AK[i % len(AK)]],
-                    parallel_num=1,
+                    SK=SK,
+                    AK=AK,
+                    parallel_num=parallel_num,
                     model_name=model_name,
                     similarity_rate=similarity_rate,
                     coverage_rate=coverage_rate,
@@ -110,108 +99,125 @@ class QualityService:
                     domain=domain
                 )
 
-                generator = QAQualityGenerator(chunk_path, hparams)
-                tasks.append(generator.iterate_optim_qa())
+                # 创建质量控制器实例
+                quality_generator = QAQualityGenerator(content, hparams)
 
-                # 更新进度
-                processed_chunks += 1
-                progress = int((processed_chunks / total_chunks) * 100)
+                # 创建任务列表
+                tasks = []
+                for i, qa in enumerate(content):
+                    task = loop.run_in_executor(
+                        self.executor,
+                        quality_generator.process_single_qa,
+                        qa,
+                        i,
+                        content,
+                        AK[0],  # 使用第一对AK/SK
+                        SK[0]
+                    )
+                    tasks.append(task)
+
+                # 使用as_completed处理任务，实时更新进度
+                optimized_qas = []
+                for future in asyncio.as_completed(tasks):
+                    try:
+                        result = await future
+                        if result:
+                            if isinstance(result, list):
+                                optimized_qas.extend(result)
+                            else:
+                                optimized_qas.append(result)
+                        
+                        # 更新进度
+                        processed_qas += 1
+                        progress = int((processed_qas / total_qas) * 100)
+                        
+                        # 立即更新数据库中的进度
+                        await self.quality_generations.update_one(
+                            {"_id": generation_id},
+                            {"$set": {"progress": progress}}
+                        )
+                    except Exception as e:
+                        logger.error(f"处理QA对失败: {str(e)}")
+                        continue
+
+                # 使用简化的文件名格式：原文件名_quality.json
+                final_save_path = os.path.join(
+                    save_path,
+                    f"{base_filename}_quality.json"
+                )
+
+                # 保存最终结果
+                with open(final_save_path, 'w', encoding='utf-8') as f:
+                    json.dump(optimized_qas, f, ensure_ascii=False, indent=4)
+
+                # 先删除之前同文件名的质量控制记录
+                await self.quality_records.delete_many({
+                    "generation_id": {
+                        "$in": [
+                            doc["_id"] for doc in await self.quality_generations.find(
+                                {"input_file": filename, "_id": {"$ne": generation_id}}
+                            ).to_list(None)
+                        ]
+                    }
+                })
+
+                # 保存问答对到数据库
+                qa_records = []
+                for qa in optimized_qas:
+                    if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
+                        raise Exception(f"Invalid QA pair format: {qa}")
+
+                    qa_record = QAQualityRecord(
+                        generation_id=PyObjectId(generation_id),
+                        question=qa["question"],
+                        answer=qa["answer"],
+                        similarity_score=qa.get("similarity_score", 0.0),
+                        is_explicit=qa.get("is_explicit", False),
+                        is_domain_relative=qa.get("is_domain_relative", False),
+                        coverage_rate=qa.get("coverage_rate", 0.0),
+                        status="passed"
+                    )
+                    qa_records.append(qa_record.dict(by_alias=True))
+
+                if qa_records:
+                    await self.quality_records.insert_many(qa_records)
+
+                # 更新旧记录状态为已覆盖
+                await self.quality_generations.update_many(
+                    {"input_file": filename, "_id": {"$ne": generation_id}},
+                    {"$set": {"status": "overwritten"}}
+                )
+
+                # 完成时设置状态和进度
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {"progress": progress}}
-                )
-
-            # 等待所有任务完成并合并结果
-            all_qa_pairs = []
-            for qa_pairs_path in tasks:
-                try:
-                    with open(qa_pairs_path, 'r', encoding='utf-8') as f:
-                        chunk_qa_pairs = json.load(f)
-                        all_qa_pairs.extend(chunk_qa_pairs)
-                except Exception as e:
-                    raise Exception(f"Failed to load optimized QA pairs from {qa_pairs_path}: {str(e)}")
-
-            # 清理临时文件
-            for temp_path in chunk_paths:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                # 同时删除QAQualityGenerator生成的结果文件
-                result_path = os.path.join(
-                    'result',
-                    'qas_iterated',
-                    f"qa_iteratedfor_{os.path.basename(temp_path).split('.')[0]}",
-                    os.path.basename(temp_path)
-                )
-                if os.path.exists(result_path):
-                    os.remove(result_path)
-
-            # 使用简化的文件名格式：原文件名_quality.json
-            final_save_path = os.path.join(
-                save_path,
-                f"{base_filename}_quality.json"
-            )
-
-            # 保存最终结果
-            with open(final_save_path, 'w', encoding='utf-8') as f:
-                json.dump(all_qa_pairs, f, ensure_ascii=False, indent=4)
-
-            # 先删除之前同文件名的质量控制记录
-            await self.quality_records.delete_many({
-                "generation_id": {
-                    "$in": [
-                        doc["_id"] for doc in await self.quality_generations.find(
-                            {"input_file": filename, "_id": {"$ne": generation_id}}
-                        ).to_list(None)
-                    ]
-                }
-            })
-
-            # 保存问答对到数据库
-            qa_records = []
-            for qa in all_qa_pairs:
-                if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
-                    raise Exception(f"Invalid QA pair format: {qa}")
-
-                qa_record = QAQualityRecord(
-                    generation_id=PyObjectId(generation_id),
-                    question=qa["question"],
-                    answer=qa["answer"],
-                    similarity_score=qa.get("similarity_score", 0.0),
-                    is_explicit=qa.get("is_explicit", False),
-                    is_domain_relative=qa.get("is_domain_relative", False),
-                    coverage_rate=qa.get("coverage_rate", 0.0),
-                    status="passed"
-                )
-                qa_records.append(qa_record.dict(by_alias=True))
-
-            if qa_records:
-                await self.quality_records.insert_many(qa_records)
-
-            # 更新旧记录状态为已覆盖
-            await self.quality_generations.update_many(
-                {"input_file": filename, "_id": {"$ne": generation_id}},
-                {"$set": {"status": "overwritten"}}
-            )
-
-            # 完成时设置状态和进度
-            await self.quality_generations.update_one(
-                {"_id": generation_id},
-                {
-                    "$set": {
-                        "status": "completed",
-                        "save_path": final_save_path,
-                        "progress": 100
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "save_path": final_save_path,
+                            "progress": 100
+                        }
                     }
-                }
-            )
+                )
 
-            return {
-                "generation_id": str(generation_id),
-                "filename": os.path.basename(final_save_path),
-                "qa_pairs": all_qa_pairs,
-                "source_text": json.dumps(content, ensure_ascii=False),
-                "save_path": final_save_path
-            }
+                return {
+                    "generation_id": str(generation_id),
+                    "filename": os.path.basename(final_save_path),
+                    "qa_pairs": optimized_qas,
+                    "source_text": json.dumps(content, ensure_ascii=False),
+                    "save_path": final_save_path
+                }
+
+            except Exception as e:
+                # 发生错误时只更新状态，保持当前进度
+                await self.quality_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {
+                        "status": "failed",
+                        "error_message": str(e)
+                    }}
+                )
+                raise e
 
         except Exception as e:
             import traceback

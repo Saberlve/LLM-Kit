@@ -8,6 +8,7 @@ from utils.helper import generate, split_chunk_by_tokens, split_text_into_chunks
 import json
 import logging
 from bson import ObjectId
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class ToTexService:
         self.tex_records = db.llm_kit.tex_records
         self.parse_records = db.llm_kit.parse_records
         self.error_logs = db.llm_kit.error_logs
+        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -28,18 +30,19 @@ class ToTexService:
         await self.error_logs.insert_one(error_log)
 
     def _process_chunk_with_api(self, chunk: str, ak: str, sk: str, model_name: str, max_tokens: int = 650) -> list:
-        """处理单个文本块"""
+        """同步处理单个文本块"""
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
         for sub_chunk in sub_chunks:
-            for attempt in range(3):  # 尝试3次
+            for attempt in range(3):
                 try:
+                    # 直接调用同步的generate函数
                     tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
                     results.append(self._clean_result(tex_text))
                     break
                 except Exception as e:
-                    if attempt == 2:  # 最后一次尝试失败
+                    if attempt == 2:
                         raise Exception(f"处理文本块失败: {str(e)}")
         return results
 
@@ -179,30 +182,37 @@ class ToTexService:
                 total_chunks = len(text_chunks)
                 processed_chunks = 0
 
-                # 并行处理文本块
-                results = []
-                with ThreadPoolExecutor(max_workers=parallel_num) as executor:
-                    futures = [
-                        executor.submit(
-                            self._process_chunk_with_api,
-                            chunk,
-                            AK[i % len(AK)],
-                            SK[i % len(SK)],
-                            model_name
-                        )
-                        for i, chunk in enumerate(text_chunks)
-                    ]
+                # 创建任务列表
+                tasks = []
+                for i, chunk in enumerate(text_chunks):
+                    task = self._process_chunk_with_api(
+                        chunk,
+                        AK[i % len(AK)],
+                        SK[i % len(SK)],
+                        model_name
+                    )
+                    tasks.append(task)
 
-                    for future in as_completed(futures):
-                        results.extend(future.result())
-                        processed_chunks += 1
-                        # 计算当前进度
-                        progress = int((processed_chunks / total_chunks) * 100)
-                        # 更新进度信息到数据库
-                        await self.tex_records.update_one(
-                            {"input_file": filename},
-                            {"$set": {"progress": progress}}
-                        )
+                # 使用线程池异步执行任务
+                results = []
+                loop = asyncio.get_event_loop()
+                
+                # 使用线程池执行同步任务，并在每个任务完成后更新进度
+                for i, future in enumerate(asyncio.as_completed([
+                    loop.run_in_executor(self.executor, task) for task in tasks
+                ])):
+                    chunk_result = await future
+                    results.extend(chunk_result)
+                    
+                    # 更新进度
+                    processed_chunks += 1
+                    progress = int((processed_chunks / total_chunks) * 100)
+                    
+                    # 立即更新数据库中的进度
+                    await self.tex_records.update_one(
+                        {"input_file": filename},
+                        {"$set": {"progress": progress}}
+                    )
 
                 # 合并所有LaTeX内容
                 combined_tex = '\n'.join(results)

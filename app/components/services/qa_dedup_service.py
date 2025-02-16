@@ -4,12 +4,15 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.models.mongodb import DedupRecord, KeptQAPair, DeletedQAPair
 import json
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import time
 import asyncio
 from bson import ObjectId
+from concurrent.futures import ThreadPoolExecutor
+import logging
 
+logger = logging.getLogger(__name__)
 
 class QADedupService:
     def __init__(self, db: AsyncIOMotorClient):
@@ -18,10 +21,11 @@ class QADedupService:
         self.kept_pairs = db.llm_kit.kept_pairs
         self.error_logs = db.llm_kit.error_logs
         self.deleted_pairs = db.llm_kit.deleted_pairs
-        self.quality_generations = db.llm_kit.quality_generations  # 添加对quality记录的引用
+        self.quality_generations = db.llm_kit.quality_generations
         self.base_output_dir = "results/dedup"
         os.makedirs(self.base_output_dir, exist_ok=True)
         self.last_progress_update = {}
+        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -104,13 +108,8 @@ class QADedupService:
             await self._log_error(str(e), "get_dedup_content")
             raise Exception(f"获取去重文件内容失败: {str(e)}")
 
-    async def deduplicate_qa(
-            self,
-            file_ids: List[str],
-            dedup_by_answer: bool,
-            dedup_threshold: float,
-            min_answer_length: int = 10,
-    ):
+    async def deduplicate_qa(self, file_ids: List[str], dedup_by_answer: bool,
+                           dedup_threshold: float, min_answer_length: int = 10):
         try:
             # 获取所有文件内容
             original_pairs = []
@@ -147,7 +146,7 @@ class QADedupService:
                 )
                 record_id = existing_record["_id"]
             else:
-                # 创建去重记录
+                # 创建去重记录，保持原有字段
                 dedup_record = DedupRecord(
                     input_file=input_filenames,
                     output_file=output_file,
@@ -159,18 +158,31 @@ class QADedupService:
                     source_text="\n".join(source_texts),
                     original_count=len(original_pairs),
                     kept_count=0,
-                    progress=0  # 初始化进度为 0
+                    progress=0
                 )
                 result = await self.dedup_records.insert_one(dedup_record.dict(by_alias=True))
                 record_id = result.inserted_id
 
-            # 创建临时文件保存合并的问答对
-            temp_input_file = os.path.join(self.base_output_dir, f"temp_input_{str(record_id)}.json")
-            with open(temp_input_file, 'w', encoding='utf-8') as f:
-                json.dump(original_pairs, f, ensure_ascii=False, indent=4)
-
             try:
-                # 执行去重
+                # 创建临时文件保存合并的问答对
+                temp_input_file = os.path.join(self.base_output_dir, f"temp_input_{str(record_id)}.json")
+                with open(temp_input_file, 'w', encoding='utf-8') as f:
+                    json.dump(original_pairs, f, ensure_ascii=False, indent=4)
+
+                # 创建进度更新回调
+                async def progress_callback(progress: int):
+                    current_time = time.time()
+                    last_update = self.last_progress_update.get(str(record_id), 0)
+                    
+                    # 保持原有的节流逻辑
+                    if current_time - last_update >= 0.5:
+                        await self.dedup_records.update_one(
+                            {"_id": record_id},
+                            {"$set": {"progress": progress}}
+                        )
+                        self.last_progress_update[str(record_id)] = current_time
+
+                # 创建去重参数
                 hparams = DedupParams(
                     input_file=[temp_input_file],
                     output_file=output_file,
@@ -180,13 +192,22 @@ class QADedupService:
                     deleted_pairs_file=deleted_pairs_file,
                 )
 
-                qa_deduplication = QADeduplication(
+                # 创建去重器实例
+                deduplicator = QADeduplication(
                     hparams,
-                    progress_callback=lambda p: asyncio.create_task(
-                        self.update_progress(str(record_id), p)
+                    progress_callback=lambda p: asyncio.run_coroutine_threadsafe(
+                        progress_callback(p),
+                        asyncio.get_event_loop()
                     )
                 )
-                kept_pairs, deleted_groups = qa_deduplication.process_qa_file(hparams)
+
+                # 在线程池中执行去重操作
+                loop = asyncio.get_event_loop()
+                kept_pairs, deleted_groups = await loop.run_in_executor(
+                    self.executor,
+                    deduplicator.process_qa_file,
+                    hparams
+                )
 
                 # 保存保留的问答对
                 if kept_pairs:
@@ -260,6 +281,14 @@ class QADedupService:
                     }
                 )
                 raise e
+
+            finally:
+                # 清理临时文件
+                if os.path.exists(temp_input_file):
+                    os.unlink(temp_input_file)
+                # 清理进度更新记录
+                if str(record_id) in self.last_progress_update:
+                    del self.last_progress_update[str(record_id)]
 
         except Exception as e:
             import traceback

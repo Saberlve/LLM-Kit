@@ -7,7 +7,11 @@ from utils.helper import generate, extract_qa
 import json
 import os
 from bson import ObjectId
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import logging
 
+logger = logging.getLogger(__name__)
 
 class QAGenerateService:
     def __init__(self, db: AsyncIOMotorClient):
@@ -16,6 +20,7 @@ class QAGenerateService:
         self.qa_pairs = db.llm_kit.qa_pairs
         self.error_logs = db.llm_kit.error_logs
         self.tex_records = db.llm_kit.tex_records
+        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -26,8 +31,8 @@ class QAGenerateService:
         }
         await self.error_logs.insert_one(error_log)
 
-    async def process_chunk_with_api(self, text: str, ak: str, sk: str, model_name: str, domain: str):
-        """处理单个文本块并生成问答对"""
+    def process_chunk_with_api(self, text: str, ak: str, sk: str, model_name: str, domain: str):
+        """同步处理单个文本块"""
         qa_pairs = []
         max_retries = 5
         
@@ -41,62 +46,55 @@ class QAGenerateService:
                 break
             except Exception as e:
                 if attempt == max_retries - 1:
-                    # 改为同步记录错误
                     print(f"处理文本块失败: {str(e)}")
         return qa_pairs
 
     async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list, 
                                     parallel_num: int, model_name: str, domain: str, generation_id: ObjectId):
         """并行处理多个文本块"""
-        import asyncio
-        
         qa_pairs = []
-        tasks = set()
         total_chunks = len(chunks)
         processed_chunks = 0
-        
-        async def process_single_chunk(chunk, ak, sk):
-            nonlocal processed_chunks
-            result = await self.process_chunk_with_api(chunk, ak, sk, model_name, domain)
-            
-            # 更新进度
-            processed_chunks += 1
-            progress = int((processed_chunks / total_chunks) * 100)
-            await self.qa_generations.update_one(
-                {"_id": generation_id},
-                {"$set": {"progress": progress}}
-            )
-            
-            return result
+        loop = asyncio.get_event_loop()
 
+        # 创建任务列表
+        tasks = []
         for i, chunk in enumerate(chunks):
             ak = ak_list[i % len(ak_list)]
             sk = sk_list[i % len(sk_list)]
             
-            if len(tasks) >= parallel_num:
-                # 等待一个任务完成后再添加新任务
-                done, pending = await asyncio.wait(
-                    tasks, 
-                    return_when=asyncio.FIRST_COMPLETED
-                )
-                
-                for task in done:
-                    result = await task
-                    if result:
-                        qa_pairs.extend(result)
-                tasks = pending
-            
-            task = asyncio.create_task(process_single_chunk(chunk, ak, sk))
-            tasks.add(task)
-        
-        # 等待所有剩余任务完成
-        if tasks:
-            done, _ = await asyncio.wait(tasks)
-            for task in done:
-                result = await task
+            # 将同步的API调用放入线程池
+            task = loop.run_in_executor(
+                self.executor,
+                self.process_chunk_with_api,
+                chunk,
+                ak,
+                sk,
+                model_name,
+                domain
+            )
+            tasks.append(task)
+
+        # 使用as_completed处理任务，实时更新进度
+        for future in asyncio.as_completed(tasks):
+            try:
+                result = await future
                 if result:
                     qa_pairs.extend(result)
-                    
+                
+                # 更新进度
+                processed_chunks += 1
+                progress = int((processed_chunks / total_chunks) * 100)
+                
+                # 立即更新数据库中的进度
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": progress}}
+                )
+            except Exception as e:
+                logger.error(f"处理文本块失败: {str(e)}")
+                continue
+
         return qa_pairs
 
     async def get_all_tex_files(self):
@@ -230,7 +228,7 @@ class QAGenerateService:
 
             try:
                 chunks = json.loads(content)
-                # 并行处理所有文本块，传入generation_id用于更新进度
+                # 使用修改后的并行处理函数
                 qa_pairs = await self.process_chunks_parallel(
                     [chunk.get("chunk", "") for chunk in chunks],
                     AK,

@@ -312,29 +312,21 @@ class ParseService:
                     "parsed_file_path": parsed_file_path
                 }
 
-            finally:
-                # 清理临时文件
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
-                # 清理进度更新记录
-                if record_id in self.last_progress_update:
-                    del self.last_progress_update[record_id]
+            except Exception as e:
+                # 发生错误时只更新状态，保持当前进度
+                if record_id:
+                    await self.parse_records.update_one(
+                        {"_id": ObjectId(record_id)},
+                        {
+                            "$set": {
+                                "status": "failed",
+                                "error_message": str(e)
+                            }
+                        }
+                    )
+                raise e
 
         except Exception as e:
-            # 发生错误时只更新状态，保持当前进度
-            if record_id:
-                await self.parse_records.update_one(
-                    {"_id": ObjectId(record_id)},
-                    {
-                        "$set": {
-                            "status": "failed",
-                            "error_message": str(e)
-                        }
-                    }
-                )
-            raise e
-
-    except Exception as e:
-        import traceback
-        await self._log_error(str(e), "parse_content", traceback.format_exc())
-        raise Exception(f"Parse content failed: {str(e)}")
+            import traceback
+            await self._log_error(str(e), "parse_content", traceback.format_exc())
+            raise Exception(f"Parse content failed: {str(e)}")

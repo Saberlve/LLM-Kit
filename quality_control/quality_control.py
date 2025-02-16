@@ -11,12 +11,15 @@ from utils.helper import generate
 from utils.helper import extract_qa
 from utils.hparams import HyperParams
 from model_api.prompts import PROMPT_DICT
+
+
 class QAQualityGenerator:
     def __init__(self, qa_path: str, hparams: HyperParams):
         # 基础配置
         self.hparams = hparams
         self.qa_path = qa_path
-        self.save_dir_path = os.path.join('result', 'qas_iterated', f"qa_iteratedfor_{os.path.basename(qa_path).split('.')[0]}")
+        self.save_dir_path = os.path.join('result', 'qas_iterated',
+                                          f"qa_iteratedfor_{os.path.basename(qa_path).split('.')[0]}")
         os.makedirs(self.save_dir_path, exist_ok=True)
         self.model_name = hparams.model_name
         # API 相关
@@ -24,14 +27,13 @@ class QAQualityGenerator:
         self.sk_list = hparams.SK
         self.parallel_num = hparams.parallel_num
         self._validate_keys()
-        PROMPT_DICT['RELATIVE']=PROMPT_DICT['RELATIVE'].replace("'domain'",self.hparams.domain)
-        PROMPT_DICT['ToQA']=PROMPT_DICT['ToQA'].replace("'domain'",self.hparams.domain)
-        
+        PROMPT_DICT['RELATIVE'] = PROMPT_DICT['RELATIVE'].replace("'domain'", self.hparams.domain)
+        PROMPT_DICT['ToQA'] = PROMPT_DICT['ToQA'].replace("'domain'", self.hparams.domain)
+
         # 质量控制参数
         self.similarity_rate = hparams.similarity_rate
         self.coverage_rate = hparams.coverage_rate
         self.max_attempts = hparams.max_attempts
-        
 
     def _validate_keys(self):
         """验证 API 密钥配置"""
@@ -39,7 +41,6 @@ class QAQualityGenerator:
             raise ValueError('AKs and SKs must have the same length!')
         if len(self.ak_list) < self.parallel_num:
             raise ValueError('请添加足够数量的 AK 和 SK！')
-
 
     @staticmethod
     def remove_non_chinese(text: str) -> str:
@@ -51,7 +52,7 @@ class QAQualityGenerator:
 
     def calculate_coverage(self, qa: Dict, nearby_qas: List[Dict]) -> float:
         """计算覆盖率"""
-        #这个chunk包含m1个token，你把chunk中出现的answer都去掉，剩下m2个token。m2/m1就是这个chunk的覆盖率）
+        # 这个chunk包含m1个token，你把chunk中出现的answer都去掉，剩下m2个token。m2/m1就是这个chunk的覆盖率）
         # 1. 计算文本的token数量
         tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
         text_tokens = tokenizer.encode(qa['text'])
@@ -62,7 +63,7 @@ class QAQualityGenerator:
         text_tokens = set(text_tokens)
         # 2. 计算覆盖率
         remaining_tokens = text_tokens - answer_tokens
-        coverage = 1- len(remaining_tokens) / len(text_tokens)
+        coverage = 1 - len(remaining_tokens) / len(text_tokens)
         return coverage
 
     def calculate_similarity(self, str1: str, str2: str) -> float:
@@ -78,7 +79,7 @@ class QAQualityGenerator:
         :return: true or false
         """
         response = generate(question, self.model_name, 'RELATIVE', ak, sk)
-        if response.count('0')>response.count('1'):
+        if response.count('0') > response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
         return True
@@ -92,7 +93,7 @@ class QAQualityGenerator:
         :return: true or false
         """
         response = generate(question, self.model_name, 'EXPLICIT', ak, sk)
-        if response.count('0')>response.count('1'):
+        if response.count('0') > response.count('1'):
             # print('question:{},reason:{}'.format(question,response['result']))
             return False
         return True
@@ -113,13 +114,13 @@ class QAQualityGenerator:
         """重新生成问答对"""
         try:
             response = generate(qa['text'], self.model_name, 'ToQA', ak, sk)
-            #由于API返回的可能有多个问答对，显然不能再用和之前问答对一样的了，所以要重新找一个和他相似度比较低的替换
+            # 由于API返回的可能有多个问答对，显然不能再用和之前问答对一样的了，所以要重新找一个和他相似度比较低的替换
             if response:
-                new_qa=extract_qa(response)
+                new_qa = extract_qa(response)
                 selected_qa = self.find_suitable_qa(new_qa, nearby_qas) if len(new_qa) > 1 else new_qa[0]
                 selected_qa['text'] = qa['text']
                 return selected_qa
-            
+
         except Exception as e:
             print(f'重新生成问答对时出错: {e}')
         return None
@@ -132,13 +133,11 @@ class QAQualityGenerator:
             try:
                 response = generate(qa['text'], self.model_name, 'MORE_QA', ak, sk)
                 if response:
-                    new_qa=extract_qa(response)
+                    new_qa = extract_qa(response)
                     return new_qa
             except Exception as e:
                 print(f'生成更多问答对时出错: {e}')
         return None
-        
-        
 
     def evaluate_qa_and_regenerate(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
         """
@@ -158,26 +157,26 @@ class QAQualityGenerator:
                 ratio = max(self.calculate_similarity(j, k) for j in text_list for k in answer_list)
                 qa['ratio'] = ratio
 
-                #检查问题质量，从明确性和医学相关性两个维度
+                # 检查问题质量，从明确性和医学相关性两个维度
                 is_explicit = self.is_explicit(qa['question'], ak, sk)
                 is_medical = self.is_relative(qa['question'], ak, sk)
 
-                #如果相似度低于阈值，或者问题不明确或不医学相关，则重新生成
+                # 如果相似度低于阈值，或者问题不明确或不医学相关，则重新生成
                 if qa['ratio'] < self.similarity_rate or \
-                   not is_explicit or not is_medical:
+                        not is_explicit or not is_medical:
                     qa = self.regenerate_qa(qa, nearby_qas, ak, sk)
                     if not qa:
                         return None
                     continue
-            
-                    
+
+
             except Exception as e:
                 print(f'质量检查时出错: {e}')
                 attempt += 1
 
         return qa
 
-    def check_coverage_and_regenerate(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) :
+    def check_coverage_and_regenerate(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str):
         """检查覆盖率"""
         coverage_rate = self.calculate_coverage(qa, nearby_qas)
         if coverage_rate < self.coverage_rate:
@@ -188,47 +187,70 @@ class QAQualityGenerator:
 
     def iterate_optim_qa(self):
         """读取文件中的问答对，进行迭代"""
-        with open(self.qa_path, "r", encoding='utf-8') as f:
-            qas = json.load(f)
+        try:
+            # 更新初始进度
+            if self.progress_callback:
+                self.progress_callback(10)
 
-        print(f"开始处理 {os.path.basename(self.qa_path)}")
-        qa_result = []
+            with open(self.qa_path, "r", encoding='utf-8') as f:
+                qas = json.load(f)
 
-        with ThreadPoolExecutor(max_workers=1) as executor:  # 改为单线程处理
-            futures = []
-            for i, qa in enumerate(qas):
-                ak = self.ak_list[0]  # 只使用第一个AK
-                sk = self.sk_list[0]  # 只使用第一个SK
-                nearby_qas = self.get_nearby_qas(qas, i)
-                futures.append(
-                    executor.submit(
-                        lambda q, n, a, s: self.check_coverage_and_regenerate(
-                            self.evaluate_qa_and_regenerate(q, n, a, s),
-                            n, a, s
-                        ),
-                        qa,
-                        nearby_qas,
-                        ak,
-                        sk,
+            if self.progress_callback:
+                self.progress_callback(20)  # 文件读取完成
+
+            print(f"开始处理 {os.path.basename(self.qa_path)}")
+            qa_result = []
+            total_qas = len(qas)
+
+            with ThreadPoolExecutor(max_workers=1) as executor:  # 保持单线程处理
+                futures = []
+                for i, qa in enumerate(qas):
+                    ak = self.ak_list[0]  # 只使用第一个AK
+                    sk = self.sk_list[0]  # 只使用第一个SK
+                    nearby_qas = self.get_nearby_qas(qas, i)
+                    futures.append(
+                        executor.submit(
+                            lambda q, n, a, s: self.check_coverage_and_regenerate(
+                                self.evaluate_qa_and_regenerate(q, n, a, s),
+                                n, a, s
+                            ),
+                            qa,
+                            nearby_qas,
+                            ak,
+                            sk,
+                        )
                     )
-                )
-            with tqdm(total=len(futures), desc="质量控制问答对") as pbar:
-                for future in as_completed(futures):
-                    result = future.result()
-                    if isinstance(result, list):
-                        qa_result.extend(result)
-                    elif result:
-                        qa_result.append(result)
-                    pbar.update(1)
 
-        # 保存结果
-        save_file_path = os.path.join(
-            self.save_dir_path,
-            os.path.basename(self.qa_path)
-        )
-        with open(save_file_path, "w", encoding="utf-8") as f:
-            json.dump(qa_result, f, ensure_ascii=False, indent=4)
-        return save_file_path
+                with tqdm(total=len(futures), desc="质量控制问答对") as pbar:
+                    for i, future in enumerate(as_completed(futures)):
+                        result = future.result()
+                        if isinstance(result, list):
+                            qa_result.extend(result)
+                        elif result:
+                            qa_result.append(result)
+                        pbar.update(1)
+
+                        # 更新进度 - 预留10%给保存阶段
+                        if self.progress_callback:
+                            progress = int(20 + (i + 1) / total_qas * 70)  # 20-90的进度范围
+                            self.progress_callback(progress)
+
+            # 保存结果
+            save_file_path = os.path.join(
+                self.save_dir_path,
+                os.path.basename(self.qa_path)
+            )
+            with open(save_file_path, "w", encoding="utf-8") as f:
+                json.dump(qa_result, f, ensure_ascii=False, indent=4)
+
+            if self.progress_callback:
+                self.progress_callback(100)  # 完成
+
+            return save_file_path
+
+        except Exception as e:
+            print(f"质量控制处理失败: {str(e)}")
+            raise e
 
     @staticmethod
     def get_nearby_qas(qas: List[Dict], i: int) -> List[Dict]:
