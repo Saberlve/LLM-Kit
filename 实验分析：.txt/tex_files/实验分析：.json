@@ -1,0 +1,6 @@
+[
+    {
+        "id": 1,
+        "chunk": "latex\n\\section{实验分析}\n\n\\subsection{npo+2个正则为什么能起到unlearn}\n\\begin{table}[h]\n\\begin{tabular}{|c|c|c|}\n\\hline\n指标 & Loss曲线 & Case示例 \\\\\n\\hline\n解释一 & 描述一 & 示例一 \\\\\n\\hline\n解释二 & 描述二 & 示例二 \\\\\n\\hline\n... & ... & ... \\\\\n\\end{tabular}\n\\caption{主表：npo+2个正则unlearn的说明}\n\\end{table}\n根据各项指标再谈。\n\n\\section{merge的分析}\n\\subsection{为何融合后变好，并涉及到safety}\n\\begin{itemize}\n\\item 分析融合的好处。\n\\item 涉及safety的原因和效果。\n\\end{itemize}\n\n\\section{讨论}\n\\subsection{关于实验的不理想一面：指标问题}\n\\begin{itemize}\n\\item 具体指标的问题。\n\\item 如何解决或改进。\n\\end{itemize}\n\n\\subsection{对unlearn问题的定义}\n\\begin{itemize}\n\\item unlearn问题的具体定义。\n\\item 可能出现的原因和解决方法。\n\\end{itemize}\n\n\\section{模型的推理能力}\n\\subsection{通过steer组合是否可以激发模型的推理能力}\n通过不同的steer组合，探讨对模型推理能力的影响。看limo的相关研究或实验。 也可以探讨其他方法提升模型的推理能力。\u000b`"
+    }
+]

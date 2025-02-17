@@ -5,6 +5,7 @@ from app.components.core.database import get_database
 from app.components.models.schemas import QualityControlRequest, APIResponse
 from app.components.services.quality_service import QualityService
 from pydantic import BaseModel
+from datetime import datetime, timezone
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -107,23 +108,56 @@ async def get_quality_progress(
 ):
     """获取质量控制进度"""
     try:
-        # 查询进度记录
-        record = await db.llm_kit.quality_generations.find_one({"input_file": request.filename})
-
+        # 使用更精确的查询条件
+        record = await db.llm_kit.quality_generations.find_one(
+            {
+                "input_file": request.filename,
+                "status": {"$in": ["processing", "completed", "failed", "timeout"]}
+            },
+            sort=[("created_at", -1)]  # 获取最新的记录
+        )
+        
         if not record:
-            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的质量控制记录未找到")
-
+            return APIResponse(
+                status="not_found",
+                message=f"文件 {request.filename} 的质量控制记录未找到",
+                data={
+                    "progress": 0,
+                    "status": "not_found"
+                }
+            )
+        
+        # 标准化状态
+        status = record.get("status", "processing")
+        progress = record.get("progress", 0)
+        
+        # 如果状态是completed，确保进度是100%
+        if status == "completed":
+            progress = 100
+        # 如果状态是failed或timeout，保持当前进度
+        elif status in ["failed", "timeout"]:
+            progress = progress
+        
         return APIResponse(
             status="success",
-            message="Progress retrieved successfully",
+            message="进度获取成功",
             data={
-                "progress": record.get("progress", 0),
-                "status": record.get("status", "processing")
+                "progress": progress,
+                "status": status,
+                "error_message": record.get("error_message", ""),  # 添加错误信息
+                "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat()  # 添加最后更新时间
             }
         )
     except Exception as e:
         logger.error(f"获取进度失败: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        return APIResponse(
+            status="error",
+            message=f"获取进度失败: {str(e)}",
+            data={
+                "progress": 0,
+                "status": "error"
+            }
+        )
 
 @router.delete("/quality_records")
 async def delete_quality_record(

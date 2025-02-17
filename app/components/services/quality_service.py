@@ -20,7 +20,6 @@ class QualityService:
         self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
         self.qa_generations = db.llm_kit.qa_generations  # 添加对qa_generations的引用
         self.qa_pairs = db.llm_kit.qa_pairs  # 添加对qa_pairs的引用
-        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -89,7 +88,6 @@ class QualityService:
                 os.makedirs(save_path, exist_ok=True)
                 total_qas = len(content)
                 processed_qas = 0
-                loop = asyncio.get_event_loop()
 
                 # 创建 hparams 对象
                 hparams = HyperParams(
@@ -114,122 +112,91 @@ class QualityService:
                     {"$set": {"progress": 20}}
                 )
 
-                # 创建任务列表
-                tasks = []
-                for i, qa in enumerate(content):
-                    task = loop.run_in_executor(
-                        self.executor,
-                        quality_generator.process_single_qa,
-                        qa,
-                        i,
-                        content,
-                        AK[0],
-                        SK[0]
-                    )
-                    tasks.append(task)
+                # 使用上下文管理器创建线程池
+                with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
+                    loop = asyncio.get_event_loop()
+                    futures = []
 
-                # 处理阶段 - 20% to 80%
-                optimized_qas = []
-                for i, future in enumerate(asyncio.as_completed(tasks)):
-                    try:
-                        result = await future
-                        if result:
-                            if isinstance(result, list):
-                                optimized_qas.extend(result)
-                            else:
-                                optimized_qas.append(result)
-                        
-                        # 更新进度 - 处理小数据时的特殊处理
-                        processed_qas += 1
-                        if total_qas == 1:
-                            # 单个QA时的进度点
-                            progress_steps = [30, 40, 50, 60, 70]
-                            progress = progress_steps[min(len(progress_steps)-1, i)]
-                        else:
-                            # 多个QA的正常进度计算
-                            progress = int(20 + (processed_qas / total_qas * 60))
-                        
-                        await self.quality_generations.update_one(
-                            {"_id": generation_id},
-                            {"$set": {"progress": progress}}
+                    # 创建任务列表
+                    for i, qa in enumerate(content):
+                        future = loop.run_in_executor(
+                            executor,
+                            quality_generator.process_single_qa,
+                            qa,
+                            i,
+                            content,
+                            AK[i % len(AK)],
+                            SK[i % len(SK)]
                         )
-                    except Exception as e:
-                        logger.error(f"处理QA对失败: {str(e)}")
-                        continue
+                        futures.append(future)
 
-                # 保存准备阶段 - 90%
-                await self.quality_generations.update_one(
-                    {"_id": generation_id},
-                    {"$set": {"progress": 90}}
-                )
+                    # 处理阶段 - 20% to 80%
+                    optimized_qas = []
+                    for i, future in enumerate(asyncio.as_completed(futures)):
+                        try:
+                            result = await future
+                            if result:
+                                if isinstance(result, list):
+                                    optimized_qas.extend(result)
+                                else:
+                                    optimized_qas.append(result)
+                            
+                            # 更新进度 - 处理小数据时的特殊处理
+                            processed_qas += 1
+                            if total_qas == 1:
+                                # 单个QA时的进度点
+                                progress_steps = [30, 40, 50, 60, 70]
+                                progress = progress_steps[min(len(progress_steps)-1, i)]
+                            else:
+                                # 多个QA的正常进度计算
+                                progress = int(20 + (processed_qas / total_qas * 60))
+                            
+                            await self.quality_generations.update_one(
+                                {"_id": generation_id},
+                                {"$set": {"progress": progress}}
+                            )
+                        except Exception as e:
+                            logger.error(f"处理QA对失败: {str(e)}")
+                            continue
 
-                # 使用简化的文件名格式：原文件名_quality.json
-                final_save_path = os.path.join(
-                    save_path,
-                    f"{base_filename}_quality.json"
-                )
-
-                # 保存最终结果
-                with open(final_save_path, 'w', encoding='utf-8') as f:
-                    json.dump(optimized_qas, f, ensure_ascii=False, indent=4)
-
-                # 先删除之前同文件名的质量控制记录
-                await self.quality_records.delete_many({
-                    "generation_id": {
-                        "$in": [
-                            doc["_id"] for doc in await self.quality_generations.find(
-                                {"input_file": filename, "_id": {"$ne": generation_id}}
-                            ).to_list(None)
-                        ]
-                    }
-                })
-
-                # 保存问答对到数据库
-                qa_records = []
-                for qa in optimized_qas:
-                    if not isinstance(qa, dict) or "question" not in qa or "answer" not in qa:
-                        raise Exception(f"Invalid QA pair format: {qa}")
-
-                    qa_record = QAQualityRecord(
-                        generation_id=PyObjectId(generation_id),
-                        question=qa["question"],
-                        answer=qa["answer"],
-                        similarity_score=qa.get("similarity_score", 0.0),
-                        is_explicit=qa.get("is_explicit", False),
-                        is_domain_relative=qa.get("is_domain_relative", False),
-                        coverage_rate=qa.get("coverage_rate", 0.0),
-                        status="passed"
+                    # 保存准备阶段 - 90%
+                    await self.quality_generations.update_one(
+                        {"_id": generation_id},
+                        {"$set": {"progress": 90}}
                     )
-                    qa_records.append(qa_record.dict(by_alias=True))
 
-                if qa_records:
-                    await self.quality_records.insert_many(qa_records)
+                    if not optimized_qas:
+                        raise Exception("没有生成任何优化后的问答对")
 
-                # 更新旧记录状态为已覆盖
-                await self.quality_generations.update_many(
-                    {"input_file": filename, "_id": {"$ne": generation_id}},
-                    {"$set": {"status": "overwritten"}}
-                )
+                    # 使用简化的文件名格式：原文件名_quality.json
+                    final_save_path = os.path.join(
+                        save_path,
+                        f"{base_filename}_quality.json"
+                    )
 
-                # 完成 - 100%
-                await self.quality_generations.update_one(
-                    {"_id": generation_id},
-                    {
-                        "$set": {
-                            "status": "completed",
-                            "save_path": final_save_path,
-                            "progress": 100
+                    # 保存最终结果
+                    with open(final_save_path, 'w', encoding='utf-8') as f:
+                        json.dump(optimized_qas, f, ensure_ascii=False, indent=4)
+
+                    # 完成 - 100%
+                    await self.quality_generations.update_one(
+                        {"_id": generation_id},
+                        {
+                            "$set": {
+                                "status": "completed",
+                                "save_path": final_save_path,
+                                "progress": 100
+                            }
                         }
-                    }
-                )
+                    )
 
-                return {
-                    "generation_id": str(generation_id),
-                    "filename": os.path.basename(final_save_path),
-                    "qa_pairs": optimized_qas,
-                    "source_text": json.dumps(content, ensure_ascii=False),
-                    "save_path": final_save_path
-                }
+                    return {
+                        "generation_id": str(generation_id),
+                        "filename": os.path.basename(final_save_path),
+                        "qa_pairs": optimized_qas,
+                        "source_text": json.dumps(content, ensure_ascii=False),
+                        "save_path": final_save_path
+                    }
 
             except Exception as e:
                 # 发生错误时只更新状态，保持当前进度

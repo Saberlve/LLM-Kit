@@ -20,7 +20,6 @@ class QAGenerateService:
         self.qa_pairs = db.llm_kit.qa_pairs
         self.error_logs = db.llm_kit.error_logs
         self.tex_records = db.llm_kit.tex_records
-        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -55,63 +54,74 @@ class QAGenerateService:
         qa_pairs = []
         total_chunks = len(chunks)
         processed_chunks = 0
-        loop = asyncio.get_event_loop()
 
-        # 初始化阶段 - 10%
-        await self.qa_generations.update_one(
-            {"_id": generation_id},
-            {"$set": {"progress": 10}}
-        )
-
-        # 任务准备 - 20%
-        tasks = []
-        for i, chunk in enumerate(chunks):
-            ak = ak_list[i % len(ak_list)]
-            sk = sk_list[i % len(sk_list)]
-            task = loop.run_in_executor(
-                self.executor,
-                self.process_chunk_with_api,
-                chunk, ak, sk, model_name, domain
-            )
-            tasks.append(task)
-
-        await self.qa_generations.update_one(
-            {"_id": generation_id},
-            {"$set": {"progress": 20}}
-        )
-
-        # 处理阶段 - 20% to 80%
-        for i, future in enumerate(asyncio.as_completed(tasks)):
+        # 使用上下文管理器创建线程池
+        with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
             try:
-                result = await future
-                if result:
-                    qa_pairs.extend(result)
-                
-                # 更新进度 - 处理小文本时的特殊处理
-                processed_chunks += 1
-                if total_chunks == 1:
-                    # 单个chunk时的进度点
-                    progress_steps = [30, 40, 50, 60, 70]
-                    progress = progress_steps[min(len(progress_steps)-1, i)]
-                else:
-                    # 多个chunks的正常进度计算
-                    progress = int(20 + (processed_chunks / total_chunks * 60))
-                
+                # 初始化阶段 - 10%
                 await self.qa_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {"progress": progress}}
+                    {"$set": {"progress": 10}}
                 )
+
+                # 任务准备 - 20%
+                loop = asyncio.get_event_loop()
+                futures = []
+                
+                for i, chunk in enumerate(chunks):
+                    ak = ak_list[i % len(ak_list)]
+                    sk = sk_list[i % len(sk_list)]
+                    future = loop.run_in_executor(
+                        executor,
+                        self.process_chunk_with_api,
+                        chunk, ak, sk, model_name, domain
+                    )
+                    futures.append(future)
+
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": 20}}
+                )
+
+                # 处理阶段 - 20% to 80%
+                for i, future in enumerate(asyncio.as_completed(futures)):
+                    try:
+                        result = await future
+                        if result:
+                            qa_pairs.extend(result)
+                        
+                        # 更新进度 - 处理小文本时的特殊处理
+                        processed_chunks += 1
+                        if total_chunks == 1:
+                            # 单个chunk时的进度点
+                            progress_steps = [30, 40, 50, 60, 70]
+                            progress = progress_steps[min(len(progress_steps)-1, i)]
+                        else:
+                            # 多个chunks的正常进度计算
+                            progress = int(20 + (processed_chunks / total_chunks * 60))
+                        
+                        await self.qa_generations.update_one(
+                            {"_id": generation_id},
+                            {"$set": {"progress": progress}}
+                        )
+                    except Exception as e:
+                        logger.error(f"处理chunk失败: {str(e)}")
+                        continue
+
+                # 保存准备 - 90%
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {"progress": 90}}
+                )
+
+                if not qa_pairs:
+                    raise Exception("没有生成任何问答对")
+
+                return qa_pairs
+
             except Exception as e:
-                logger.error(f"处理文本块失败: {str(e)}")
-                continue
-
-        # 保存准备 - 90%
-        await self.qa_generations.update_one(
-            {"_id": generation_id},
-            {"$set": {"progress": 90}}
-        )
-
-        return qa_pairs
+                logger.error(f"并行处理失败: {str(e)}")
+                raise e
 
     async def get_all_tex_files(self):
         """获取所有已转换的tex文件记录，同名文件只返回最新的记录"""

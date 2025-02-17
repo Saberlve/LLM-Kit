@@ -18,7 +18,6 @@ class ToTexService:
         self.tex_records = db.llm_kit.tex_records
         self.parse_records = db.llm_kit.parse_records
         self.error_logs = db.llm_kit.error_logs
-        self.executor = ThreadPoolExecutor(max_workers=10)  # 添加线程池
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -133,194 +132,202 @@ class ToTexService:
             parallel_num: int,
             model_name: str
     ):
-        try:
-            # 初始化进度为0
-            await self.tex_records.update_one(
-                {"input_file": filename},
-                {"$set": {
-                    "status": "processing",
-                    "progress": 0
-                }},
-                upsert=True
-            )
-
-            # 验证输入
-            assert len(AK) >= parallel_num, '请提供足够的AK和SK'
-
-            # 创建保存目录
-            os.makedirs(save_path, exist_ok=True)
-
-            # 获取不带扩展名的文件名
-            base_filename = filename.rsplit('.', 1)[0]
-
-            # 检查是否已有记录，如果有，重置进度
-            existing_record = await self.tex_records.find_one({"input_file": filename})
-            if existing_record:
-                await self.tex_records.update_one(
-                    {"_id": existing_record["_id"]},
-                    {"$set": {"status": "processing", "progress": 0}}
-                )
-            else:
-                # 创建新记录
-                record = TexConversionRecord(
-                    input_file=filename,
-                    status="processing",
-                    model_name=model_name,
-                    save_path=save_path,
-                    progress=0  # 初始化进度为 0
-                )
-                result = await self.tex_records.insert_one(record.dict(by_alias=True))
-                record_id = result.inserted_id
-
+        # 使用上下文管理器创建线程池
+        with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
             try:
-                # 文本预处理阶段 - 10%
+                # 初始化进度为0
                 await self.tex_records.update_one(
                     {"input_file": filename},
-                    {"$set": {"progress": 10}}
+                    {"$set": {
+                        "status": "processing",
+                        "progress": 0
+                    }},
+                    upsert=True
                 )
 
-                # 切分文本
-                text_chunks = split_text_into_chunks(parallel_num, content)
-                total_chunks = len(text_chunks)
-                processed_chunks = 0
+                # 验证输入
+                assert len(AK) >= parallel_num, '请提供足够的AK和SK'
 
-                # 创建任务列表 - 20%
-                await self.tex_records.update_one(
-                    {"input_file": filename},
-                    {"$set": {"progress": 20}}
-                )
+                # 创建保存目录
+                os.makedirs(save_path, exist_ok=True)
 
-                tasks = []
-                for i, chunk in enumerate(text_chunks):
-                    task = self._process_chunk_with_api(
-                        chunk,
-                        AK[i % len(AK)],
-                        SK[i % len(SK)],
-                        model_name
+                # 获取不带扩展名的文件名
+                base_filename = filename.rsplit('.', 1)[0]
+
+                # 检查是否已有记录，如果有，重置进度
+                existing_record = await self.tex_records.find_one({"input_file": filename})
+                if existing_record:
+                    await self.tex_records.update_one(
+                        {"_id": existing_record["_id"]},
+                        {"$set": {"status": "processing", "progress": 0}}
                     )
-                    tasks.append(task)
+                else:
+                    # 创建新记录
+                    record = TexConversionRecord(
+                        input_file=filename,
+                        status="processing",
+                        model_name=model_name,
+                        save_path=save_path,
+                        progress=0  # 初始化进度为 0
+                    )
+                    result = await self.tex_records.insert_one(record.dict(by_alias=True))
+                    record_id = result.inserted_id
 
-                # 使用线程池异步执行任务
-                results = []
-                loop = asyncio.get_event_loop()
-                
-                # 文本处理阶段 - 20% to 80%
-                for i, future in enumerate(asyncio.as_completed([
-                    loop.run_in_executor(self.executor, task) for task in tasks
-                ])):
-                    chunk_result = await future
-                    results.extend(chunk_result)
-                    
-                    # 更新进度 - 即使只有一个chunk也会有渐进的进度
-                    processed_chunks += 1
-                    if total_chunks == 1:
-                        # 如果只有一个chunk，分多个步骤显示进度
-                        progress_steps = [30, 40, 50, 60, 70]
-                        progress = progress_steps[min(len(progress_steps)-1, i)]
-                    else:
-                        # 多个chunks时的正常进度计算
-                        progress = int(20 + (processed_chunks / total_chunks * 60))
-                    
+                try:
+                    # 文本预处理阶段 - 10%
                     await self.tex_records.update_one(
                         {"input_file": filename},
-                        {"$set": {"progress": progress}}
+                        {"$set": {"progress": 10}}
                     )
 
-                # 准备保存 - 90%
-                await self.tex_records.update_one(
-                    {"input_file": filename},
-                    {"$set": {"progress": 90}}
-                )
+                    # 切分文本
+                    text_chunks = split_text_into_chunks(parallel_num, content)
+                    total_chunks = len(text_chunks)
+                    processed_chunks = 0
 
-                # 合并所有LaTeX内容
-                combined_tex = '\n'.join(results)
+                    # 创建任务列表 - 20%
+                    await self.tex_records.update_one(
+                        {"input_file": filename},
+                        {"$set": {"progress": 20}}
+                    )
 
-                # 准备保存的数据格式
-                data_to_save = [
-                    {"id": i + 1, "chunk": result}
-                    for i, result in enumerate(results)
-                ]
+                    # 使用线程池异步执行任务
+                    results = []
+                    loop = asyncio.get_event_loop()
+                    
+                    # 创建任务列表
+                    futures = []
+                    for i, chunk in enumerate(text_chunks):
+                        future = loop.run_in_executor(
+                            executor,
+                            self._process_chunk_with_api,
+                            chunk,
+                            AK[i % len(AK)],
+                            SK[i % len(SK)],
+                            model_name
+                        )
+                        futures.append(future)
+                    
+                    # 文本处理阶段 - 20% to 80%
+                    for i, future in enumerate(asyncio.as_completed(futures)):
+                        try:
+                            chunk_result = await future
+                            results.extend(chunk_result)
+                            
+                            # 更新进度 - 即使只有一个chunk也会有渐进的进度
+                            processed_chunks += 1
+                            if total_chunks == 1:
+                                # 如果只有一个chunk，分多个步骤显示进度
+                                progress_steps = [30, 40, 50, 60, 70]
+                                progress = progress_steps[min(len(progress_steps)-1, i)]
+                            else:
+                                # 多个chunks时的正常进度计算
+                                progress = int(20 + (processed_chunks / total_chunks * 60))
+                            
+                            await self.tex_records.update_one(
+                                {"input_file": filename},
+                                {"$set": {"progress": progress}}
+                            )
+                        except Exception as e:
+                            logger.error(f"处理chunk失败: {str(e)}")
+                            # 继续处理其他chunks
+                            continue
 
-                # 生成简化的保存路径
-                tex_file_path = os.path.join(
-                    save_path,
-                    'tex_files',
-                    f'{base_filename}.json'  # 修改为.json后缀
-                )
-                os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
+                    # 准备保存 - 90%
+                    await self.tex_records.update_one(
+                        {"input_file": filename},
+                        {"$set": {"progress": 90}}
+                    )
 
-                # 保存为JSON格式
-                with open(tex_file_path, 'w', encoding='utf-8') as json_file:
-                    json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
+                    # 合并所有LaTeX内容
+                    combined_tex = '\n'.join(results)
 
-                # 完成 - 100%
-                await self.tex_records.update_one(
-                    {"input_file": filename},
-                    {
-                        "$set": {
-                            "status": "completed",
-                            "content": data_to_save,
-                            "save_path": tex_file_path,
-                            "progress": 100
+                    # 准备保存的数据格式
+                    data_to_save = [
+                        {"id": i + 1, "chunk": result}
+                        for i, result in enumerate(results)
+                    ]
+
+                    # 生成简化的保存路径
+                    tex_file_path = os.path.join(
+                        save_path,
+                        'tex_files',
+                        f'{base_filename}.json'  # 修改为.json后缀
+                    )
+                    os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
+
+                    # 保存为JSON格式
+                    with open(tex_file_path, 'w', encoding='utf-8') as json_file:
+                        json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
+
+                    # 完成 - 100%
+                    await self.tex_records.update_one(
+                        {"input_file": filename},
+                        {
+                            "$set": {
+                                "status": "completed",
+                                "content": data_to_save,
+                                "save_path": tex_file_path,
+                                "progress": 100
+                            }
                         }
+                    )
+
+                    # 更新上传文件的状态为completed
+                    await self.db.llm_kit.uploaded_files.update_one(
+                        {"filename": filename},
+                        {"$set": {"status": "completed"}}
+                    )
+
+                    # 同时更新二进制文件集合中的状态（如果存在）
+                    await self.db.llm_kit.uploaded_binary_files.update_one(
+                        {"filename": filename},
+                        {"$set": {"status": "completed"}}
+                    )
+
+                    # 添加一条新记录，使用简化的文件名
+                    saved_file_record = {
+                        "input_file": os.path.basename(tex_file_path),
+                        "original_file": filename,
+                        "status": "completed",
+                        "content": data_to_save,  # 使用JSON格式的数据
+                        "created_at": datetime.now(timezone.utc),
+                        "save_path": tex_file_path,
+                        "model_name": model_name
                     }
-                )
+                    await self.tex_records.insert_one(saved_file_record)
 
-                # 更新上传文件的状态为completed
-                await self.db.llm_kit.uploaded_files.update_one(
-                    {"filename": filename},
-                    {"$set": {"status": "completed"}}
-                )
+                    return {
+                        "filename": os.path.basename(tex_file_path),
+                        "save_path": tex_file_path,
+                        "content": data_to_save
+                    }
 
-                # 同时更新二进制文件集合中的状态（如果存在）
-                await self.db.llm_kit.uploaded_binary_files.update_one(
-                    {"filename": filename},
-                    {"$set": {"status": "completed"}}
-                )
+                except Exception as e:
+                    # 发生错误时保持当前进度，只更新状态
+                    await self.tex_records.update_one(
+                        {"input_file": filename},
+                        {"$set": {"status": "failed", "error_message": str(e)}}
+                    )
 
-                # 添加一条新记录，使用简化的文件名
-                saved_file_record = {
-                    "input_file": os.path.basename(tex_file_path),
-                    "original_file": filename,
-                    "status": "completed",
-                    "content": data_to_save,  # 使用JSON格式的数据
-                    "created_at": datetime.now(timezone.utc),
-                    "save_path": tex_file_path,
-                    "model_name": model_name
-                }
-                await self.tex_records.insert_one(saved_file_record)
+                    # 更新上传文件的状态为failed
+                    await self.db.llm_kit.uploaded_files.update_one(
+                        {"filename": filename},
+                        {"$set": {"status": "failed"}}
+                    )
 
-                return {
-                    "filename": os.path.basename(tex_file_path),
-                    "save_path": tex_file_path,
-                    "content": data_to_save
-                }
+                    # 同时更新二进制文件的状态（如果存在）
+                    await self.db.llm_kit.uploaded_binary_files.update_one(
+                        {"filename": filename},
+                        {"$set": {"status": "failed"}}
+                    )
+
+                    raise e
 
             except Exception as e:
-                # 发生错误时保持当前进度，只更新状态
-                await self.tex_records.update_one(
-                    {"input_file": filename},
-                    {"$set": {"status": "failed", "error_message": str(e)}}
-                )
-
-                # 更新上传文件的状态为failed
-                await self.db.llm_kit.uploaded_files.update_one(
-                    {"filename": filename},
-                    {"$set": {"status": "failed"}}
-                )
-
-                # 同时更新二进制文件的状态（如果存在）
-                await self.db.llm_kit.uploaded_binary_files.update_one(
-                    {"filename": filename},
-                    {"$set": {"status": "failed"}}
-                )
-
-                raise e
-
-        except Exception as e:
-            import traceback
-            await self._log_error(str(e), "convert_to_latex", traceback.format_exc())
-            raise Exception(f"转换失败: {str(e)}")
+                import traceback
+                await self._log_error(str(e), "convert_to_latex", traceback.format_exc())
+                raise Exception(f"转换失败: {str(e)}")
 
     async def get_tex_records(self):
         """获取最近一次的LaTeX转换历史记录"""
