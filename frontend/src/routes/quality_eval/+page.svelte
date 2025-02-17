@@ -287,7 +287,7 @@
             </div>
         </AccordionItem>
     </Accordion>
-</div>
+  </div>
   <div>
     <div class="m-2">
       <Accordion>
