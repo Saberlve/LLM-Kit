@@ -19,14 +19,14 @@
     let domain1 = '';
     let showDeleteConfirmation = false;
     let filesLoaded = false;
-    let successMessage = null;
+    let successMessage = null; // Remove global success message for generation
     let parallelNum = 1;
     let parallelNum1 = 1;
     let domain = '';
     let savePath = '';
     let selectedModel = 'erine';
     $: parallelNum = parseInt(String(parallelNum), 10) || 1;
-    $: parallelNum1 = parseInt(String(parallelNum), 10) || 1;
+    $: parallelNum1 = parseInt(String(parallelNum1), 10) || 1;
     $: numSKAKInputs = parallelNum;
     $: numSKAKInputs1 = parallelNum1;
     $: updatedSKs = [...Array(numSKAKInputs).keys()].map(() => '');
@@ -67,6 +67,7 @@
         selectedFiles = selectedFiles.includes(file)
             ? selectedFiles.filter(f => f !== file)
             : [...selectedFiles, file];
+        selectedFiles1 = selectedFiles; // sync selectedFiles1 with selectedFiles
         updateSelectAllCheckbox(); // Update the "select all" checkbox state
     };
 
@@ -81,10 +82,12 @@
         if (selectAllChecked) {
             console.log("selectAllChecked is TRUE - Attempting to select ALL files.");
             selectedFiles = [...uploadedFiles];
+            selectedFiles1 = [...uploadedFiles]; // sync selectedFiles1 with selectedFiles
             console.log("selectedFiles AFTER select ALL:", selectedFiles);
         } else {
             console.log("selectAllChecked is FALSE - Attempting to DESELECT ALL files.");
             selectedFiles = [];
+            selectedFiles1 = []; // sync selectedFiles1 with selectedFiles
             console.log("selectedFiles AFTER deselect ALL files.");
         }
 
@@ -94,6 +97,7 @@
 
         // 尝试强制组件重新评估 selectedFiles
         selectedFiles = selectedFiles; // 关键行: 重新赋值 selectedFiles
+        selectedFiles1 = selectedFiles1; // 关键行: 重新赋值 selectedFiles1
     };
     const updateSelectAllCheckbox = () => {
         if (!uploadedFiles.length) {
@@ -155,12 +159,13 @@
                     });
                     return {
                         ...file,
-                        status:{1:statusResponse.data.exists,2:statusResponse1.data.exists}
-
+                        status:{1:statusResponse.data.exists,2:statusResponse1.data.exists},
+                        qa_status_message: null, // Initialize qa_status_message
+                        cot_status_message: null // Initialize cot_status_message
                     };
                 } catch (error) {
                     console.error('Error fetching status for file', file.name, error);
-                    return { ...file, status:{1:-1,2:-1} };
+                    return { ...file, status:{1:-1,2:-1}, qa_status_message: null, cot_status_message: null}; // Initialize with null status message
                 }
             }));
 
@@ -183,32 +188,47 @@
         }
 
         try {
-            const fileNamesToDelete = selectedFiles.map(file => file.name);
-            const response = await axios.post(
-                'http://127.0.0.1:8000/parse/delete_files',
-                { files: fileNamesToDelete },
-                { headers: { "Content-Type": "application/json" } }
-            );
+            // Loop through each file and send a delete request one by one
+            for (const file of selectedFiles) {
+                try {
+                    const response = await axios.post(
+                        'http://127.0.0.1:8000/parse/delete_files',
+                        { files: [file.name] }, // Send only one file name at a time
+                        { headers: { "Content-Type": "application/json" } }
+                    );
 
-            if (response.status === 200) {
-                selectedFiles = [];
-                selectAllChecked = false;
-                await fetchFiles();
-                showDeleteConfirmation = false;
-                setTimeout(() => {
-                    successMessage = null;
-                }, 2000);
-            } else {
-                const errorData = await response.json();
-                console.error('Error deleting files:', response.status, errorData);
-                errorMessage = errorData.detail || "Failed to delete files";
+                    if (response.status === 200) {
+                        console.log(`File ${file.name} deleted successfully`);
+                    } else {
+                        const errorData = await response.json();
+                        console.error(`Error deleting file ${file.name}:`, response.status, errorData);
+                        throw new Error(errorData.detail || `Failed to delete file ${file.name}`);
+                    }
+                } catch (error) {
+                    console.error(`Error deleting file ${file.name}:`, error);
+                    errorMessage = `Network error deleting file ${file.name}`;
+                    // Optionally, you can break the loop here if you want to stop on the first error
+                    // break;
+                }
             }
+
+            // After all files are processed, update the UI
+            selectedFiles = [];
+            selectedFiles1 = [];
+            selectAllChecked = false;
+            await fetchFiles();
+            showDeleteConfirmation = false;
+
+            // Clear success message after 2 seconds
+            setTimeout(() => {
+                successMessage = null;
+            }, 2000);
+
         } catch (error) {
-            console.error('Error deleting files:', error);
-            errorMessage = "Network error deleting files";
+            console.error('Error during file deletion process:', error);
+            errorMessage = "An error occurred during the file deletion process";
         }
     };
-
     const generateQAPairs = async () => {
         if (selectedFiles.length === 0) {
             errorMessage = t("data.construct.no_file_selected");
@@ -216,13 +236,23 @@
         }
 
         isGeneratingQA = true;
-        successMessage = t("data.construct.qa_generating_wait"); // Inform user to wait
-        setTimeout(() => { successMessage = null; }, 5000); // Clear message after 5 seconds if needed, or upon actual success
+
+
+        let updatedFiles = uploadedFiles.map(file => {
+            if (selectedFiles.includes(file)) {
+                return {...file, qa_status_message: t("data.construct.latex_converting")}; // Set initial status for selected files
+            }
+            return file;
+        });
+        uploadedFiles = updatedFiles;
 
         try {
             const selectedFileNames = selectedFiles.map(f => f.name);
             for (let i = 0; i < selectedFileNames.length; i++) {
                 const filename = selectedFileNames[i];
+                let currentFileIndex = uploadedFiles.findIndex(file => file.name === filename);
+
+
                 const toTexRequestData = {
                     filename: filename,
                     content: "",
@@ -242,15 +272,16 @@
 
                     if (toTexResponse.status !== 200) {
                         const errorData = await toTexResponse.json();
-                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
-                        return;
+                        const message = errorData.detail || t('data.construct.latex_conversion_failed');
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message: message} : file);
+                        continue; // Skip to next file if to_tex fails
                     }
 
                 } catch (toTexError) {
                     console.error('Error converting to LaTeX:', toTexError);
-                    handleError(toTexError);
-                    errorMessage = t('data.construct.latex_conversion_network_error');
-                    return;
+                    const message = t('data.construct.latex_conversion_network_error');
+                    uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message: message} : file);
+                    continue; // Skip to next file if to_tex network error
                 }
 
 
@@ -264,6 +295,9 @@
                     domain: domain,
                 };
 
+                uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message:  t("data.construct.qa_generating")} : file);
+
+
                 try {
                     const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa', requestData, {
                         headers: {
@@ -273,27 +307,33 @@
 
                     if (response.status === 200) {
                         dispatch('qaGenerated', response.data);
-                        successMessage = t("data.construct.qa_generated_success");
-                        selectedFiles = []; //clear all selected files after success
-                        selectAllChecked = false;
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message: t("data.construct.qa_generated_success"), status: {...file.status, 1: 1}} : file);
+
+                        selectedFiles = selectedFiles.filter(f => f.name !== filename); // remove this file from selectedFiles after success
+                        selectedFiles1 = selectedFiles; // sync selectedFiles1 with selectedFiles
+                        successMessage = t("data.construct.qa_all_generated_success"); // Global success message for QA
                         setTimeout(() => {
                             successMessage = null;
                         }, 2000);
 
-                        await fetchFiles();
+
                     } else {
                         const errorData = await response.json();
-                        errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
-                        return;  // Stop processing this file
+                        const message = errorData.detail || t('data.construct.qa_generation_failed');
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message: message} : file);
+                        await fetchFiles(); // Refresh file status in case backend status is not correctly updated.
+                        continue;  // Continue to next file even if QA generation fails for one
                     }
 
                 } catch (error) {
                     console.error('Error generating QA pairs:', error);
-                    handleError(error);
-                    errorMessage = t('data.construct.qa_generation_network_error');
-                    return; // Stop processing this file
+                    const message = t('data.construct.qa_generation_network_error');
+                    uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, qa_status_message: message} : file);
+                    await fetchFiles(); // Refresh file status in case backend status is not correctly updated.
+                    continue; // Continue to next file even if QA generation fails for one
                 }
             }
+            await fetchFiles(); // Refresh file status after all files are processed to update status based on backend.
         } catch (error) {
             // This catch block should handle errors outside of the file processing loop
             console.error('Unexpected error in generateQAPairs:', error);
@@ -301,6 +341,7 @@
             errorMessage = t('data.construct.unexpected_error'); //Generic error
         } finally {
             isGeneratingQA = false;
+            // successMessage = null; // Clear global success message after all files are processed (or errors occurred) - No global success message anymore
         }
     };
 
@@ -350,20 +391,29 @@
 
     // COT Functions
     const generateCOTs = async () => {
-        if (selectedFiles.length === 0) {
+        if (selectedFiles1.length === 0) {
             errorMessage = t("data.construct.no_file_selected");
             return;
         }
 
         isGeneratingCOT = true;
-        successMessage = t("data.construct.cot_generating_wait"); // Inform user to wait
-        setTimeout(() => { successMessage = null; }, 5000);
+
+        let updatedFiles = uploadedFiles.map(file => {
+            if (selectedFiles1.includes(file)) {
+                return {...file, cot_status_message: t("data.construct.latex_converting")}; // Set initial status for selected files
+            }
+            return file;
+        });
+        uploadedFiles = updatedFiles;
 
 
         try {
-            const selectedFileNames = selectedFiles.map(f => f.name);
+            const selectedFileNames = selectedFiles1.map(f => f.name);
             for (let i = 0; i < selectedFileNames.length; i++) {
                 const filename = selectedFileNames[i];
+                let currentFileIndex = uploadedFiles.findIndex(file => file.name === filename);
+
+
                 const toTexRequestData = {
                     filename: filename,
                     content: "",
@@ -383,15 +433,16 @@
 
                     if (toTexResponse.status !== 200) {
                         const errorData = await toTexResponse.json();
-                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
-                        return;
+                        const message = errorData.detail || t('data.construct.latex_conversion_failed');
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: message} : file);
+                        continue; // Skip to next file if to_tex fails
                     }
 
                 } catch (toTexError) {
                     console.error('Error converting to LaTeX:', toTexError);
-                    handleError(toTexError);
-                    errorMessage = t('data.construct.latex_conversion_network_error');
-                    return;
+                    const message = t('data.construct.latex_conversion_network_error');
+                    uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: message} : file);
+                    continue; // Skip to next file if to_tex network error
                 }
 
 
@@ -405,6 +456,8 @@
                     domain: domain1,
                 };
 
+                uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: t("data.construct.cot_generating")} : file);
+
 
                 try {
                     const response = await axios.post('http://127.0.0.1:8000/cot/generate', requestData1, {
@@ -415,32 +468,40 @@
 
                     if (response.status === 200) {
                         dispatch('cotGenerated', response.data); // Dispatch a new event for COT if needed
-                        successMessage = t("data.construct.cot_generated_success");
-                        selectedFiles = [];
-                        selectAllChecked = false;
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: t("data.construct.cot_generated_success"), status: {...file.status, 2: 1}} : file);
+                        selectedFiles1 = selectedFiles1.filter(f => f.name !== filename);
+                        selectedFiles = selectedFiles1; // sync selectedFiles with selectedFiles1
+                        successMessage = t("data.construct.cot_all_generated_success"); // Global success message for COT
                         setTimeout(() => {
                             successMessage = null;
                         }, 2000);
-                        await fetchFiles(); // Refresh file status
+
+
                     } else {
 
-                        const errorData = await response.JSON();
-                        errorMessage = errorData.detail || t('data.construct.cot_generation_failed');
-                        return;
+                        const errorData = await response.json();
+                        const message = errorData.detail || t('data.construct.cot_generation_failed');
+                        uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: message} : file);
+                        await fetchFiles(); // Refresh file status in case backend status is not correctly updated.
+                        continue;
                     }
                 } catch (error) {
                     console.error('Error generating COT:', error);
                     handleError(error);
-                    errorMessage = t('data.construct.cot_generation_network_error');
-                    return;
+                    const message = t('data.construct.cot_generation_network_error');
+                    uploadedFiles = uploadedFiles.map((file, index) => index === currentFileIndex ? {...file, cot_status_message: message} : file);
+                    await fetchFiles(); // Refresh file status in case backend status is not correctly updated.
+                    continue;
                 }
             }
+            await fetchFiles(); // Refresh file status after all files are processed to update status based on backend.
         } catch (error) {
             console.error('Unexpected error in generateCOTs:', error);
             handleError(error);
             errorMessage = t('data.construct.unexpected_error');
         } finally {
             isGeneratingCOT = false;
+            // successMessage = null; // Clear global success message after all files are processed (or errors occurred) - No global success message anymore
         }
     };
 
@@ -497,7 +558,7 @@
     {#if successMessage}
         <!-- 显示成功的提示消息 -->
         <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-            {successMessage}
+            <strong class="font-bold">{t("general.success")}!</strong> {successMessage}
         </div>
     {/if}
 
@@ -545,9 +606,9 @@
                                                             {t("data.construct.status_generated")}
                                                         </Button>
                                                     {:else}
-                                                        <span class="px-2 py-1 text-sm rounded-full"
-                                                              class:bg-yellow-100={file.status[1]===0}
-                                                              class:bg-gray-100={file.status[1]===-1}>
+                                                        <span class="status-indicator"
+                                                              class:status-generating={file.status[1]===0}
+                                                              class:status-unknown={file.status[1]===-1}>
                                                             {#if file.status[1] === 0}
                                                                 {t("data.construct.status_generating")}
                                                             {:else}
@@ -562,6 +623,24 @@
                                                     {/if}
                                                 </TableBodyCell>
                                             </tr>
+                                            {#if file.qa_status_message}
+                                                <tr>
+                                                    <TableBodyCell colspan="6" class="text-sm italic text-gray-500 text-center">
+                                                        <span class="status-message"
+                                                              class:status-converting={file.qa_status_message === t("data.construct.latex_converting")}
+                                                              class:status-generating-qa={file.qa_status_message === t("data.construct.qa_generating")}
+                                                              class:status-generated-success={file.qa_status_message === t("data.construct.qa_generated_success")}
+                                                              class:status-generation-failed={
+                                                                  file.qa_status_message === t('data.construct.qa_generation_failed') ||
+                                                                  file.qa_status_message === t('data.construct.qa_generation_network_error') ||
+                                                                  file.qa_status_message === t('data.construct.latex_conversion_failed') ||
+                                                                  file.qa_status_message === t('data.construct.latex_conversion_network_error')
+                                                              }>
+                                                            {file.qa_status_message}
+                                                        </span>
+                                                    </TableBodyCell>
+                                                </tr>
+                                            {/if}
                                         {/each}
                                     </TableBody>
                                 </Table>
@@ -707,7 +786,7 @@
     {#if successMessage}
         <!-- 显示成功的提示消息 -->
         <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-            {successMessage}
+            <strong class="font-bold">{t("general.success")}!</strong> {successMessage}
         </div>
     {/if}
 
@@ -755,9 +834,9 @@
                                                             {t("data.construct.status_generated")}
                                                         </Button>
                                                     {:else}
-                                                        <span class="px-2 py-1 text-sm rounded-full"
-                                                              class:bg-yellow-100={file.status[2]===0}
-                                                              class:bg-gray-100={file.status[2]===-1}>
+                                                        <span class="status-indicator"
+                                                              class:status-generating={file.status[2]===0}
+                                                              class:status-unknown={file.status[2]===-1}>
                                                             {#if file.status[2] === 0}
                                                                 {t("data.construct.status_generating")}
                                                             {:else}
@@ -772,6 +851,24 @@
                                                     {/if}
                                                 </TableBodyCell>
                                             </tr>
+                                            {#if file.cot_status_message}
+                                                <tr>
+                                                    <TableBodyCell colspan="6" class="text-sm italic text-gray-500 text-center">
+                                                        <span class="status-message"
+                                                              class:status-converting={file.cot_status_message === t("data.construct.latex_converting")}
+                                                              class:status-generating-cot={file.cot_status_message === t("data.construct.cot_generating")}
+                                                              class:status-generated-success={file.cot_status_message === t("data.construct.cot_generated_success")}
+                                                              class:status-generation-failed={
+                                                                  file.cot_status_message === t('data.construct.cot_generation_failed') ||
+                                                                  file.cot_status_message === t('data.construct.cot_generation_network_error') ||
+                                                                  file.cot_status_message === t('data.construct.latex_conversion_failed') ||
+                                                                  file.cot_status_message === t('data.construct.latex_conversion_network_error')
+                                                              }>
+                                                            {file.cot_status_message}
+                                                        </span>
+                                                    </TableBodyCell>
+                                                </tr>
+                                            {/if}
                                         {/each}
                                     </TableBody>
                                 </Table>
@@ -903,4 +1000,30 @@
     .space-y-4 > * + * {
         margin-top: 1rem;
     }
+    .status-indicator {
+        @apply px-2 py-1 text-sm rounded-full inline-block;
+    }
+    .status-indicator.status-generating {
+        @apply bg-yellow-100 text-yellow-800;
+    }
+    .status-indicator.status-unknown {
+        @apply bg-gray-100 text-gray-800;
+    }
+
+    .status-message {
+        @apply px-2 py-1 text-sm rounded inline-block;
+    }
+    .status-message.status-converting {
+        @apply bg-yellow-200 text-yellow-900;
+    }
+    .status-message.status-generating-qa, .status-message.status-generating-cot {
+        @apply bg-blue-200 text-blue-900;
+    }
+    .status-message.status-generated-success {
+        @apply bg-green-200 text-green-900;
+    }
+    .status-message.status-generation-failed {
+        @apply bg-red-200 text-red-900;
+    }
+
 </style>
