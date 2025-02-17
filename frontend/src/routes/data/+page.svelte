@@ -22,75 +22,9 @@
   import { goto } from "$app/navigation";
   const t: any = getContext("t");
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
-  import type {
-      APIResponse,
-      UploadResponse,
-      ParseResponse,
-      TaskProgressResponse,
-      ParseHistoryResponse,
-      UnifiedFileListResponse
-    } from '../../class/APIResponse';
-    import type {
-      UploadedFile,
-      UploadedBinaryFile,
-      UnifiedFile
-    } from '../../class/FileTypes';
+
   // --- Types ---
 
-<<<<<<< HEAD
-  // interface APIResponse {
-  //   status: "success" | "fail";
-  //   message: string;
-  //   data: any;
-  // }
-
-  // interface UploadResponse extends APIResponse {
-  //   data: { file_id: string };
-  // }
-
-  // interface ParseResponse extends APIResponse {
-  //   data: { record_id: string };
-  // }
-
-  // interface TaskProgressResponse extends APIResponse {
-  //   data: { progress: number, status: string, task_type: string };
-  // }
-
-  // interface ParseHistoryResponse extends APIResponse {
-  //   data: { exists: number };
-  // }
-
-  // interface UploadedFile {
-  //   file_id: string;
-  //   filename: string;
-  //   file_type: string;
-  //   size: number;
-  //   status: string;
-  //   created_at: string;
-  //   type: string;
-  //   parseStatus?: string;
-  //   parseProgress?: number;
-  //   recordId?: string | null;
-  // }
-  // interface UploadedBinaryFile {
-  //   file_id: string;
-  //   filename: string;
-  //   file_type: string;
-  //   mime_type: string;
-  //   size: number;
-  //   status: string;
-  //   created_at: string;
-  //   type: string;
-  //   parseStatus?: string;
-  //   parseProgress?: number;
-  //   recordId?: string | null;
-  // }
-
-  // type UnifiedFile = UploadedFile | UploadedBinaryFile;
-  // interface UnifiedFileListResponse extends APIResponse {
-  //   data: UnifiedFile[];
-  // }
-=======
   interface APIResponse {
     status: "success" | "fail";
     message: string;
@@ -143,7 +77,6 @@
   interface UnifiedFileListResponse extends APIResponse {
     data: UnifiedFile[];
   }
->>>>>>> 13a4339c651a2c5b1e19728862427996025cfa6f
 
   // --- Component State ---
   let loading = false;
