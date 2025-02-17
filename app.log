@@ -3805,3 +3805,20 @@ fastapi.exceptions.HTTPException: 404: 文件 哈尔滨工业大学.txt 未找�
 2025-02-17 20:14:27,242 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: 'list' object is not callable
 2025-02-17 20:15:17,889 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: 'list' object is not callable
 2025-02-17 20:24:43,629 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:49:18,781 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:52:45,576 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:54:00,193 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:54:20,633 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:56:51,493 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 20:57:30,833 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 21:08:37,795 - app.components.routers.to_tex - ERROR - 转换失败: 转换失败: [WinError 183] 当文件已存在时，无法创建该文件。: 'ceshi.txt'
+2025-02-17 21:13:29,103 - app.components.routers.qa_generate - ERROR - 生成问答对失败: 404: 文件 新建 文本文档.txt 未找到
+Traceback (most recent call last):
+  File "D:\pyproject\test2\LLM-Kit\app\components\routers\qa_generate.py", line 96, in generate_qa_pairs
+    raise HTTPException(
+fastapi.exceptions.HTTPException: 404: 文件 新建 文本文档.txt 未找到
+2025-02-17 21:40:02,700 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：testtext.txt
+2025-02-17 21:40:28,611 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\testtext_cot.json
+2025-02-17 21:43:21,326 - app.components.services.cot_generate_service - INFO - 成功删除文件：result\cot\testtext_cot.json
+2025-02-17 21:43:55,301 - app.components.services.cot_generate_service - INFO - 开始生成COT，模型：erine，文件名：testtext.txt
+2025-02-17 21:44:21,518 - app.components.services.cot_generate_service - INFO - COT结果已保存到：result\cot\testtext_cot.json

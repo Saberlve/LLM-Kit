@@ -965,6 +965,30 @@ async def delete_files(request: Request):
     for filename in files_to_delete["files"]:
         parsed_filename = f"{filename}_parsed.txt"
         file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
+
+        PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+        raw_filename = filename.split('.')[0]
+        parsed_filename1 = f"{raw_filename}.json"
+        file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
+
+
+        PARSED_FILES_DIR2 = "result\qas"
+        PARSED_FILES_DIR3 = f"{filename}\\tex_files"
+
+        filename3 = filename.split('.')[0]
+        parsed_filename2 = f"{filename3}_qa.json"
+        file_path2 = os.path.join(PARSED_FILES_DIR2, parsed_filename2)
+
+        parsed_filename3 = f"{filename3}.json"
+        file_path3 = os.path.join(PARSED_FILES_DIR3, parsed_filename3)
+
+
+        if os.path.exists(file_path1):
+            os.remove(file_path1)
+        if os.path.exists(file_path2):
+            os.remove(file_path2)
+        if os.path.exists(file_path3):
+            os.remove(file_path3)
         if os.path.exists(file_path):
             os.remove(file_path)
             return {"status": "success"}

@@ -79,6 +79,7 @@ async def convert_to_latex(
         async with semaphore:
             try:
                 filename = request.filename
+                print(filename)
                 PARSED_FILES_DIR1 = f"{filename}\\tex_files"
                 raw_filename = filename.split('.')[0]
                 parsed_filename1 = f"{raw_filename}.json"
