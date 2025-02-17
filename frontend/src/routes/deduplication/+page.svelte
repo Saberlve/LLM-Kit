@@ -1,12 +1,5 @@
 <script lang="ts">
   import type DatasetEntry from "../../class/DatasetEntry";
-  import {
-    Accordion,
-    AccordionItem,
-    Button,
-    Input,
-    Checkbox
-  } from "flowbite-svelte";
   import axios from "axios";
   import { page } from "$app/stores";
   import { getContext } from "svelte";
@@ -17,6 +10,35 @@
   import DatasetTable from "./DatasetTable.svelte";
   import { onDestroy, onMount } from "svelte";
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
+  import type EvalEntry from "../../class/EvalEntry";
+  import { PlusOutline } from "flowbite-svelte-icons";
+  import {
+    Accordion,
+    AccordionItem,
+    Button,
+    Checkbox,
+    Table,
+    TableHead,
+    TableHeadCell,
+    TableBody,
+    TableBodyCell,
+    Input,
+    Progressbar,
+    Modal,
+  } from "flowbite-svelte";
+  import type {
+    APIResponse,
+    UploadResponse,
+    ParseResponse,
+    TaskProgressResponse,
+    ParseHistoryResponse,
+    UnifiedFileListResponse
+  } from '../../class/APIResponse';
+  import type {
+    UploadedFile,
+    UploadedBinaryFile,
+    UnifiedFile
+  } from '../../class/Filetypes';
 
   let entries: Array<DatasetEntry> = [];
   async function fetch_dataset_entries() {
@@ -121,55 +143,58 @@
 <ActionPageTitle returnTo={"/data"} title={t("deduplication.title")}/>
 
 {#if !deduplicationing}
-
-  <div class="m-2 p-2">
-    <span>{t("deduplication.p1")}</span>
-    <DatasetTable datasetEntries={entries} noOperation={true} on:modified={async (_) => {
-      await fetch_dataset_entries();
-    }} selectable={true} bind:selectedDatasetId={selectedDatasetId}/>
+<div class="w-full flex flex-col">
+  {#if errorMessage}
+  <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+    {errorMessage}
   </div>
-
-  <div>
-    <div class="m-2">
-      <Accordion>
+  {/if}
+  <div class="m-2">
+    <Accordion>
         <AccordionItem open={true}>
-          <span slot="header">{t("deduplication.zone")}</span>
-          <div class="justify-end items-center text-black">
-            <div class="m-2 p-2 flex flex-row items-center gap-2">
-              <Checkbox bind:checked={dedupByAnswer}>{t('deduplication.dedup_by_answer')}</Checkbox>
+            <span slot="header">{t("data.uploader.uploaded_files")}</span>
+            <div class="overflow-x-auto" style="max-height: 600px;">
+                <Table striped={true}>
+                    <TableHead>
+                        {#each uploaded_file_heads as head}
+                            <TableHeadCell>{head}</TableHeadCell>
+                        {/each}
+                    </TableHead>
+                    <TableBody>
+                        {#each uploadedFiles as file}
+                            <tr>
+                                <TableBodyCell style="overflow-x: auto; white-space: nowrap; max-width: 300px;">
+                                    <div style="overflow-x: auto; white-space: nowrap;">{file.filename}</div>
+                                </TableBodyCell>
+                                <TableBodyCell>{file.file_type || file.mime_type}</TableBodyCell>
+                                <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
+                                <TableBodyCell>{file.created_at.substring(0, 19)}</TableBodyCell>
+                                <TableBodyCell>
+                                    {file.status === 'parsed' ? t("data.uploader.parsed") : (file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending"))}
+                                </TableBodyCell>
+                            </tr>
+                            {#if file.parseStatus}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="flex flex-row items-center gap-2">
+                                            <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
+                                            {#if file.parseStatus === 'processing'}
+                                                <Progressbar progress={file.parseProgress} size="sm" />
+                                            {:else if file.parseStatus === 'completed'}
+                                                <span class="text-green-500">({t("data.uploader.completed")})</span>
+                                            {:else if file.parseStatus === 'failed'}
+                                                <span class="text-red-500">({t("data.uploader.failed")})</span>
+                                            {/if}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {/if}
+                        {/each}
+                    </TableBody>
+                </Table>
             </div>
-            <div class="m-2 p-2">
-              <span>{t("deduplication.min_answer_length")}</span>
-              <Input
-                      type="number"
-                      aria-describedby="helper-text-explanation"
-                      class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                      bind:value={minAnswerLength}
-              />
-            </div>
-            <div class="m-2 p-2">
-              <span>{t("data.filter.name")}</span>
-              <input
-                      type="text"
-                      aria-describedby="helper-text-explanation"
-                      class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                      bind:value={name}
-              />
-            </div>
-
-            <div class="m-2 p-2">
-              <span>{t("data.filter.des")}</span>
-              <input
-                      type="text"
-                      aria-describedby="helper-text-explanation"
-                      class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                      bind:value={description}
-              />
-            </div>
-          </div>
         </AccordionItem>
-      </Accordion>
-    </div>
+    </Accordion>
   </div>
 
   <div class="flex flex-row justify-end gap-2 mt-4">
@@ -180,6 +205,7 @@
       {t("deduplication.begin")}
     </Button>
   </div>
+</div>
 {:else}
   <div>
     <div>{t("deduplication.progress")}{response.progress}%</div>

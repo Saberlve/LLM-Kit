@@ -10,45 +10,48 @@
       eval_entries = (await axios.get("/api/eval")).data;
     });
     import type PoolEntry from "../../class/PoolEntry";
-    import SimplePoolCard from "./QltEvlPoolCard.svelte";
     import type DatasetEntry from "../../class/DatasetEntry";
     import {
       Accordion,
       AccordionItem,
       Button,
-      Checkbox,
+      Table,
+      TableHead,
+      TableHeadCell,
+      TableBody,
+      TableBodyCell,
       Input,
-
-      List
-
+      Progressbar,
+      Modal,
     } from "flowbite-svelte";
     import { page } from "$app/stores";
+    import type {
+      APIResponse,
+      UploadResponse,
+      ParseResponse,
+      TaskProgressResponse,
+      ParseHistoryResponse,
+      UnifiedFileListResponse
+    } from '../../class/APIResponse';
+    import type {
+      UploadedFile,
+      UploadedBinaryFile,
+      UnifiedFile
+    } from '../../class/Filetypes';
 
     import { UPDATE_VIEW_INTERVAL } from "../store";
-    import { goto } from "$app/navigation";
     import DatasetTable from "./DatasetTable.svelte";
     import { onDestroy, onMount } from "svelte";
-    
-    const col_names = ["ID", "名称", "创建时间", "条目数", "描述", ""];
-    let pools = [] as Array<PoolEntry>;
-    onMount(async () => {
-      pools = (await axios.get(`/api/pool/`)).data as Array<PoolEntry>;
-    });
-    let entries: Array<DatasetEntry> = [];
-    
-    async function fetch_dataset_entries() {
-      entries = (await axios.get("http://127.0.0.1:8000/parse/parse/history")).data;
-    }
-    onMount(async () => {
-      await fetch_dataset_entries();
-    })
-    
+
     let selectedDatasetId: number | null = null;
     let name = `quality_control-${Date.now().toString().substring(5, 10)}`;
     let description = `quality_control-${Date.now().toString().substring(5, 10)}`;
     let quality_eval_processing: boolean | null = false;
     let minAnswerLength: number | null = null;
     let quality_controling: boolean = false;
+    let loading = false;
+    let errorMessage: string | null = null;
+    let uploadedFiles: UnifiedFile[] = [];
     let parallel_num: number | null = 1;
     let similarity_rate: number = 0.8;
     let coverage_rate: number = 0.8;
@@ -64,6 +67,15 @@
     let modelname: String = 'Qwen';
     let api_keys = []; // 用于存储API-KEY的列表
     let secret_keys = []; // 用于存储SECRET KEY的列表
+    let parsingProgressIntervals: { [fileId: string]: any } = {};
+
+    const uploaded_file_heads = [
+    t("data.uploader.filename"),
+    t("data.uploader.file_type"),
+    t("data.uploader.size"),
+    t("data.uploader.created_at"),
+    t("data.uploader.upload_status"),
+    ]
 
     // 当parallel_num改变时，更新api_keys和secret_keys的长度
     $: {
@@ -75,17 +87,6 @@
     function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
     } 
-
-    let fetch_entries_updater: any;
-    onMount(async () => {
-      fetch_entries_updater = setInterval(
-          fetch_dataset_entries,
-          UPDATE_VIEW_INTERVAL,
-      );
-    });
-    onDestroy(async () => {
-      clearInterval(fetch_entries_updater);
-    });
 
 
     async function quality_eval() {
@@ -145,41 +146,153 @@
     onDestroy(async() => {
       clearInterval(progressInterval);
     });
-  </script>
+
+    async function checkParseHistory(filename: string): Promise<number> {
+    try {
+      const response = await axios.post(
+              "http://127.0.0.1:8000/parse/phistory",
+              { filename },
+              { headers: { "Content-Type": "application/json" } }
+      );
+
+      // 检查响应数据
+      if (response.data && typeof response.data.exists === "number") {
+        return response.data.exists;
+      } else {
+        console.error("Unexpected response format:", response);
+        return 0;
+      }
+    } catch (error) {
+      console.error("Error checking parse history:", error);
+      return 0;
+    }
+  }
+
+    async function fetchUploadedFiles(): Promise<void> {
+    try {
+      const response = await axios.get<UnifiedFileListResponse>(
+            `http://127.0.0.1:8000/parse/files/all`
+      );
+      if (response.data.status === "success") {
+
+        uploadedFiles = response.data.data.map(async file => {
+          let status = file.status;
+          const exists = await checkParseHistory(file.filename);
+          status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
+          return {
+            ...file,
+            status: status,
+            parseStatus: file.parseStatus || "",
+            parseProgress: file.parseProgress || 0,
+            recordId: file.recordId || null
+          };
+        });
+
+        uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
+
+      } else {
+        console.error("Error fetching uploaded files:", response);
+        errorMessage = t("data.uploader.fetch_fail");
+      }
+    } catch (error) {
+      console.error("Error fetching uploaded files:", error);
+      errorMessage = t("data.uploader.fetch_fail");
+    }
+  }
+
+  function formatFileSize(sizeInBytes: number): string {
+    const sizeInKilobytes = sizeInBytes / 1024;
+    const sizeInMegabytes = sizeInKilobytes / 1024;
+
+    if (sizeInMegabytes > 1) {
+      return `${sizeInMegabytes.toFixed(2)} MB`;
+    } else if (sizeInKilobytes > 1) {
+      return `${sizeInKilobytes.toFixed(2)} KB`;
+    } else {
+      return `${sizeInBytes} B`;
+    }
+  }
+
+  let fetchEntriesUpdater: any;
+  onMount(async () => {
+    fetchEntriesUpdater = setInterval(fetchUploadedFiles, UPDATE_VIEW_INTERVAL);
+    await fetchUploadedFiles();
+  });
+
+  onDestroy(() => {
+    clearInterval(fetchEntriesUpdater);
+    for (const intervalId in parsingProgressIntervals) {
+      clearInterval(parsingProgressIntervals[intervalId]);
+    }
+  });
+
+</script>
 
 <ActionPageTitle
   title={t("quality_eval.title")}
   subtitle={t("quality_eval.subtitle")}
 >
-  <!-- <svelte:fragment slot="right">
-    <div class="flex gap-2">
-      <Button color="blue" href="/eval/tasks">
-        <PlusOutline class="sm" />
-        {t("eval.create_task")}
-      </Button>
-    </div>
-  </svelte:fragment> -->
 </ActionPageTitle>
 
-<!-- <div class="w-full grid grid-cols-3">
-  {#each pools as pool}
-    <div class="m-2">
-      <SimplePoolCard {pool} />
-    </div>
-  {/each}
-</div> -->
 {#if !quality_eval_processing}
-  <div class="m-2 p-2">
-    <DatasetTable datasetEntries={entries} noOperation={true} on:modified={async (_) => {
-            await fetch_dataset_entries();
-        }} selectable={true} bind:selectedDatasetId={selectedDatasetId}/>
+<div class="w-full flex flex-col">
+  {#if errorMessage}
+  <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+    {errorMessage}
   </div>
-
+  {/if}
+  <div class="m-2">
+    <Accordion>
+        <AccordionItem open={true}>
+            <span slot="header">{t("data.uploader.uploaded_files")}</span>
+            <div class="overflow-x-auto" style="max-height: 600px;">
+                <Table striped={true}>
+                    <TableHead>
+                        {#each uploaded_file_heads as head}
+                            <TableHeadCell>{head}</TableHeadCell>
+                        {/each}
+                    </TableHead>
+                    <TableBody>
+                        {#each uploadedFiles as file}
+                            <tr>
+                                <TableBodyCell style="overflow-x: auto; white-space: nowrap; max-width: 300px;">
+                                    <div style="overflow-x: auto; white-space: nowrap;">{file.filename}</div>
+                                </TableBodyCell>
+                                <TableBodyCell>{file.file_type || file.mime_type}</TableBodyCell>
+                                <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
+                                <TableBodyCell>{file.created_at.substring(0, 19)}</TableBodyCell>
+                                <TableBodyCell>
+                                    {file.status === 'parsed' ? t("data.uploader.parsed") : (file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending"))}
+                                </TableBodyCell>
+                            </tr>
+                            {#if file.parseStatus}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="flex flex-row items-center gap-2">
+                                            <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
+                                            {#if file.parseStatus === 'processing'}
+                                                <Progressbar progress={file.parseProgress} size="sm" />
+                                            {:else if file.parseStatus === 'completed'}
+                                                <span class="text-green-500">({t("data.uploader.completed")})</span>
+                                            {:else if file.parseStatus === 'failed'}
+                                                <span class="text-red-500">({t("data.uploader.failed")})</span>
+                                            {/if}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {/if}
+                        {/each}
+                    </TableBody>
+                </Table>
+            </div>
+        </AccordionItem>
+    </Accordion>
+</div>
   <div>
     <div class="m-2">
       <Accordion>
         <AccordionItem open={true}>
-          <span slot="header">{t("deduplication.zone")}</span>
+          <span slot="header">{t("quality_eval.params")}</span>
           <div class="justify-end items-center text-black">
             <div class="m-2 p-2">
               <span>{t("quality_eval.parallel_num")}</span>
@@ -341,19 +454,21 @@
                   max="10"
               />
             </div>
+          </div>
         </AccordionItem>
       </Accordion>
     </div>
   </div>
 
-    <div class="flex flex-row justify-end gap-2 mt-4">
-      <Button
-              on:click={quality_eval}
-              disabled={!validFordeduplication}
-      >
-        {t("quality_eval.start")}
-      </Button>
-    </div>
+  <div class="flex flex-row justify-end gap-2 mt-4">
+    <Button
+            on:click={quality_eval}
+            disabled={!validFordeduplication}
+    >
+      {t("quality_eval.start")}
+    </Button>
+  </div>
+</div>
 {:else}
   <div>
     <div>{t("deduplication.progress")}{progress_response.progress}%</div>
