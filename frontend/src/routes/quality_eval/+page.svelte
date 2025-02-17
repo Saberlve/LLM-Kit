@@ -147,7 +147,7 @@
       clearInterval(progressInterval);
     });
 
-    async function checkParseHistory(filename: string): Promise<number> {
+  async function checkParseHistory(filename: string): Promise<number> {
     try {
       const response = await axios.post(
               "http://127.0.0.1:8000/parse/phistory",
@@ -168,7 +168,7 @@
     }
   }
 
-    async function fetchUploadedFiles(): Promise<void> {
+  async function fetchUploadedFiles(): Promise<void> {
     try {
       const response = await axios.get<UnifiedFileListResponse>(
             `http://127.0.0.1:8000/parse/files/all`

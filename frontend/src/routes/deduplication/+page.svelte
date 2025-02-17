@@ -47,7 +47,10 @@
   onMount(async () => {
     await fetch_dataset_entries();
   })
-
+  
+  let errorMessage: string | null = null;
+  let uploadedFiles: UnifiedFile[] = [];
+  let parsingProgressIntervals: { [fileId: string]: any } = {};
   let selectedDatasetId: number | null = null;
   let name = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
   let description = `deduplicationed-${Date.now().toString().substring(5, 10)}`;
@@ -56,6 +59,14 @@
   let minAnswerLength: number = 10;
   let deduplicatedEntries: Array<DatasetEntry> = [];
   let deletedPairs: Array<any> = [];
+
+  const uploaded_file_heads = [
+  t("data.uploader.filename"),
+  t("data.uploader.file_type"),
+  t("data.uploader.size"),
+  t("data.uploader.created_at"),
+  t("data.uploader.upload_status"),
+  ]
 
   $: validFordeduplication = selectedDatasetId !== null;
 
@@ -95,15 +106,83 @@
     }
   }
 
-  let fetch_entries_updater: any;
+  async function checkParseHistory(filename: string): Promise<number> {
+    try {
+      const response = await axios.post(
+              "http://127.0.0.1:8000/parse/phistory",
+              { filename },
+              { headers: { "Content-Type": "application/json" } }
+      );
+
+      // 检查响应数据
+      if (response.data && typeof response.data.exists === "number") {
+        return response.data.exists;
+      } else {
+        console.error("Unexpected response format:", response);
+        return 0;
+      }
+    } catch (error) {
+      console.error("Error checking parse history:", error);
+      return 0;
+    }
+  }
+
+  async function fetchUploadedFiles(): Promise<void> {
+    try {
+      const response = await axios.get<UnifiedFileListResponse>(
+            `http://127.0.0.1:8000/parse/files/all`
+      );
+      if (response.data.status === "success") {
+
+        uploadedFiles = response.data.data.map(async file => {
+          let status = file.status;
+          const exists = await checkParseHistory(file.filename);
+          status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
+          return {
+            ...file,
+            status: status,
+            parseStatus: file.parseStatus || "",
+            parseProgress: file.parseProgress || 0,
+            recordId: file.recordId || null
+          };
+        });
+
+        uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
+
+      } else {
+        console.error("Error fetching uploaded files:", response);
+        errorMessage = t("data.uploader.fetch_fail");
+      }
+    } catch (error) {
+      console.error("Error fetching uploaded files:", error);
+      errorMessage = t("data.uploader.fetch_fail");
+    }
+  }
+
+  function formatFileSize(sizeInBytes: number): string {
+    const sizeInKilobytes = sizeInBytes / 1024;
+    const sizeInMegabytes = sizeInKilobytes / 1024;
+
+    if (sizeInMegabytes > 1) {
+      return `${sizeInMegabytes.toFixed(2)} MB`;
+    } else if (sizeInKilobytes > 1) {
+      return `${sizeInKilobytes.toFixed(2)} KB`;
+    } else {
+      return `${sizeInBytes} B`;
+    }
+  }
+
+  let fetchEntriesUpdater: any;
   onMount(async () => {
-    fetch_entries_updater = setInterval(
-            fetch_dataset_entries,
-            UPDATE_VIEW_INTERVAL,
-    );
+    fetchEntriesUpdater = setInterval(fetchUploadedFiles, UPDATE_VIEW_INTERVAL);
+    await fetchUploadedFiles();
   });
-  onDestroy(async () => {
-    clearInterval(fetch_entries_updater);
+
+  onDestroy(() => {
+    clearInterval(fetchEntriesUpdater);
+    for (const intervalId in parsingProgressIntervals) {
+      clearInterval(parsingProgressIntervals[intervalId]);
+    }
   });
 
   let progress = { "progress": 1, "time": 0 };
@@ -195,6 +274,17 @@
             </div>
         </AccordionItem>
     </Accordion>
+  </div>
+
+  <div>
+    <div class="m-2">
+      <Accordion>
+        <AccordionItem open={true}>
+          <span slot="header">{t("deduplication.params")}</span>
+
+        </AccordionItem>
+      </Accordion>
+    </div>
   </div>
 
   <div class="flex flex-row justify-end gap-2 mt-4">
