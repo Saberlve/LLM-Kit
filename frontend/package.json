@@ -35,7 +35,7 @@
 		"axios": "^1.6.8",
 		"date-fns": "^4.1.0",
 		"flowbite": "^2.3.0",
-		"flowbite-svelte": "^0.47.0",
+		"flowbite-svelte": "^0.47.4",
 		"flowbite-svelte-icons": "^1.5.0",
 		"from": "^0.1.7",
 		"i18next": "^23.10.1",

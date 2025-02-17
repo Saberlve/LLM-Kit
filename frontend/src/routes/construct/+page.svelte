@@ -1,504 +1,906 @@
 <script lang="ts">
-  import axios from "axios";
-  import {
-    Accordion,
-    AccordionItem,
-    Button,
-    Table,
-    TableHead,
-    TableHeadCell,
-    TableBody,
-    TableBodyCell,
-  } from "flowbite-svelte";
-  import { Dropzone } from "flowbite-svelte";
-  import { UPDATE_VIEW_INTERVAL } from "../store";
-  import DatasetTable from "./DatasetTable.svelte";
-  import type DatasetEntry from "../../class/DatasetEntry";
-  import { onDestroy, onMount } from "svelte";
-  import { getContext } from "svelte";
-  import { goto } from "$app/navigation";
-  const t: any = getContext("t");
-  import ActionPageTitle from "../components/ActionPageTitle.svelte";
+    import ActionPageTitle from '../components/ActionPageTitle.svelte';
+    import { Accordion, AccordionItem } from 'flowbite-svelte';
+    import { Table, TableHead, TableHeadCell, TableBody, TableBodyCell } from 'flowbite-svelte';
+    import { Button } from 'flowbite-svelte';
+    import { Modal } from 'flowbite-svelte';
+    import { getContext } from "svelte";
+    import axios from "axios";
+    import { onMount } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
+    import { goto } from '$app/navigation';
+    const dispatch = createEventDispatcher();
 
-  // --- 类型定义 ---
-  interface SubmissionEntry {
-    id: string;
-    name: string;
-    domain: string;
-    file: File;
-    size: string;
-    uploadProgress: number;
-    isBinary: boolean;
-  }
+    const t: any = getContext("t");
+    let errorMessage = null;
+    let uploadedFiles = [];
+    let selectedFiles = [];
+    let selectedFiles1 = [];
+    let domain1 = '';
+    let showDeleteConfirmation = false;
+    let filesLoaded = false;
+    let successMessage = null;
+    let parallelNum = 1;
+    let parallelNum1 = 1;
+    let domain = '';
+    let savePath = '';
+    let selectedModel = 'erine';
+    $: parallelNum = parseInt(String(parallelNum), 10) || 1;
+    $: parallelNum1 = parseInt(String(parallelNum), 10) || 1;
+    $: numSKAKInputs = parallelNum;
+    $: numSKAKInputs1 = parallelNum1;
+    $: updatedSKs = [...Array(numSKAKInputs).keys()].map(() => '');
 
-  interface UploadResponse {
-    status: "success" | "fail";
-    message: string;
-    data: { file_id: string };
-  }
+    let modelOptions = [
+        { name: 'erine', secretKeyRequired: true },
+        { name: 'flash', secretKeyRequired: false },
+        { name: 'lite', secretKeyRequired: false },
+        { name: 'qwen', secretKeyRequired: false },
+    ];
+    let SKs = [];
+    let AKs = [];
+    let SKs1 = [];
+    let AKs1 = [];
+    let errorModalVisible = false;
+    let errorTimeoutId: NodeJS.Timeout | null = null;
+    const errorDuration = 500;
+    $: showSKInputs = (selectedModel =='erine');
+    $: showSKInputs1 = (selectedModel =='erine');
 
-  interface UploadedFile {
-    filename: string;
-    content: string;
-    file_type: string;
-    size: number;
-    status: string;
-    created_at: string;
-  }
-  interface UploadedBinaryFile {
-    filename: string;
-    file_type: string;
-    mime_type: string;
-    size: number;
-    status: string;
-    created_at: string;
-  }
+    let uploaded_file_heads = [t("data.construct.filename"),
+        t("data.uploader.file_type"),
+        t("data.uploader.size"),
+        t("data.uploader.created_at"),
+        t("data.construct.upload_status")
+    ];
 
-  type UnifiedFile = UploadedFile | UploadedBinaryFile;
-  interface UnifiedFileListResponse {
-    status: string;
-    message: string;
-    data: UnifiedFile[];
-  }
-
-  // --- 组件状态 ---
-  let submissions: SubmissionEntry[] = [];
-  let loading = false;
-  let errorMessage: string | null = null;
-  let uploadedFiles: UnifiedFile[] = [];
-  let entries: DatasetEntry[] = [];
-  export let stageEmpty = submissions.length == 0;
-  $: stageEmpty = submissions.length == 0;
+    let selectAllChecked = false;
+    $: selectedFiles = selectedFiles;
+    $: selectedFiles1= selectedFiles;
+    let isGeneratingQA = false;
+    let isGeneratingCOT = false;
 
 
-  // --- 辅助函数 ---
-  function generateUniqueId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  }
-
-  function formatFileSize(sizeInBytes: number): string {
-    const sizeInKilobytes = sizeInBytes / 1024;
-    const sizeInMegabytes = sizeInKilobytes / 1024;
-
-    if (sizeInMegabytes > 1) {
-      return `${sizeInMegabytes.toFixed(2)} MB`;
-    } else if (sizeInKilobytes > 1) {
-      return `${sizeInKilobytes.toFixed(2)} KB`;
-    } else {
-      return `${sizeInBytes} B`;
-    }
-  }
-
-
-  function file_to_default_entry(file: File): SubmissionEntry {
-    return {
-      id: generateUniqueId(),
-      name: file.name.split(".")[0],
-      domain: `Uploaded file ${file.name}`,
-      file: file,
-      size: formatFileSize(file.size),
-      uploadProgress: 0,
-      isBinary: false,
+    // Function to toggle selection of a single file
+    const toggleSelection = (file) => {
+        console.log("Toggling selection for", file.name);
+        selectedFiles = selectedFiles.includes(file)
+            ? selectedFiles.filter(f => f !== file)
+            : [...selectedFiles, file];
+        updateSelectAllCheckbox(); // Update the "select all" checkbox state
     };
-  }
 
-  function file_to_default_binary_entry(file: File): SubmissionEntry {
-    return {
-      id: generateUniqueId(),
-      name: file.name.split(".")[0],
-      domain: `Uploaded file ${file.name}`,
-      file: file,
-      size: formatFileSize(file.size),
-      uploadProgress: 0,
-      isBinary: true,
-    };
-  }
+    // Function to toggle selection of all files
+    const toggleSelectAll = () => {
+        console.log("toggleSelectAll function CALLED. Current selectAllChecked:", selectAllChecked);
+        console.log("Current uploadedFiles:", uploadedFiles);
 
-  function files_to_default_entries(files: File[]): SubmissionEntry[] {
-    return files.map((file) => {
-      const fileType = file.name.split(".").pop()?.toLowerCase();
-      if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
-        return file_to_default_binary_entry(file);
-      } else {
-        return file_to_default_entry(file);
-      }
-    });
-  }
+        selectAllChecked = !selectAllChecked;
+        console.log("selectAllChecked TOGGLED to:", selectAllChecked);
 
-  // --- 事件处理 ---
-  function drop_handle(event: DragEvent) {
-    event.preventDefault();
-    const files_in_items = Array.from(event.dataTransfer.items)
-            .filter((item) => {
-              return item.kind === "file";
-            })
-            .map((item) => {
-              return item.getAsFile();
-            });
-    const files_in_files = Array.from(event.dataTransfer.files);
-    const files = Array.from(new Set([...files_in_items, ...files_in_files]));
-    submissions = [...submissions, ...files_to_default_entries(files)];
-  }
-
-
-  function change_handle(event: any) {
-    event.preventDefault();
-    const files: File[] = Array.from(event.target.files);
-    submissions = [...submissions, ...files_to_default_entries(files)];
-  }
-
-  function updateSubmissionProgress(id: string, progress: number) {
-    submissions = submissions.map((submission) =>
-            submission.id === id ? { ...submission, uploadProgress: progress } : submission
-    );
-  }
-
-  // --- API 函数 ---
-  async function uploadFile(entry: SubmissionEntry): Promise<UploadResponse> {
-    const file = entry.file;
-    try {
-      if (entry.isBinary) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const response = await axios.post<UploadResponse>(
-                `http://127.0.0.1:8000/parse/upload/binary`,
-                formData,
-                {
-                  onUploadProgress: (progressEvent) => {
-                    const percentage = Math.round(
-                            (progressEvent.loaded * 100) / progressEvent.total
-                    );
-                    updateSubmissionProgress(entry.id, percentage);
-                  },
-                }
-        );
-        return response.data;
-      } else {
-        const reader = new FileReader();
-        reader.readAsText(file);
-
-        return await new Promise((resolve, reject) => {
-          reader.onload = async (e) => {
-            const fileContent = e.target.result;
-            try {
-              const response = await axios.post<UploadResponse>(
-                      `http://127.0.0.1:8000/parse/upload`,
-                      {
-                        filename: file.name,
-                        content: fileContent,
-                        file_type: file.name.split(".").pop(),
-                      },
-                      {
-                        onUploadProgress: (progressEvent) => {
-                          const percentage = Math.round(
-                                  (progressEvent.loaded * 100) / progressEvent.total
-                          );
-                          updateSubmissionProgress(entry.id, percentage);
-                        },
-                      }
-              );
-              resolve(response.data);
-            } catch (error) {
-              console.error(`Error uploading file ${file.name}:`, error);
-              reject(error);
-            }
-          };
-        });
-      }
-    } catch (error) {
-      // Error reading the file
-      console.error(`Error processing file ${file.name}:`, error);
-      throw error;
-    }
-  }
-
-  async function fetchDatasetEntries(): Promise<void> {
-    try {
-      entries = (
-              await axios.get<DatasetEntry[]>(
-                      `http://127.0.0.1:8000/parse/parse/history`
-              )
-      ).data;
-    } catch (error) {
-      console.error("Error fetching entries:", error);
-      errorMessage = t("data.uploader.fetch_fail");
-    }
-  }
-
-  async function fetchUploadedFiles(): Promise<void> {
-    try {
-      const response = await axios.get<UnifiedFileListResponse>(
-              `http://127.0.0.1:8000/parse/files/all`
-      );
-      if (response.data.status === "success") {
-        uploadedFiles = response.data.data;
-      } else {
-        console.error("Error fetching uploaded files:", response);
-        errorMessage = t("data.uploader.fetch_fail");
-      }
-    } catch (error) {
-      console.error("Error fetching uploaded files:", error);
-      errorMessage = t("data.uploader.fetch_fail");
-    }
-  }
-
-  // --- 上传逻辑 ---
-  async function submit_handle() {
-    loading = true;
-    errorMessage = null;
-    try {
-      for (const entry of submissions) {
-        const response = await uploadFile(entry);
-
-        if (response.status !== "success") {
-          errorMessage = t("data.uploader.upload_fail") + ":" + entry.file.name;
-          console.error(`Error uploading file ${entry.file.name}:`, response);
+        if (selectAllChecked) {
+            console.log("selectAllChecked is TRUE - Attempting to select ALL files.");
+            selectedFiles = [...uploadedFiles];
+            console.log("selectedFiles AFTER select ALL:", selectedFiles);
         } else {
-          console.log("File uploaded successfully, id is", response.data.file_id);
+            console.log("selectAllChecked is FALSE - Attempting to DESELECT ALL files.");
+            selectedFiles = [];
+            console.log("selectedFiles AFTER deselect ALL files.");
         }
-      }
-      await fetchDatasetEntries();
-      await fetchUploadedFiles();
 
-      submissions = []; // Clear submissions after successful upload
-    } catch (error) {
-      errorMessage = t("data.uploader.upload_fail_all");
-      console.error("Upload failed:", error);
-    } finally {
-      loading = false;
+        updateSelectAllCheckbox();
+        console.log("After updateSelectAllCheckbox, selectAllChecked is:", selectAllChecked);
+        console.log("Final selectedFiles after toggleSelectAll:", selectedFiles);
+
+        // 尝试强制组件重新评估 selectedFiles
+        selectedFiles = selectedFiles; // 关键行: 重新赋值 selectedFiles
+    };
+    const updateSelectAllCheckbox = () => {
+        if (!uploadedFiles.length) {
+            selectAllChecked = false;
+            return;
+        }
+        selectAllChecked = selectedFiles.length === uploadedFiles.length; // Check if all files are selected
+    };
+
+
+    const handleError = (error: any) => {
+        let errorMessageToShow = (error.response && error.response.data && error.response.data.detail) || t("data.construct.qa_generation_network_error");
+        errorModalVisible = true;
+        errorMessage = errorMessageToShow;
+        clearTimeout(errorTimeoutId);
+        errorTimeoutId = setTimeout(() => {
+            errorModalVisible = false;
+            errorMessage = null;
+        }, errorDuration);
+    };
+
+
+
+    function formatFileSize(sizeInBytes: number): string {
+        const sizeInKilobytes = sizeInBytes / 1024;
+        const sizeInMegabytes = sizeInKilobytes / 1024;
+
+        if (sizeInMegabytes > 1) {
+            return `${sizeInMegabytes.toFixed(2)} MB`;
+        } else if (sizeInKilobytes > 1) {
+            return `${sizeInKilobytes.toFixed(2)} KB`;
+        } else {
+            return `${sizeInBytes} B`;
+        }
     }
-  }
 
-  function returnToData() {
-    goto(`/data`);
-  }
+    onMount(async () => {
+        await fetchFiles();
+        filesLoaded = true;
+    });
 
-  let fetch_entries_updater: any;
-  onMount(async () => {
-    fetch_entries_updater = setInterval(
-            fetchDatasetEntries,
-            UPDATE_VIEW_INTERVAL
-    );
-    await fetchUploadedFiles();
-    await fetchDatasetEntries();
-  });
+    const fetchFiles = async () => {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/parse/parse_files');
+            if (!response.ok) {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || "Failed to load files.";
+                return;
+            }
+            const data = await response.json();
 
-  onDestroy(() => {
-    clearInterval(fetch_entries_updater);
-  });
+            const filesWithStatus = await Promise.all(data.map(async (file) => {
+                try {
+                    const statusResponse = await axios.post('http://127.0.0.1:8000/qa/qashistory', {
+                        filename: file.name
+                    });
+                    const statusResponse1 = await axios.post('http://127.0.0.1:8000/cot/cothistory', {
+                        filename: file.name
+                    });
+                    return {
+                        ...file,
+                        status:{1:statusResponse.data.exists,2:statusResponse1.data.exists}
 
-  function remove_from_stage_handle(id: string) {
-    submissions = submissions.filter((entry) => entry.id !== id);
-  }
+                    };
+                } catch (error) {
+                    console.error('Error fetching status for file', file.name, error);
+                    return { ...file, status:{1:-1,2:-1} };
+                }
+            }));
+
+
+            uploadedFiles = filesWithStatus;
+
+            updateSelectAllCheckbox(); // Update "select all" checkbox after loading files
+        } catch (error) {
+            errorMessage = 'Failed to load files';
+            console.error("Error fetching files:", error);
+        }
+    };
+
+
+    // 删除选中文件
+    const deleteSelectedFiles = async () => {
+        if (selectedFiles.length === 0) {
+            console.log("No files selected"); // Debugging
+            return; // Don't proceed if no files are selected
+        }
+
+        try {
+            const fileNamesToDelete = selectedFiles.map(file => file.name);
+            const response = await axios.post(
+                'http://127.0.0.1:8000/parse/delete_files',
+                { files: fileNamesToDelete },
+                { headers: { "Content-Type": "application/json" } }
+            );
+
+            if (response.status === 200) {
+                selectedFiles = [];
+                selectAllChecked = false;
+                await fetchFiles();
+                showDeleteConfirmation = false;
+                setTimeout(() => {
+                    successMessage = null;
+                }, 2000);
+            } else {
+                const errorData = await response.json();
+                console.error('Error deleting files:', response.status, errorData);
+                errorMessage = errorData.detail || "Failed to delete files";
+            }
+        } catch (error) {
+            console.error('Error deleting files:', error);
+            errorMessage = "Network error deleting files";
+        }
+    };
+
+    const generateQAPairs = async () => {
+        if (selectedFiles.length === 0) {
+            errorMessage = t("data.construct.no_file_selected");
+            return;
+        }
+
+        isGeneratingQA = true;
+        successMessage = t("data.construct.qa_generating_wait"); // Inform user to wait
+        setTimeout(() => { successMessage = null; }, 5000); // Clear message after 5 seconds if needed, or upon actual success
+
+        try {
+            const selectedFileNames = selectedFiles.map(f => f.name);
+            for (let i = 0; i < selectedFileNames.length; i++) {
+                const filename = selectedFileNames[i];
+                const toTexRequestData = {
+                    filename: filename,
+                    content: "",
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs : new Array(AKs.length).fill('a'),
+                    AK: AKs.length > 0 ? AKs : [],
+                    parallel_num: parallelNum,
+                    model_name: selectedModel,
+                };
+
+                try {
+                    const toTexResponse = await axios.post('http://127.0.0.1:8000/to_tex/to_tex', toTexRequestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (toTexResponse.status !== 200) {
+                        const errorData = await toTexResponse.json();
+                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
+                        return;
+                    }
+
+                } catch (toTexError) {
+                    console.error('Error converting to LaTeX:', toTexError);
+                    handleError(toTexError);
+                    errorMessage = t('data.construct.latex_conversion_network_error');
+                    return;
+                }
+
+
+                const requestData = {
+                    filename: filename,
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs  :new Array(AKs.length).fill('a'), //Handle empty array
+                    AK: AKs.length > 0 ? AKs : [],  // Ensure 'files' is an array
+                    parallel_num: parallelNum,
+                    model_name: selectedModel,
+                    domain: domain,
+                };
+
+                try {
+                    const response = await axios.post('http://127.0.0.1:8000/qa/generate_qa', requestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (response.status === 200) {
+                        dispatch('qaGenerated', response.data);
+                        successMessage = t("data.construct.qa_generated_success");
+                        selectedFiles = []; //clear all selected files after success
+                        selectAllChecked = false;
+                        setTimeout(() => {
+                            successMessage = null;
+                        }, 2000);
+
+                        await fetchFiles();
+                    } else {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || t('data.construct.qa_generation_failed');
+                        return;  // Stop processing this file
+                    }
+
+                } catch (error) {
+                    console.error('Error generating QA pairs:', error);
+                    handleError(error);
+                    errorMessage = t('data.construct.qa_generation_network_error');
+                    return; // Stop processing this file
+                }
+            }
+        } catch (error) {
+            // This catch block should handle errors outside of the file processing loop
+            console.error('Unexpected error in generateQAPairs:', error);
+            handleError(error);
+            errorMessage = t('data.construct.unexpected_error'); //Generic error
+        } finally {
+            isGeneratingQA = false;
+        }
+    };
+
+    const handleModelChange = (event: Event) => {
+        const selectedOption = event.target as HTMLSelectElement;
+        selectedModel = selectedOption.value;
+        SKs = [];
+        AKs = [];
+        SKs1 = [];
+        AKs1 = [];
+        parallelNum = 1;
+    };
+
+    const deleteQaFile = async (filename: string) => {
+        try {
+            const response = await axios.post('http://127.0.0.1:8000/qa/delete_file', {
+                filename: filename
+            });
+            if (response.status === 200) {
+                successMessage = t("data.construct.qa_delete_success");
+                setTimeout(() => {
+                    successMessage = null;
+                }, 2000);
+                await fetchFiles(); // Refresh file list to update status
+            } else {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || t("data.construct.qa_delete_failed");
+            }
+        } catch (error) {
+            console.error('Error deleting QA file:', error);
+            handleError(error);
+            errorMessage = t("data.construct.qa_delete_network_error");
+        }
+    };
+
+    const previewQaFile = (filename: string) => {
+        goto(`/construct/qa-preview?filename=${filename}`); // Navigate to preview page
+    };
+
+    const previewcotFile = (filename: string) => {
+        goto(`/construct/cot-preview?filename=${filename}`); // Navigate to preview page
+    };
+
+    const previewRawFile = (filename: string) => {
+        goto(`/construct/raw-preview?filename=${filename}`); // Navigate to raw preview page
+    };
+
+    // COT Functions
+    const generateCOTs = async () => {
+        if (selectedFiles.length === 0) {
+            errorMessage = t("data.construct.no_file_selected");
+            return;
+        }
+
+        isGeneratingCOT = true;
+        successMessage = t("data.construct.cot_generating_wait"); // Inform user to wait
+        setTimeout(() => { successMessage = null; }, 5000);
+
+
+        try {
+            const selectedFileNames = selectedFiles.map(f => f.name);
+            for (let i = 0; i < selectedFileNames.length; i++) {
+                const filename = selectedFileNames[i];
+                const toTexRequestData = {
+                    filename: filename,
+                    content: "",
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs1 : new Array(AKs1.length).fill('a'),
+                    AK: AKs1.length > 0 ? AKs1 : [],
+                    parallel_num: parallelNum,
+                    model_name: selectedModel,
+                };
+
+                try {
+                    const toTexResponse = await axios.post('http://127.0.0.1:8000/to_tex/to_tex', toTexRequestData, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (toTexResponse.status !== 200) {
+                        const errorData = await toTexResponse.json();
+                        errorMessage = errorData.detail || t('data.construct.latex_conversion_failed');
+                        return;
+                    }
+
+                } catch (toTexError) {
+                    console.error('Error converting to LaTeX:', toTexError);
+                    handleError(toTexError);
+                    errorMessage = t('data.construct.latex_conversion_network_error');
+                    return;
+                }
+
+
+                const requestData1 = {
+                    filename: filename,
+                    save_path: savePath || selectedFileNames[0],
+                    SK: showSKInputs ? SKs1  :new Array(AKs1.length).fill('a'), //Handle empty array
+                    AK: AKs1.length > 0 ? AKs1 : [],  // Ensure 'files' is an array
+                    parallel_num: parallelNum1,
+                    model_name: selectedModel,
+                    domain: domain1,
+                };
+
+
+                try {
+                    const response = await axios.post('http://127.0.0.1:8000/cot/generate', requestData1, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (response.status === 200) {
+                        dispatch('cotGenerated', response.data); // Dispatch a new event for COT if needed
+                        successMessage = t("data.construct.cot_generated_success");
+                        selectedFiles = [];
+                        selectAllChecked = false;
+                        setTimeout(() => {
+                            successMessage = null;
+                        }, 2000);
+                        await fetchFiles(); // Refresh file status
+                    } else {
+
+                        const errorData = await response.JSON();
+                        errorMessage = errorData.detail || t('data.construct.cot_generation_failed');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error generating COT:', error);
+                    handleError(error);
+                    errorMessage = t('data.construct.cot_generation_network_error');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Unexpected error in generateCOTs:', error);
+            handleError(error);
+            errorMessage = t('data.construct.unexpected_error');
+        } finally {
+            isGeneratingCOT = false;
+        }
+    };
+
+
+    const deleteCotFile = async (filename: string) => {
+        try {
+            const response = await axios.delete(`http://127.0.0.1:8000/cot/file/${filename}`); // Using DELETE endpoint
+            if (response.status === 200) {
+                successMessage = t("data.construct.cot_delete_success");
+                setTimeout(() => {
+                    successMessage = null;
+                }, 2000);
+                await fetchFiles();
+            } else {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || t("data.construct.cot_delete_failed");
+            }
+        } catch (error) {
+            console.error('Error deleting COT file:', error);
+            handleError(error);
+            errorMessage = t("data.construct.cot_delete_network_error");
+        }
+    };
+
+    const previewCotFile = async (filename: string) => {
+        try {
+            const response = await axios.get(`http://127.0.0.1:8000/cot/content/${filename}`);
+            if (response.status === 200) {
+                const cotContent = response.data.data;
+                goto(`/construct/cot-preview?filename=${filename}&content=${encodeURIComponent(cotContent)}`); // Pass content as query param
+            } else {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || t("data.construct.cot_preview_failed");
+            }
+        } catch (error) {
+            console.error('Error previewing COT file:', error);
+            handleError(error);
+            errorMessage = t("data.construct.cot_preview_network_error");
+        }
+    };
+
+
 </script>
 
-<ActionPageTitle returnTo={"/data"} title={t("data.uploader.title")} />
+<ActionPageTitle returnTo="/construct/" title={t("data.construct.title")} />
+
+<div class="w-full flex flex-col">
+    {#if errorMessage}
+        <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {errorMessage}
+        </div>
+    {/if}
+
+    {#if successMessage}
+        <!-- 显示成功的提示消息 -->
+        <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            {successMessage}
+        </div>
+    {/if}
+
+    <div class="m-2">
+        <Accordion>
+            <AccordionItem open={false}>
+                <span slot="header">{t("data.construct.main_settings")}</span>
+                <div class="p-4 space-y-4">
+                    <Accordion>
+                        <AccordionItem open={true}>
+                            <span slot="header">{t("data.construct.uploaded_files")}</span>
+                            <div class="overflow-x-auto max-h-[250px]">
+                                <Table striped={false}>
+                                    <TableHead>
+                                        <TableHeadCell>
+                                            <input type="checkbox" bind:checked={selectAllChecked} on:change={toggleSelectAll} />
+                                        </TableHeadCell>
+                                        {#each uploaded_file_heads as head}
+                                            <TableHeadCell>{head.toLowerCase().replace(' ', '_')}</TableHeadCell>
+                                        {/each}
+                                    </TableHead>
+                                    <TableBody>
+                                        {#each uploadedFiles as file}
+                                            <tr>
+                                                <TableBodyCell>
+                                                    <input
+                                                            type="checkbox"
+                                                            checked={selectedFiles.includes(file)}
+                                                            on:change={() => toggleSelection(file)}
+                                                    />
+                                                </TableBodyCell>
+                                                <TableBodyCell>
+                                                    <Button color="blue" size="xs" on:click={() => previewRawFile(file.name)}>
+                                                        {file.name}
+                                                    </Button>
+                                                </TableBodyCell>
+                                                <TableBodyCell>{file.type}</TableBodyCell>
+                                                <TableBodyCell>{formatFileSize(file.size)} </TableBodyCell>
+                                                <TableBodyCell>
+                                                    {new Date(file.modification_time).toLocaleString()}
+                                                </TableBodyCell>
+                                                <TableBodyCell>
+                                                    {#if file.status[1]===1 }
+                                                        <Button color="green" size="xs" on:click={() => previewQaFile(file.name)}>
+                                                            {t("data.construct.status_generated")}
+                                                        </Button>
+                                                    {:else}
+                                                        <span class="px-2 py-1 text-sm rounded-full"
+                                                              class:bg-yellow-100={file.status[1]===0}
+                                                              class:bg-gray-100={file.status[1]===-1}>
+                                                            {#if file.status[1] === 0}
+                                                                {t("data.construct.status_generating")}
+                                                            {:else}
+                                                                {t("data.construct.status_unknown")}
+                                                            {/if}
+                                                        </span>
+                                                    {/if}
+                                                    {#if file.status[1]===1}
+                                                        <Button color="red" size="xs" on:click={() => deleteQaFile(file.name)}>
+                                                            {t("data.construct.delete_qa_button")}
+                                                        </Button>
+                                                    {/if}
+                                                </TableBodyCell>
+                                            </tr>
+                                        {/each}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div class="m-2 p-2 flex justify-end">
+                                <Button
+                                        color="red"
+                                        on:click={() => {
+                                        showDeleteConfirmation = true;
+                                    }}
+                                        disabled={selectedFiles.length === 0}
+                                >
+                                    {t("data.construct.delete_button")} ({selectedFiles.length})
+                                </Button>
+                            </div>
+                        </AccordionItem>
+                        <AccordionItem open={false}>
+                            <span slot="header">{t("data.construct.qa_generation_settings")}</span>
+                            <div class="p-4 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.parallel_num")}</label>
+                                    <input
+                                            type="number"
+                                            min="1"
+                                            bind:value={parallelNum}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.save_path")}</label>
+                                    <input
+                                            type="text"
+                                            bind:value={savePath}
+                                            placeholder={t("data.construct.save_path_placeholder")}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.model_name")}</label>
+                                    <select bind:value={selectedModel} on:change={handleModelChange}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                        {#each modelOptions as option}
+                                            <option value={option.name}>{t(`data.construct.${option.name}`)}</option>
+                                        {/each}
+                                    </select>
+                                </div>
+
+
+                                {#if showSKInputs}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">{t("data.construct.sk")}</label>
+                                        {#each Array(numSKAKInputs) as _, i}
+                                            <input
+                                                    type="text"
+                                                    placeholder={`SK ${i + 1}`}
+                                                    bind:value={SKs[i]}
+                                                    class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                            />
+                                        {/each}
+                                    </div>
+                                {/if}
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.ak")}</label>
+                                    {#each Array(numSKAKInputs) as _, i}
+                                        <input
+                                                type="text"
+                                                placeholder={`AK ${i + 1}`}
+                                                bind:value={AKs[i]}
+                                                class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                        />
+                                    {/each}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.domain")}</label>
+                                    <input
+                                            type="text"
+                                            bind:value={domain}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </div>
+
+
+                                <Button
+                                        color="blue"
+                                        on:click={generateQAPairs}
+                                        disabled={selectedFiles.length === 0 || isGeneratingQA}
+                                >
+                                    {#if isGeneratingQA}
+                                        {t("data.construct.generating_button_text")}
+                                    {:else}
+                                        {t("data.construct.generate_button")}
+                                    {/if}
+                                </Button>
+                            </div>
+                        </AccordionItem>
+                    </Accordion>
+                </div>
+            </AccordionItem>
+        </Accordion>
+    </div>
+
+
+    {#if errorModalVisible}
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-50">
+            <div class="bg-white p-6 rounded shadow-lg w-1/3 text-center">
+                <p class="text-lg font-medium mb-4">{errorMessage}</p>
+            </div>
+        </div>
+    {/if}
+
+
+    {#if showDeleteConfirmation}
+
+        <div class="fixed inset-0 z-50 flex justify-center items-center bg-gray-800 bg-opacity-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
+                <h3 class="text-xl font-bold mb-4">{t("data.uploader.delete_confirmation_title")}</h3>
+                <p class="mb-4">
+                    {t("data.uploader.delete_confirmation_message", { count: selectedFiles.length })}
+                </p>
+                <div class="flex justify-end gap-3">
+                    <Button color="red" on:click={deleteSelectedFiles}>
+                        {t("data.uploader.delete_confirm_button")}
+                    </Button>
+                    <Button color="gray" on:click={() => showDeleteConfirmation = false}>
+                        {t("data.uploader.delete_cancel_button")}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    {/if}
+</div>
+
+<div class="w-full flex flex-col">
+    {#if errorMessage}
+        <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {errorMessage}
+        </div>
+    {/if}
+
+    {#if successMessage}
+        <!-- 显示成功的提示消息 -->
+        <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+            {successMessage}
+        </div>
+    {/if}
+
+    <div class="m-2">
+        <Accordion>
+            <AccordionItem open={false}>
+                <span slot="header">{t("data.construct.cotgenerate")}</span>
+                <div class="p-4 space-y-4">
+                    <Accordion>
+                        <AccordionItem open={false}>
+                            <span slot="header">{t("data.construct.uploaded_files")}</span>
+                            <div class="overflow-x-auto max-h-[250px]">
+                                <Table striped={false}>
+                                    <TableHead>
+                                        <TableHeadCell>
+                                            <input type="checkbox" bind:checked={selectAllChecked} on:change={toggleSelectAll} />
+                                        </TableHeadCell>
+                                        {#each uploaded_file_heads as head}
+                                            <TableHeadCell>{head.toLowerCase().replace(' ', '_')}</TableHeadCell>
+                                        {/each}
+                                    </TableHead>
+                                    <TableBody>
+                                        {#each uploadedFiles as file}
+                                            <tr>
+                                                <TableBodyCell>
+                                                    <input
+                                                            type="checkbox"
+                                                            checked={selectedFiles1.includes(file)}
+                                                            on:change={() => toggleSelection(file)}
+                                                    />
+                                                </TableBodyCell>
+                                                <TableBodyCell>
+                                                    <Button color="blue" size="xs" on:click={() => previewRawFile(file.name)}>
+                                                        {file.name}
+                                                    </Button>
+                                                </TableBodyCell>
+                                                <TableBodyCell>{file.type}</TableBodyCell>
+                                                <TableBodyCell>{formatFileSize(file.size)} </TableBodyCell>
+                                                <TableBodyCell>
+                                                    {new Date(file.modification_time).toLocaleString()}
+                                                </TableBodyCell>
+                                                <TableBodyCell>
+                                                    {#if file.status[2]===1 }
+                                                        <Button color="green" size="xs" on:click={() => previewcotFile(file.name)}>
+                                                            {t("data.construct.status_generated")}
+                                                        </Button>
+                                                    {:else}
+                                                        <span class="px-2 py-1 text-sm rounded-full"
+                                                              class:bg-yellow-100={file.status[2]===0}
+                                                              class:bg-gray-100={file.status[2]===-1}>
+                                                            {#if file.status[2] === 0}
+                                                                {t("data.construct.status_generating")}
+                                                            {:else}
+                                                                {t("data.construct.status_unknown")}
+                                                            {/if}
+                                                        </span>
+                                                    {/if}
+                                                    {#if file.status[2]===1}
+                                                        <Button color="red" size="xs" on:click={() => deleteCotFile(file.name)}>
+                                                            {t("data.construct.delete_qa_button")}
+                                                        </Button>
+                                                    {/if}
+                                                </TableBodyCell>
+                                            </tr>
+                                        {/each}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div class="m-2 p-2 flex justify-end">
+                                <Button
+                                        color="red"
+                                        on:click={() => {
+                                        showDeleteConfirmation = true;
+                                    }}
+                                        disabled={selectedFiles1.length === 0}
+                                >
+                                    {t("data.construct.delete_button")} ({selectedFiles1.length})
+                                </Button>
+                            </div>
+                        </AccordionItem>
+                        <AccordionItem open={false}>
+                            <span slot="header">{t("data.construct.qa_generation_settings")}</span>
+                            <div class="p-4 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.parallel_num")}</label>
+                                    <input
+                                            type="number"
+                                            min="1"
+                                            bind:value={parallelNum1}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </div>
+
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.model_name")}</label>
+                                    <select bind:value={selectedModel} on:change={handleModelChange}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                        {#each modelOptions as option}
+                                            <option value={option.name}>{t(`data.construct.${option.name}`)}</option>
+                                        {/each}
+                                    </select>
+                                </div>
+
+
+                                {#if showSKInputs1}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">{t("data.construct.sk")}</label>
+                                        {#each Array(numSKAKInputs1) as _, i}
+                                            <input
+                                                    type="text"
+                                                    placeholder={`SK ${i + 1}`}
+                                                    bind:value={SKs1[i]}
+                                                    class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                            />
+                                        {/each}
+                                    </div>
+                                {/if}
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.ak")}</label>
+                                    {#each Array(numSKAKInputs1) as _, i}
+                                        <input
+                                                type="text"
+                                                placeholder={`AK ${i + 1}`}
+                                                bind:value={AKs1[i]}
+                                                class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                        />
+                                    {/each}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">{t("data.construct.domain")}</label>
+                                    <input
+                                            type="text"
+                                            bind:value={domain1}
+                                            placeholder={`如: 医疗`}
+                                            class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                    />
+                                </div>
+
+
+                                <Button
+                                        color="blue"
+                                        on:click={generateCOTs}
+                                        disabled={selectedFiles1.length === 0 || isGeneratingCOT}
+                                >
+                                    {#if isGeneratingCOT}
+                                        {t("data.construct.generating_button_text")}
+                                    {:else}
+                                        {t("data.construct.generate_button")}
+                                    {/if}
+                                </Button>
+                            </div>
+                        </AccordionItem>
+                    </Accordion>
+                </div>
+            </AccordionItem>
+        </Accordion>
+    </div>
+
+
+    {#if errorModalVisible}
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-50">
+            <div class="bg-white p-6 rounded shadow-lg w-1/3 text-center">
+                <p class="text-lg font-medium mb-4">{errorMessage}</p>
+            </div>
+        </div>
+    {/if}
+
+
+    {#if showDeleteConfirmation}
+
+        <div class="fixed inset-0 z-50 flex justify-center items-center bg-gray-800 bg-opacity-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-1/3">
+                <h3 class="text-xl font-bold mb-4">{t("data.uploader.delete_confirmation_title")}</h3>
+                <p class="mb-4">
+                    {t("data.uploader.delete_confirmation_message", { count: selectedFiles.length+ selectedFiles1.length})}
+                </p>
+                <div class="flex justify-end gap-3">
+                    <Button color="red" on:click={deleteSelectedFiles}>
+                        {t("data.uploader.delete_confirm_button")}
+                    </Button>
+                    <Button color="gray" on:click={() => showDeleteConfirmation = false}>
+                        {t("data.uploader.delete_cancel_button")}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    {/if}
+</div>
 
 <style>
-  .file-list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .file-item {
-    display: flex;
-    flex-direction: column; /* Changed to column to stack items */
-    margin-bottom: 5px;
-    padding: 5px; /* Add some padding for better spacing */
-    border: 1px solid #e0e0e0; /* Add border for each file item */
-    border-radius: 4px; /* Rounded corners */
-    background-color: #f9f9f9; /* Light background color */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle box shadow */
-    gap: 4px;
-  }
-  .file-item div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .file-size {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .file-item button {
-    padding: 3px 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    background-color: #fff;
-    cursor: pointer;
-    font-size: 0.8rem;
-    color: #007bff;
-  }
+    .space-y-4 > * + * {
+        margin-top: 1rem;
+    }
 </style>
-
-{#if !loading}
-  <div class="w-full max-w-full overflow-x-auto">
-    <div class="m-2">
-      <Accordion>
-        <AccordionItem open={true}>
-          <span slot="header">{t("data.uploader.datapool_detail")}</span>
-          {#if uploadedFiles.length > 0}
-            <div class="mb-2">
-              <div class="font-bold">{t("data.uploader.uploaded_files_title")}</div>
-            </div>
-            <ul class="space-y-2">
-              <div class="file-list">
-                {#each uploadedFiles as file}
-                  <li class="file-item">
-                    <div>
-                      <div class="text-gray-800 font-medium">{file.filename}</div>
-                      <div class="text-gray-500 text-sm">
-                                <span >
-                                    ({file.file_type || file.mime_type}, <span class="file-size">{formatFileSize(file.size)}</span>, {new Date(file.created_at).toLocaleString()})
-                                </span>
-                      </div>
-                    </div>
-                  </li>
-                {/each}
-              </div>
-            </ul>
-          {:else}
-            <div class="text-center">
-              {t("data.uploader.no_file_uploaded")}
-            </div>
-          {/if}
-          <div class="m-2">
-            <div class="font-bold">{t("data.uploader.data_list_title")}</div>
-            <div class="text-gray-500 text-sm">
-              ID - {t("data.uploader.col_filename")} - {t("data.uploader.col_creation_time")} - {t("data.uploader.col_filesize")} - {t("data.uploader.col_filetype")} - {t("data.uploader.col_des")}
-            </div>
-          </div>
-          <div class="overflow-y-auto max-h-96 m-2">
-            <DatasetTable
-                    datasetEntries={entries}
-                    on:modified={async (_) => {
-                    await fetchDatasetEntries();
-                  }}
-            />
-          </div>
-
-        </AccordionItem>
-      </Accordion>
-    </div>
-    {#if errorMessage}
-      <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-        {errorMessage}
-      </div>
-    {/if}
-    <div>
-      <div class="m-2">
-        <Accordion>
-          <AccordionItem open={true}>
-            <span slot="header">{t("data.uploader.zone")}</span>
-            <div class="flex flex-row justify-end items-center text-black">
-              <div>
-                <Button class="m-2 text-center" on:click={submit_handle}>
-                  {t("data.uploader.submit")}
-                </Button>
-              </div>
-            </div>
-            <div class="border border-gray-200 text-gray-800 rounded p-2 m-2">
-              {#if submissions.length === 0}
-                <div class="w-full text-center">
-                  <span>{t("data.uploader.no_file")}</span>
-                </div>
-              {:else}
-                <div class="mb-2">
-                  <div class="font-bold">{t("data.uploader.stage_list_title")}</div>
-                  <div class="text-gray-500 text-sm">
-                    ID - {t("data.uploader.col_filename")} - {t("data.uploader.col_uploadtime")} - {t("data.uploader.col_filesize")} - {t("data.uploader.col_filetype")} - {t("data.uploader.col_des")}
-                  </div>
-                </div>
-                <div class="file-list">
-                  {#each submissions as entry (entry.id)}
-                    <li class="file-item">
-                      <div>
-                        <div class="text-gray-800 font-medium">
-                          {entry.id} - {entry.name} - <span class="file-size">{entry.size}</span> - {entry.isBinary? "Binary" : "Text"}
-                        </div>
-
-                        <input
-                                placeholder={t("data.uploader.enter_des")}
-                                bind:value={entry.domain}
-                                class="border-2 border-gray-300 rounded-md p-1 mt-1 w-full"
-                        />
-                      </div>
-
-                      <button
-                              on:click={() => remove_from_stage_handle(entry.id)}
-                      >
-                        {t("data.uploader.remove_stage")}
-                      </button>
-                    </li>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      <div class="m-4">
-        <Dropzone
-                id="dropzone"
-                on:drop={drop_handle}
-                on:dragover={(event) => event.preventDefault()}
-                on:change={change_handle}
-        >
-          <svg
-                  aria-hidden="true"
-                  class="mb-3 w-10 h-10 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-          <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
-            <span class="font-semibold">{t("data.uploader.click")}</span>{t("data.uploader.or")}<span
-                  class="font-semibold"
-          >{t("data.uploader.p1")}</span>{t("data.uploader.p2")}
-          </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">JSON, PDF, JPG, PNG</p>
-        </Dropzone>
-      </div>
-    </div>
-  </div>
-{:else}
-  <div class="m-4 p-4 border-2 border-gray-300 rounded text-center">
-    <div>
-      {t("data.uploader.uploading")}
-    </div>
-    <div class="flex flex-col gap-2">
-      {#each submissions as entry}
-        <div class="relative pt-1">
-          <div
-                  class="flex overflow-hidden bg-black rounded-lg shadow-sm"
-                  style="height: 23px;"
-          >
-            <div
-                    class="flex-grow bg-white rounded-lg"
-                    style="width: {100 - entry.uploadProgress}%"
-            >
-              <div
-                      class="flex-grow bg-blue-700 rounded-lg"
-                      style="width: {entry.uploadProgress}%"
-              />
-            </div>
-          </div>
-          <span>{entry.file.name} : {entry.uploadProgress.toFixed(2)}%</span>
-        </div>
-      {/each}
-    </div>
-  </div>
-{/if}
