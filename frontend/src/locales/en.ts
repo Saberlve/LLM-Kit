@@ -134,7 +134,11 @@ export default {
       save_path_placeholder:"Default original file name",
       domain:'Dataset domain information',
       generate_button:'generate',
+<<<<<<< HEAD
       p1: "Original Dataset",
+=======
+      p1: "原始数据集",
+>>>>>>> 13a4339c651a2c5b1e19728862427996025cfa6f
       AK: "API KEY：",
       AU: "API URL：",
       prompt: "prompt：",
