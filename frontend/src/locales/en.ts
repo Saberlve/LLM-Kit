@@ -291,7 +291,9 @@ export default {
       task_action: "Task Action",
       view_logs: "View logs",
       download_logs: "Download logs",
-      close: "close"
+      close: "close",
+      params: "Deduplication Paramters",
+      begin: "Start Deduplication",
     }
   },
   quality_eval: {

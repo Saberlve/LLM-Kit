@@ -283,23 +283,8 @@ export default {
       remain_time: "剩余时间",
       wait: "等待"
     },
-    task_detail: {
-      title: "任务详细信息",
-      task_name: "任务名称",
-      task_status: "任务状态",
-      task_time: "任务时间",
-      task_description: "任务描述",
-      task_input: "任务输入",
-      task_output: "任务输出",
-      task_logs: "任务日志",
-      task_message: "任务消息",
-      task_source: "任务源",
-      task_code: "任务代码",
-      task_action: "任务操作",
-      view_logs: "查看日志",
-      download_logs: "下载日志",
-      close: "关闭"
-    }
+    params: "去重参数",
+    begin: "开始去重",
   },
   quality_eval: {
     title: "数据集质控",
