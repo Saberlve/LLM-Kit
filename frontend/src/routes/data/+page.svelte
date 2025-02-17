@@ -22,19 +22,7 @@
   import { goto } from "$app/navigation";
   const t: any = getContext("t");
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
-  import type {
-      APIResponse,
-      UploadResponse,
-      ParseResponse,
-      TaskProgressResponse,
-      ParseHistoryResponse,
-      UnifiedFileListResponse
-    } from '../../class/APIResponse';
-    import type {
-      UploadedFile,
-      UploadedBinaryFile,
-      UnifiedFile
-    } from '../../class/FileTypes';
+
   // --- Types ---
 
   interface APIResponse {
