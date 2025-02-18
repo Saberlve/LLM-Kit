@@ -190,6 +190,8 @@ export default {
       type:"类型",
       qa_delete_success:"删除成功",
       size:"大小",
+      deselect_all:'全不选',
+      select_all:'全选',
       latex_converting:"转latex格式中",
       cot_generating:'COT数据生成中',
       qa_generating:"问答对生成中",
