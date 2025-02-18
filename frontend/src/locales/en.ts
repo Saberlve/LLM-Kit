@@ -98,6 +98,8 @@ export default {
       uploaded_files:"A list of resolved files",
       type:"type",
       size:"size",
+      deselect_all:'deselect_all',
+      select_all:'select_all',
       erine:'erine',
       flash:'flash',
       qwen:'qwen',
