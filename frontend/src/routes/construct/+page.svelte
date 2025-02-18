@@ -60,51 +60,39 @@
     let isGeneratingQA = false;
     let isGeneratingCOT = false;
 
-
+    let progressIntervals: { [filename: string]: NodeJS.Timeout } = {};
     // Function to toggle selection of a single file
     const toggleSelection = (file) => {
         console.log("Toggling selection for", file.name);
         selectedFiles = selectedFiles.includes(file)
             ? selectedFiles.filter(f => f !== file)
             : [...selectedFiles, file];
-        selectedFiles1 = selectedFiles; // sync selectedFiles1 with selectedFiles
-        updateSelectAllCheckbox(); // Update the "select all" checkbox state
+        selectedFiles1 = selectedFiles;
+        updateSelectAllCheckbox();
     };
 
-    // Function to toggle selection of all files
     const toggleSelectAll = () => {
-        console.log("toggleSelectAll function CALLED. Current selectAllChecked:", selectAllChecked);
-        console.log("Current uploadedFiles:", uploadedFiles);
+        if (uploadedFiles.length === 0) return;
 
         selectAllChecked = !selectAllChecked;
-        console.log("selectAllChecked TOGGLED to:", selectAllChecked);
 
         if (selectAllChecked) {
-            console.log("selectAllChecked is TRUE - Attempting to select ALL files.");
+
             selectedFiles = [...uploadedFiles];
-            selectedFiles1 = [...uploadedFiles]; // sync selectedFiles1 with selectedFiles
-            console.log("selectedFiles AFTER select ALL:", selectedFiles);
+            selectedFiles1 = [...uploadedFiles];
         } else {
-            console.log("selectAllChecked is FALSE - Attempting to DESELECT ALL files.");
             selectedFiles = [];
-            selectedFiles1 = []; // sync selectedFiles1 with selectedFiles
-            console.log("selectedFiles AFTER deselect ALL files.");
+            selectedFiles1 = [];
         }
 
         updateSelectAllCheckbox();
-        console.log("After updateSelectAllCheckbox, selectAllChecked is:", selectAllChecked);
-        console.log("Final selectedFiles after toggleSelectAll:", selectedFiles);
-
-        // 尝试强制组件重新评估 selectedFiles
-        selectedFiles = selectedFiles; // 关键行: 重新赋值 selectedFiles
-        selectedFiles1 = selectedFiles1; // 关键行: 重新赋值 selectedFiles1
     };
     const updateSelectAllCheckbox = () => {
         if (!uploadedFiles.length) {
             selectAllChecked = false;
             return;
         }
-        selectAllChecked = selectedFiles.length === uploadedFiles.length; // Check if all files are selected
+        selectAllChecked = selectedFiles.length === uploadedFiles.length;
     };
 
 
@@ -160,8 +148,9 @@
                     return {
                         ...file,
                         status:{1:statusResponse.data.exists,2:statusResponse1.data.exists},
-                        qa_status_message: null, // Initialize qa_status_message
-                        cot_status_message: null // Initialize cot_status_message
+                        qa_status_message: null,
+                        cot_status_message: null ,
+
                     };
                 } catch (error) {
                     console.error('Error fetching status for file', file.name, error);
@@ -572,6 +561,14 @@
                             <span slot="header">{t("data.construct.uploaded_files")}</span>
                             <div class="overflow-x-auto max-h-[250px]">
                                 <Table striped={false}>
+                                    <div class="mb-2 flex justify-start">
+                                        <Button
+                                                color={selectAllChecked ? "yellow" : "blue"}
+                                                on:click={toggleSelectAll}
+                                        >
+                                            {selectAllChecked ? t("data.construct.deselect_all") : t("data.construct.select_all")}
+                                        </Button>
+                                    </div>
                                     <TableHead>
                                         <TableHeadCell>
                                             <input type="checkbox" bind:checked={selectAllChecked} on:change={toggleSelectAll} />
@@ -800,6 +797,14 @@
                             <span slot="header">{t("data.construct.uploaded_files")}</span>
                             <div class="overflow-x-auto max-h-[250px]">
                                 <Table striped={false}>
+                                    <div class="mb-2 flex justify-start">
+                                        <Button
+                                                color={selectAllChecked ? "yellow" : "blue"}
+                                                on:click={toggleSelectAll}
+                                        >
+                                            {selectAllChecked ? t("data.construct.deselect_all") : t("data.construct.select_all")}
+                                        </Button>
+                                    </div>
                                     <TableHead>
                                         <TableHeadCell>
                                             <input type="checkbox" bind:checked={selectAllChecked} on:change={toggleSelectAll} />
