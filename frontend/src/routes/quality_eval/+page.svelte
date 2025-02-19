@@ -315,7 +315,7 @@
             
             {#each api_keys as api_key, index}
                 <div class="m-2 p-2">
-                    <span>{t("quality_eval.AK") + " " + (index + 1)}</span>
+                    <span>{t("quality_eval.AK") + " " + (index + 1) + ":"}</span>
                     <input
                         type="text"
                         id="API KEY"
@@ -329,7 +329,7 @@
             
             {#each secret_keys as secret_key, index}
                 <div class="m-2 p-2">
-                    <span>{t("quality_eval.SK") + " " + (index + 1)}</span>
+                    <span>{t("quality_eval.SK") + " " + (index + 1) + ":"}</span>
                     <input
                         id="SCERET KEY"
                         type="text"
