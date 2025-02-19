@@ -258,10 +258,14 @@ export default {
   },
   deduplication: {
     title: "数据集去重",
+    select: "选择数据集",
     description: "对数据集进行去重操作以保证数据集质量",
     create_task: "创建去重任务",
     task_list: "去重任务列表",
     task_name: "任务名称",
+    min_answer_length: "最短回答长度：",
+    dedup_by_answer: "是否通过回答去重：",
+    dedup_threshold: "去重阈值：",
     task_status: "任务状态",
     task_time: "任务时间",
     action: "操作",
@@ -271,34 +275,29 @@ export default {
     search: "查找",
     wordcloud: "词云",
     close: "关闭",
-    dedup_process: {
-      upload_files: "上传文件",
-      select_models: "选择模型",
-      start: "开始",
-      progress: "进度",
-      remain_time: "剩余时间",
-      wait: "等待"
-    },
     params: "去重参数",
     begin: "开始去重",
+    deduplication_finish: "去重完成",
+    remain_time: "剩余时间:",
+    wait: "等待",
   },
   quality_eval: {
     title: "数据集质控",
     subtitle: "评估数据集的质量优良",
-    create_task: "创建评估任务",
-    next_step: "下一步",
-    previous_step: "上一步",
-    start: "质控启动",
-    AK: "API KEY:",
-    SK: "SCERET KEY:",
+    start: "开始质控",
     model_name: "模型选择:",
     name: "输入文件名称:",
-    des: "新数据集描述:",
+    domain: "新数据集描述:",
     optional: "(可选)",
-    parallel_num: "并行数量:",
     max_attempts: "最大尝试次数:",
     similarity_rate: "文本相似度:",
     coverage_rate: "覆盖率:",
-    params: "质控参数"
+    params: "质控参数",
+    files: {
+      record_id: "ID",
+      filename: "文件名称",
+      create_at: "创建时间",
+      select: "选择文件"
+    }
   }
 };

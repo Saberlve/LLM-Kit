@@ -9,12 +9,11 @@
     onMount(async () => {
       eval_entries = (await axios.get("/api/eval")).data;
     });
-    import type PoolEntry from "../../class/PoolEntry";
-    import type DatasetEntry from "../../class/DatasetEntry";
     import {
       Accordion,
       AccordionItem,
       Button,
+      Checkbox,
       Table,
       TableHead,
       TableHeadCell,
@@ -26,30 +25,20 @@
     } from "flowbite-svelte";
     import { page } from "$app/stores";
     import type {
-      APIResponse,
-      UploadResponse,
-      ParseResponse,
-      TaskProgressResponse,
-      ParseHistoryResponse,
-      UnifiedFileListResponse
-    } from '../../class/APIResponse';
-    import type {
-      UploadedFile,
-      UploadedBinaryFile,
       UnifiedFile
     } from '../../class/Filetypes';
 
     import { UPDATE_VIEW_INTERVAL } from "../store";
-    import DatasetTable from "./DatasetTable.svelte";
     import { onDestroy, onMount } from "svelte";
 
-    let selectedDatasetId: number | null = null;
-    let name = `quality_control-${Date.now().toString().substring(5, 10)}`;
+    interface APIResponse<T = Record<string, unknown>> {
+      status: string;
+      message: string;
+      data?: T | null;
+    }
+
     let description = `quality_control-${Date.now().toString().substring(5, 10)}`;
     let quality_eval_processing: boolean | null = false;
-    let minAnswerLength: number | null = null;
-    let quality_controling: boolean = false;
-    let loading = false;
     let errorMessage: string | null = null;
     let uploadedFiles: UnifiedFile[] = [];
     let parallel_num: number | null = 1;
@@ -64,17 +53,19 @@
       { value: 'flash', label: 'flash' },
       { value: 'lite' , label: 'lite'  }
     ];
+    let selectedFileId: number;
+    let selectedFilename: string = ''; // 用于存储选中的文件名
+    let contentData: Array<Record<string, any>> = []; // 存储从API获取的内容
+
     let modelname: String = 'Qwen';
     let api_keys = []; // 用于存储API-KEY的列表
     let secret_keys = []; // 用于存储SECRET KEY的列表
     let parsingProgressIntervals: { [fileId: string]: any } = {};
 
     const uploaded_file_heads = [
-    t("data.uploader.filename"),
-    t("data.uploader.file_type"),
-    t("data.uploader.size"),
-    t("data.uploader.created_at"),
-    t("data.uploader.upload_status"),
+    t("quality_eval.files.record_id"),
+    t("quality_eval.files.filename"),
+    t("quality_eval.files.create_at"),
     ]
 
     // 当parallel_num改变时，更新api_keys和secret_keys的长度
@@ -82,39 +73,64 @@
         api_keys = Array(parallel_num).fill(null);
         secret_keys = Array(parallel_num).fill(null);
     }
-    $: validFordeduplication = selectedDatasetId !== null;
     
-    function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-    } 
+    // 移除selectedDatasetId相关代码，改用selectedFilename
+    $: validFordeduplication = selectedFilename !== '';
 
-
-    async function quality_eval() {
-      quality_eval_processing = true;
+    async function fetchFileContent(fileId: number): Promise<void> {
       try {
-        const response = await axios.post(`http://127.0.0.1:8000/quality`, {
-          content: selectedDatasetId,
-          filename: name,
-          save_path: 'result/',
-          SK: secret_keys,
-          AK: api_keys,
-          parallel_num: parallel_num,
-          model_name: modelname,
-          similarity_rate: similarity_rate,
-          coverage_rate: coverage_rate,
-          max_attempts: 5,
-          domain: description,
-        });
+        const response = await axios.post<APIResponse<{ content: any }>>(
+          `http://127.0.0.1:8000/quality/qa_content`,
+          {
+            record_id: fileId,
+          }
+        );
 
-        if (!response.data) {
-          console.error("Quality Control failed, no data received")
+        if (response.data.status === "success") {
+          contentData = response.data.data.content;
+        } else {
+          console.error("Error fetching file content:", response.data.message);
+          contentData = [];
         }
       } catch (error) {
-        console.error("Error during quality control:", error);
-      } finally {
-        await sleep(500);
-        quality_eval_processing = false;
+        console.error("Error fetching file content:", error);
+        contentData = [];
       }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    } 
+
+    async function quality_eval() {
+        quality_eval_processing = true;
+        try {
+            // 获取选中文件的内容
+            await fetchFileContent(selectedFileId);
+            
+            const response = await axios.post(`http://127.0.0.1:8000/quality/quality`, {
+                content: contentData,
+                filename: selectedFilename,
+                model_name: modelname,
+                save_path: "/result",
+                SK: secret_keys,
+                AK: api_keys,
+                parallel_num: parallel_num,
+                similarity_rate: similarity_rate,
+                coverage_rate: coverage_rate,
+                max_attempts: max_attempts,
+                domain: description, // 确保description对应domain字段
+            });
+
+            if (!response.data) {
+                console.error("Quality Control failed, no data received");
+            }
+        } catch (error) {
+            console.error("Error during quality control:", error);
+        } finally {
+            await sleep(500);
+            quality_eval_processing = false;
+        }
     }
 
     function updateProgress(current, total) {
@@ -124,7 +140,7 @@
 
     async function fetchProgress() {
       try {
-        progress_response = (await axios.get('/api/quality/progress')).data;
+        progress_response = (await axios.get('http://127.0.0.1:8000/quality/progress')).data;
         console.log('Progress:', progress_response);
         updateProgress(progress_response.progress, progress_response.time);
       } catch (error) {
@@ -147,69 +163,27 @@
       clearInterval(progressInterval);
     });
 
-  async function checkParseHistory(filename: string): Promise<number> {
-    try {
-      const response = await axios.post(
-              "http://127.0.0.1:8000/parse/phistory",
-              { filename },
-              { headers: { "Content-Type": "application/json" } }
-      );
-
-      // 检查响应数据
-      if (response.data && typeof response.data.exists === "number") {
-        return response.data.exists;
-      } else {
-        console.error("Unexpected response format:", response);
-        return 0;
-      }
-    } catch (error) {
-      console.error("Error checking parse history:", error);
-      return 0;
-    }
-  }
-
   async function fetchUploadedFiles(): Promise<void> {
     try {
-      const response = await axios.get<UnifiedFileListResponse>(
-            `http://127.0.0.1:8000/parse/files/all`
+      const response = await axios.get<APIResponse<{ files: Array<{ id: string; filename: string; create_at: string }> }>>(
+        `http://127.0.0.1:8000/quality/qa_files`
       );
+
       if (response.data.status === "success") {
+        const files = response.data.data.files.map((file: { id: string; filename: string; create_at: string }) => ({
+          id: file.id,
+          filename: file.filename,
+          create_at: file.create_at,
+        }));
 
-        uploadedFiles = response.data.data.map(async file => {
-          let status = file.status;
-          const exists = await checkParseHistory(file.filename);
-          status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
-          return {
-            ...file,
-            status: status,
-            parseStatus: file.parseStatus || "",
-            parseProgress: file.parseProgress || 0,
-            recordId: file.recordId || null
-          };
-        });
-
-        uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
-
+        uploadedFiles = files;
       } else {
-        console.error("Error fetching uploaded files:", response);
+        console.error("Error fetching uploaded files:", response.data.message);
         errorMessage = t("data.uploader.fetch_fail");
       }
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
       errorMessage = t("data.uploader.fetch_fail");
-    }
-  }
-
-  function formatFileSize(sizeInBytes: number): string {
-    const sizeInKilobytes = sizeInBytes / 1024;
-    const sizeInMegabytes = sizeInKilobytes / 1024;
-
-    if (sizeInMegabytes > 1) {
-      return `${sizeInMegabytes.toFixed(2)} MB`;
-    } else if (sizeInKilobytes > 1) {
-      return `${sizeInKilobytes.toFixed(2)} KB`;
-    } else {
-      return `${sizeInBytes} B`;
     }
   }
 
@@ -247,42 +221,37 @@
             <span slot="header">{t("data.uploader.uploaded_files")}</span>
             <div class="overflow-x-auto" style="max-height: 600px;">
                 <Table striped={true}>
-                    <TableHead>
-                        {#each uploaded_file_heads as head}
-                            <TableHeadCell>{head}</TableHeadCell>
-                        {/each}
-                    </TableHead>
-                    <TableBody>
-                        {#each uploadedFiles as file}
-                            <tr>
-                                <TableBodyCell style="overflow-x: auto; white-space: nowrap; max-width: 300px;">
-                                    <div style="overflow-x: auto; white-space: nowrap;">{file.filename}</div>
-                                </TableBodyCell>
-                                <TableBodyCell>{file.file_type || file.mime_type}</TableBodyCell>
-                                <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
-                                <TableBodyCell>{file.created_at.substring(0, 19)}</TableBodyCell>
-                                <TableBodyCell>
-                                    {file.status === 'parsed' ? t("data.uploader.parsed") : (file.status === 'processed' ? t("data.uploader.processed") : t("data.uploader.pending"))}
-                                </TableBodyCell>
-                            </tr>
-                            {#if file.parseStatus}
-                                <tr>
-                                    <td colspan="5">
-                                        <div class="flex flex-row items-center gap-2">
-                                            <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
-                                            {#if file.parseStatus === 'processing'}
-                                                <Progressbar progress={file.parseProgress} size="sm" />
-                                            {:else if file.parseStatus === 'completed'}
-                                                <span class="text-green-500">({t("data.uploader.completed")})</span>
-                                            {:else if file.parseStatus === 'failed'}
-                                                <span class="text-red-500">({t("data.uploader.failed")})</span>
-                                            {/if}
-                                        </div>
-                                    </td>
-                                </tr>
-                            {/if}
-                        {/each}
-                    </TableBody>
+                  <TableHead>
+                    <TableHeadCell>{t("quality_eval.files.record_id")}</TableHeadCell>
+                    <TableHeadCell>{t("quality_eval.files.filename")}</TableHeadCell>
+                    <TableHeadCell>{t("quality_eval.files.create_at")}</TableHeadCell>
+                    <TableHeadCell>{t("quality_eval.files.select")}</TableHeadCell>
+
+                  </TableHead>
+                  <TableBody>
+                    {#each uploadedFiles as file}
+                      <tr>
+                        <TableBodyCell>{file.id}</TableBodyCell>
+                        <TableBodyCell>{file.filename}</TableBodyCell>
+                        <TableBodyCell>{file.create_at}</TableBodyCell>
+                        <TableBodyCell>
+                          <Checkbox
+                            checked={selectedFilename === file.filename && selectedFileId === file.id}
+                            on:change={(event) => {
+                              const target = event.target as HTMLInputElement; 
+                              if (target.checked) {
+                                selectedFilename = file.filename;
+                                selectedFileId = file.id; 
+                              } else if (selectedFilename === file.filename && selectedFileId === file.id) {
+                                selectedFilename = null;
+                                selectedFileId = null;
+                              }
+                            }}
+                          />
+                        </TableBodyCell>
+                      </tr>
+                    {/each}
+                  </TableBody>
                 </Table>
             </div>
         </AccordionItem>
@@ -334,7 +303,8 @@
                         placeholder={t("quality_eval.optional")}
                     />
                 </div>
-            {/each}
+            {/each}    
+
             <div class="m-2 p-2">
               <span>{t("quality_eval.model_name")}</span>
               <select
@@ -346,26 +316,30 @@
                       <option value={option.value}>{option.label}</option>
                   {/each}
               </select>
-            </div>
-            <div class="m-2 p-2">
-              <span>{t("quality_eval.name")}</span>
+          </div>
+          
+          <!-- 修改max_attempts绑定 -->
+          <div class="m-2 p-2">
+              <span>{t("quality_eval.max_attempts")}</span>
               <input
-                  type="text"
-                  aria-describedby="helper-text-explanation"
-                  class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
-                  bind:value={name}
+                  type="number"
+                  id="max_attempts_number"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  style="width: 100px;"
+                  bind:value={max_attempts}
+                  min="1"
+                  max="10"
               />
-            </div>
-            
-            <div class="m-2 p-2">
-              <span>{t("quality_eval.des")}</span>
+          </div>
+
+          <div class="m-2 p-2">
+              <span>{t("quality_eval.domain")}</span>
               <input
                   type="text"
-                  aria-describedby="helper-text-explanation"
                   class={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500`}
                   bind:value={description}
               />                 
-            </div>
+          </div>
 
             <div class="w-full flex flex-row">
               <div class="m-2 p-2">
