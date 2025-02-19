@@ -300,6 +300,18 @@ export default {
       filename: "Filename",
       create_at: "Create Time",
       select: "Select"
+    },
+    progress: {
+      progress: "Progress",
+      processing: "Processing",
+      completed: "Finish",
+      failed: "Failed",
+      timeout: "Timeout",
+      error: "Error",
+      not_found: "Not Found",
+      remain_time: "Remain Time:",
+      error_info: "Error Information:",
+      wait: "Wait",
     }
   },
   construct: {
