@@ -45,8 +45,6 @@
     let similarity_rate: number = 0.8;
     let coverage_rate: number = 0.8;
     let max_attempts: number = 1;
-    let progress_response;
-    let progress = { "progress": 1, "time": 0 };
     let modelOptions = [
       { value: 'Qwen' , label: 'Qwen'  },
       { value: 'erine', label: 'erine' },
@@ -61,6 +59,25 @@
     let api_keys = []; // 用于存储API-KEY的列表
     let secret_keys = []; // 用于存储SECRET KEY的列表
     let parsingProgressIntervals: { [fileId: string]: any } = {};
+    let progress_response;
+
+    let progress = {
+      progress: 0, // 当前进度
+      time: 0,
+    };
+    let statusOptions = {
+      processing: { label: t("quality_eval.progress.processing") },
+      completed: { label: t("quality_eval.progress.completed")},
+      failed: { label: t("quality_eval.progress.failed")},
+      timeout: { label: t("quality_eval.progress.timeout")},
+      error: { label: t("quality_eval.progress.error")},
+      not_found: { label: t("quality_eval.progress.not_found") },
+    };
+
+    // 定义定时器
+    const INTERVAL = 5000; // 每秒查询一次进度
+    let intervalId = null;
+
 
     const uploaded_file_heads = [
     t("quality_eval.files.record_id"),
@@ -74,7 +91,6 @@
         secret_keys = Array(parallel_num).fill(null);
     }
     
-    // 移除selectedDatasetId相关代码，改用selectedFilename
     $: validFordeduplication = selectedFilename !== '';
 
     async function fetchFileContent(fileId: number): Promise<void> {
@@ -133,35 +149,56 @@
         }
     }
 
-    function updateProgress(current, total) {
-      progress.progress = current;
-      progress.time = total;
-    }
-
     async function fetchProgress() {
-      try {
-        progress_response = (await axios.get('http://127.0.0.1:8000/quality/progress')).data;
-        console.log('Progress:', progress_response);
-        updateProgress(progress_response.progress, progress_response.time);
-      } catch (error) {
-        console.error('Error fetching progress:', error);
+    try {
+      const apiUrl = `http://127.0.0.1:8000/quality/progress`; // 后端接口 URL
+      const response = await axios.post(apiUrl, {
+        filename: selectedFilename,
+      });
+
+      if (response.data.status === "success") {
+        progress_response = response.data.data;
+        updateProgress(progress_response.progress, progress_response.status);
+      } else {
+        console.error("Error fetching progress:", response.data.message);
+        progress_response = {
+          progress: 0,
+          status: "error",
+        };
       }
+    } catch (error) {
+      console.error("Error fetching progress:", error);
+      progress_response = { progress: 0, status: "error" };
     }
+  }
 
-    onMount(async () => {
-      await fetchProgress();
-    })
+  function updateProgress(current: number, status: string) {
+    progress.progress = current;
+    switch (status) {
+      case "processing":
+        break;
+      case "completed":
+        progress.progress = 100;
+        break;
+      case "failed":
+      case "timeout":
+        progress.progress = current; 
+        break;
+      default:
+        progress.progress = 0;
+        break;
+    }
+  }
 
-    let progressInterval: any;
-    onMount(async() => {
-      progressInterval = setInterval(
-              fetchProgress,
-              UPDATE_VIEW_INTERVAL
-      );
-    });
-    onDestroy(async() => {
-      clearInterval(progressInterval);
-    });
+  function startProgressPolling() {
+    // 开启定时器，定期查询进度
+    intervalId = setInterval(fetchProgress, INTERVAL);
+  }
+
+  function stopProgressPolling() {
+    // 停止定时器
+    clearInterval(intervalId);
+  }
 
   async function fetchUploadedFiles(): Promise<void> {
     try {
@@ -444,35 +481,38 @@
   </div>
 </div>
 {:else}
-  <div>
-    <div>{t("deduplication.progress")}{progress_response.progress}%</div>
-    {#if progress_response.time !== 0}
-      <div>{t("deduplication.remain_time")}{progress_response.time}s</div>
-    {:else}
-      <div>{t("deduplication.wait")}{progress_response.time}s</div>
-    {/if}
-  </div>
-  <div class="relative pt-1">
-    <div class="flex overflow-hidden bg-black rounded-lg shadow-sm" style="height: 23px;">
-      <div
-              class="flex-grow bg-white rounded-lg"
-              style="width: {100 - progress_response.progress}%"
-      >
-        <div
-                class="flex-grow bg-blue-700 rounded-lg"
-                style="width: {progress_response.progress}%"
+  <div style="width: 100%;">
+    {#if progress_response}
+    <div>
+      <div>{t("quality_eval.progress.progress")} {progress.progress}%</div>
+      {#if progress_response.status === "processing"}
+        <div>{t("quality_eval.progress.remain_time")} {progress.time}s</div>
+      {:else if progress_response.status === "completed"}
+        <div>{t("quality_eval.progress.completed")}</div>
+      {:else if progress_response.status === "failed" || progress_response.status === "timeout"}
+        <div>{t("quality_eval.progress.error_info")} {progress_response.error_message}</div>
+      {:else if progress_response.status === "not_found"}
+        <div>{t("quality_eval.progress.not_found")}</div>
+      {:else}
+        <div>{t("quality_eval.progress.wait")}</div>
+      {/if}
+
+      <div class="relative pt-1">
+        <Progressbar
+          progress={progress.progress}
+          status={progress_response.status}
+          className="mb-4"
         >
-          {#if progress_response.progress !== 100}
-            <div class="flex items-center justify-center text-xs font-medium text-center text-white p-1">
-              {t("deduplication.deduplicationing")}
-            </div>
+          {#if progress.progress < 100}
+            {t("quality_eval.progress.processing")}
           {:else}
-            <div class="flex items-center justify-center text-xs font-medium text-center text-white p-1">
-              {t("deduplication.deduplication_finish")}
-            </div>
+            {t("quality_eval.progress.completed")}
           {/if}
-        </div>
+        </Progressbar>
       </div>
     </div>
+    {:else}
+    <div>{t("quality_eval.wait")}</div>
+    {/if}
   </div>
 {/if}

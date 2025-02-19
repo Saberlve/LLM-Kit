@@ -300,6 +300,18 @@ export default {
       filename: "文件名称",
       create_at: "创建时间",
       select: "选择文件"
+    },
+    progress: {
+      progress: "进度：",
+      processing: "正在进行中",
+      completed: "已完成",
+      failed: "失败",
+      timeout: "超时",
+      error: "错误",
+      not_found: "未发现该文件",
+      remain_time: "剩余时间：",
+      error_info: "错误信息：",
+      wait: "请等待",
     }
   }
 };
