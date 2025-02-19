@@ -285,6 +285,9 @@ export default {
     similarity_rate: "Similarity Rate:",
     coverage_rate: "Coverage Rate:",
     params: "Paramters",
+    parallel_num: "Parallel Number:",
+    AK: "API Key",
+    SK: "Secret Key",
     files: {
       record_id: "ID",
       filename: "Filename",

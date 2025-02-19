@@ -295,6 +295,9 @@ export default {
     similarity_rate: "文本相似度:",
     coverage_rate: "覆盖率:",
     params: "质控参数",
+    parallel_num: "并行数量:",
+    AK: "API Key",
+    SK: "Secret Key",
     files: {
       record_id: "ID",
       filename: "文件名称",
