@@ -209,7 +209,6 @@
     fileToDelete = null;
   }
 
-
   // --- API Functions ---
   async function uploadFile(file: File): Promise<UploadResponse> {
     try {
