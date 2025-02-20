@@ -40,7 +40,7 @@
     let description = `quality_control-${Date.now().toString().substring(5, 10)}`;
     let quality_eval_processing: boolean | null = false;
     let errorMessage: string | null = null;
-    let uploadedFiles: UnifiedFile[] = [];
+    let upQAFiles: UnifiedFile[] = [];
     let parallel_num: number | null = 1;
     let similarity_rate: number = 0.8;
     let coverage_rate: number = 0.8;
@@ -80,9 +80,9 @@
 
 
     const uploaded_file_heads = [
-    t("quality_eval.files.record_id"),
-    t("quality_eval.files.filename"),
-    t("quality_eval.files.create_at"),
+      t("quality_eval.files.record_id"),
+      t("quality_eval.files.filename"),
+      t("quality_eval.files.create_at"),
     ]
 
     // 当parallel_num改变时，更新api_keys和secret_keys的长度
@@ -150,27 +150,27 @@
     }
 
     async function fetchProgress() {
-    try {
-      const apiUrl = `http://127.0.0.1:8000/quality/progress`; // 后端接口 URL
-      const response = await axios.post(apiUrl, {
-        filename: selectedFilename,
-      });
+      try {
+        const apiUrl = `http://127.0.0.1:8000/quality/progress`; // 后端接口 URL
+        const response = await axios.post(apiUrl, {
+          filename: selectedFilename,
+        });
 
-      if (response.data.status === "success") {
-        progress_response = response.data.data;
-        updateProgress(progress_response.progress, progress_response.status);
-      } else {
-        console.error("Error fetching progress:", response.data.message);
-        progress_response = {
-          progress: 0,
-          status: "error",
-        };
+        if (response.data.status === "success") {
+          progress_response = response.data.data;
+          updateProgress(progress_response.progress, progress_response.status);
+        } else {
+          console.error("Error fetching progress:", response.data.message);
+          progress_response = {
+            progress: 0,
+            status: "error",
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching progress:", error);
+        progress_response = { progress: 0, status: "error" };
       }
-    } catch (error) {
-      console.error("Error fetching progress:", error);
-      progress_response = { progress: 0, status: "error" };
-    }
-  }
+    } 
 
   function updateProgress(current: number, status: string) {
     progress.progress = current;
@@ -200,7 +200,7 @@
     clearInterval(intervalId);
   }
 
-  async function fetchUploadedFiles(): Promise<void> {
+  async function fetchQAFiles(): Promise<void> {
     try {
       const response = await axios.get<APIResponse<{ files: Array<{ id: string; filename: string; create_at: string }> }>>(
         `http://127.0.0.1:8000/quality/qa_files`
@@ -213,21 +213,21 @@
           create_at: file.create_at,
         }));
 
-        uploadedFiles = files;
+        upQAFiles = files;
       } else {
-        console.error("Error fetching uploaded files:", response.data.message);
+        console.error("Error fetching QA files:", response.data.message);
         errorMessage = t("data.uploader.fetch_fail");
       }
     } catch (error) {
-      console.error("Error fetching uploaded files:", error);
+      console.error("Error fetching QA files:", error);
       errorMessage = t("data.uploader.fetch_fail");
     }
   }
 
   let fetchEntriesUpdater: any;
   onMount(async () => {
-    fetchEntriesUpdater = setInterval(fetchUploadedFiles, UPDATE_VIEW_INTERVAL);
-    await fetchUploadedFiles();
+    fetchEntriesUpdater = setInterval(fetchQAFiles, UPDATE_VIEW_INTERVAL);
+    await fetchQAFiles();
   });
 
   onDestroy(() => {
@@ -255,7 +255,7 @@
   <div class="m-2">
     <Accordion>
         <AccordionItem open={true}>
-            <span slot="header">{t("data.uploader.uploaded_files")}</span>
+            <span slot="header">{t("quality_eval.qa_files")}</span>
             <div class="overflow-x-auto" style="max-height: 600px;">
                 <Table striped={true}>
                   <TableHead>
@@ -266,7 +266,7 @@
 
                   </TableHead>
                   <TableBody>
-                    {#each uploadedFiles as file}
+                    {#each upQAFiles as file}
                       <tr>
                         <TableBodyCell>{file.id}</TableBodyCell>
                         <TableBodyCell>{file.filename}</TableBodyCell>
