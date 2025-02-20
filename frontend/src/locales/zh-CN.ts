@@ -8,7 +8,7 @@ export default {
     quality_eval: "质量评估",
     deduplication: "数据集去重",
     deployment_manager: "部署管理",
-    error_log: "错误记录",
+    record: "记录管理",
     settings: "设置",
   },
   components: {
@@ -303,6 +303,21 @@ export default {
       remain_time: "剩余时间：",
       error_info: "错误信息：",
       wait: "请等待",
+    }
+  },
+  record: {
+    title: "记录管理",
+    description: "管理所有任务记录。",
+    search: "搜索",
+    view_logs: "查看日志",
+    message: "消息",
+    time: "时间",
+    source: "来源",
+    action: "操作",
+    tasks: {
+      parse: "解析",
+      to_tex: "转换为 TeX",
+      generate_qa: "生成问答"
     }
   }
 };

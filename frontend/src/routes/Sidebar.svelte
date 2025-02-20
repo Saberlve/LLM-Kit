@@ -17,7 +17,7 @@
     t("sidebar.dataset_construct"),
     t("sidebar.quality_eval"),
     t("sidebar.deduplication"),
-    t("sidebar.error_log"),
+    // t("sidebar.record"),
     t("sidebar.settings"),
   ];
   let route = [
@@ -25,7 +25,7 @@
     "/construct",
     "/quality_eval",
     "/deduplication",
-    "/fault",
+    // "/record",
     "/config",
   ];
   $: activeUrl = (function() {

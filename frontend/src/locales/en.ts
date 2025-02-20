@@ -8,7 +8,7 @@ export default {
     quality_eval: "Quality Evaluation",
     deduplication: "Deduplication",
     deployment_manager: "Deployment",
-    error_log: "Error Logs",
+    record: "Record Management",
     settings: "Settings",
   },
   components: {
@@ -305,5 +305,20 @@ export default {
     create_task: "Create Constrcut Task",
     next_step: "Next Step",
     previous_step: "Previous Step",
+  },
+  record: {
+    title: "Record Management",
+    description: "Manage all task records.",
+    search: "Search",
+    view_logs: "View Logs",
+    message: "Message",
+    time: "Time",
+    source: "Source",
+    action: "Action",
+    tasks: {
+      parse: "Parse",
+      to_tex: "Convert to TeX",
+      generate_qa: "Generate QA"
+    }
   }
 };
