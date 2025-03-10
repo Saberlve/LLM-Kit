@@ -149,56 +149,56 @@
         }
     }
 
-    async function fetchProgress() {
-      try {
-        const apiUrl = `http://127.0.0.1:8000/quality/progress`; // 后端接口 URL
-        const response = await axios.post(apiUrl, {
-          filename: selectedFilename,
-        });
+  //   async function fetchProgress() {
+  //     try {
+  //       const apiUrl = `http://127.0.0.1:8000/quality/progress`; // 后端接口 URL
+  //       const response = await axios.post(apiUrl, {
+  //         filename: selectedFilename,
+  //       });
 
-        if (response.data.status === "success") {
-          progress_response = response.data.data;
-          updateProgress(progress_response.progress, progress_response.status);
-        } else {
-          console.error("Error fetching progress:", response.data.message);
-          progress_response = {
-            progress: 0,
-            status: "error",
-          };
-        }
-      } catch (error) {
-        console.error("Error fetching progress:", error);
-        progress_response = { progress: 0, status: "error" };
-      }
-    } 
+  //       if (response.data.status === "success") {
+  //         progress_response = response.data.data;
+  //         updateProgress(progress_response.progress, progress_response.status);
+  //       } else {
+  //         console.error("Error fetching progress:", response.data.message);
+  //         progress_response = {
+  //           progress: 0,
+  //           status: "error",
+  //         };
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching progress:", error);
+  //       progress_response = { progress: 0, status: "error" };
+  //     }
+  //   } 
 
-  function updateProgress(current: number, status: string) {
-    progress.progress = current;
-    switch (status) {
-      case "processing":
-        break;
-      case "completed":
-        progress.progress = 100;
-        break;
-      case "failed":
-      case "timeout":
-        progress.progress = current; 
-        break;
-      default:
-        progress.progress = 0;
-        break;
-    }
-  }
+  // function updateProgress(current: number, status: string) {
+  //   progress.progress = current;
+  //   switch (status) {
+  //     case "processing":
+  //       break;
+  //     case "completed":
+  //       progress.progress = 100;
+  //       break;
+  //     case "failed":
+  //     case "timeout":
+  //       progress.progress = current; 
+  //       break;
+  //     default:
+  //       progress.progress = 0;
+  //       break;
+  //   }
+  // }
 
-  function startProgressPolling() {
-    // 开启定时器，定期查询进度
-    intervalId = setInterval(fetchProgress, INTERVAL);
-  }
+  // function startProgressPolling() {
+  //   // 开启定时器，定期查询进度
+  //   intervalId = setInterval(fetchProgress, INTERVAL);
+  // }
 
-  function stopProgressPolling() {
-    // 停止定时器
-    clearInterval(intervalId);
-  }
+  // function stopProgressPolling() {
+  //   // 停止定时器
+  //   clearInterval(intervalId);
+  // }
 
   async function fetchQAFiles(): Promise<void> {
     try {
@@ -245,7 +245,7 @@
 >
 </ActionPageTitle>
 
-{#if !quality_eval_processing}
+
 <div class="w-full flex flex-col">
   {#if errorMessage}
   <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -480,7 +480,7 @@
     </Button>
   </div>
 </div>
-{:else}
+<!-- {:else}
   <div style="width: 100%;">
     {#if progress_response}
     <div>
@@ -515,4 +515,4 @@
     <div>{t("quality_eval.wait")}</div>
     {/if}
   </div>
-{/if}
+{/if} -->
