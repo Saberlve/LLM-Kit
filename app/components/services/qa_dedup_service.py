@@ -108,7 +108,59 @@ class QADedupService:
             await self._log_error(str(e), "get_dedup_content")
             raise Exception(f"获取去重文件内容失败: {str(e)}")
 
-    async def deduplicate_qa(self, file_ids: List[str], dedup_by_answer: bool,
+    async def get_quality_content_by_filename(self, filename: str):
+        """根据文件名获取quality文件内容"""
+        try:
+            # 查找指定文件名的quality记录
+            record = await self.quality_generations.find_one({"input_file": filename})
+            
+            if not record:
+                raise Exception(f"未找到文件名为 {filename} 的quality记录")
+            
+            if not record.get("save_path") or not os.path.exists(record["save_path"]):
+                raise Exception(f"文件路径不存在: {record.get('save_path')}")
+            
+            # 读取文件内容
+            with open(record["save_path"], 'r', encoding='utf-8') as f:
+                content = json.load(f)
+            
+            return {
+                "filename": record["input_file"],
+                "content": content,
+                "created_at": record["created_at"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_quality_content_by_filename")
+            raise Exception(f"获取quality文件内容失败: {str(e)}")
+
+    async def get_dedup_content_by_filename(self, filename: str):
+        """根据文件名获取去重后的文件内容"""
+        try:
+            # 查找指定文件名的去重记录
+            record = await self.dedup_records.find_one({"output_file": {"$regex": f".*{filename}.*"}})
+            
+            if not record:
+                raise Exception(f"未找到文件名为 {filename} 的去重记录")
+            
+            if not record.get("output_file") or not os.path.exists(record["output_file"]):
+                raise Exception(f"文件路径不存在: {record.get('output_file')}")
+            
+            # 读取文件内容
+            with open(record["output_file"], 'r', encoding='utf-8') as f:
+                content = json.load(f)
+            
+            return {
+                "filename": os.path.basename(record["output_file"]),
+                "content": content,
+                "created_at": record["created_at"],
+                "original_count": record["original_count"],
+                "kept_count": record["kept_count"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_dedup_content_by_filename")
+            raise Exception(f"获取去重文件内容失败: {str(e)}")
+
+    async def deduplicate_qa(self, filenames: List[str], dedup_by_answer: bool,
                            dedup_threshold: float, min_answer_length: int = 10):
         try:
             # 获取所有文件内容
@@ -116,8 +168,8 @@ class QADedupService:
             source_texts = []
             input_filenames = []
 
-            for file_id in file_ids:
-                quality_content = await self.get_quality_content(file_id)
+            for filename in filenames:
+                quality_content = await self.get_quality_content_by_filename(filename)
                 source_texts.append(json.dumps(quality_content["content"]))
                 original_pairs.extend(quality_content["content"])
                 input_filenames.append(quality_content["filename"])

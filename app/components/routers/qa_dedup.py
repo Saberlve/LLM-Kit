@@ -9,14 +9,11 @@ from pydantic import BaseModel
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-class FileIDRequest(BaseModel):
-    file_id: str
+class FilenameRequest(BaseModel):
+    filename: str
 
 class RecordIDRequest(BaseModel):
     record_id: str
-
-class FilenameRequest(BaseModel):
-    filename: str
 
 @router.post("/deduplicate_qa")
 async def deduplicate_qa(
@@ -27,7 +24,7 @@ async def deduplicate_qa(
     try:
         service = QADedupService(db)
         result = await service.deduplicate_qa(
-            file_ids=request.quality_file_ids,
+            filenames=request.quality_filenames,
             dedup_by_answer=request.dedup_by_answer,
             dedup_threshold=request.dedup_threshold,
             min_answer_length=request.min_answer_length,
@@ -85,13 +82,13 @@ async def get_dedup_progress(
 
 @router.post("/quality_content")
 async def get_quality_content(
-    request: FileIDRequest,
+    request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定quality文件的内容"""
     try:
         service = QADedupService(db)
-        content = await service.get_quality_content(request.file_id)
+        content = await service.get_quality_content_by_filename(request.filename)
         return APIResponse(
             status="success",
             message="获取文件内容成功",
@@ -103,13 +100,13 @@ async def get_quality_content(
 
 @router.post("/dedup_content")
 async def get_dedup_content(
-    request: FileIDRequest,
+    request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """获取指定去重文件的内容"""
     try:
         service = QADedupService(db)
-        content = await service.get_dedup_content(request.file_id)
+        content = await service.get_dedup_content_by_filename(request.filename)
         return APIResponse(
             status="success",
             message="获取文件内容成功",

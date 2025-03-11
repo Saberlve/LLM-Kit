@@ -31,14 +31,18 @@ class COTGenerateRequest(BaseRequest):
     domain: str = "医学"
 
 class DedupRequest(BaseModel):
-    quality_file_ids: List[str]
+    quality_filenames: List[str]
     dedup_by_answer: bool = False
     min_answer_length: int = 10
     dedup_threshold: float = 0.8
 
-class QualityControlRequest(BaseRequest):
+class QualityControlRequest(BaseModel):
     content: str  # 问答对内容，是一个字典列表
     filename: str  # 文件名
+    save_path: str = "result/"
+    SK: Optional[List[str]] = None
+    AK: Optional[List[str]] = None
+    parallel_num: int = 1
     model_name: str
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8
