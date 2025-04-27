@@ -87,7 +87,7 @@ async def generate_qa_pairs(
                 detail="并行数量不能大于 API 密钥对数量"
             )
         filename=request_body.filename
-        PARSED_FILES_DIR = f"{filename}\\tex_files"
+        PARSED_FILES_DIR = os.path.join(filename, "tex_files")
         raw_filename = filename.split('.')[0]
         parsed_filename = f"{raw_filename}.json"
         # 读取文件内容
@@ -156,7 +156,7 @@ async def get_qa_progress(
             },
             sort=[("created_at", -1)]  # 获取最新的记录
         )
-        
+
         if not record:
             return APIResponse(
                 status="not_found",
@@ -166,18 +166,18 @@ async def get_qa_progress(
                     "status": "not_found"
                 }
             )
-        
+
         # 标准化状态
         status = record.get("status", "processing")
         progress = record.get("progress", 0)
-        
+
         # 如果状态是completed，确保进度是100%
         if status == "completed":
             progress = 100
         # 如果状态是failed或timeout，保持当前进度
         elif status in ["failed", "timeout"]:
             progress = progress
-        
+
         return APIResponse(
             status="success",
             message="进度获取成功",
@@ -254,9 +254,9 @@ async def get_parse_history(request: FilenameRequest):
 @router.post("/delete_file")
 async def delete_files(request: FilenameRequest):
     '''删除构造文件'''
-    PARSED_FILES_DIR = "result\qas"
+    PARSED_FILES_DIR = os.path.join("result", "qas")
     filename = request.filename
-    PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+    PARSED_FILES_DIR1 = os.path.join(filename, "tex_files")
 
     filename = filename.split('.')[0]
     parsed_filename = f"{filename}_qa.json"

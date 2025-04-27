@@ -907,7 +907,7 @@ def clean_filename(filename: str) -> str:
 @router.get("/parse_files")
 async def get_files():
     files_info = []
-    PARSED_FILES_DIR = "parsed_files\parsed_file"
+    PARSED_FILES_DIR = os.path.join("parsed_files", "parsed_file")
     # 将相对路径转换为绝对路径
     for filename in os.listdir(PARSED_FILES_DIR):
         file_path = os.path.join(PARSED_FILES_DIR, filename)
@@ -959,21 +959,21 @@ def _convert_size(size_bytes: int) -> str:
 
 @router.post("/delete_files")
 async def delete_files(request: Request):
-    PARSED_FILES_DIR = "parsed_files\parsed_file"
+    PARSED_FILES_DIR = os.path.join("parsed_files", "parsed_file")
     files_to_delete = await request.json()
     # Process deletion logic here
     for filename in files_to_delete["files"]:
         parsed_filename = f"{filename}_parsed.txt"
         file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
 
-        PARSED_FILES_DIR1 = f"{filename}\\tex_files"
+        PARSED_FILES_DIR1 = os.path.join(filename, "tex_files")
         raw_filename = filename.split('.')[0]
         parsed_filename1 = f"{raw_filename}.json"
         file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
 
 
-        PARSED_FILES_DIR2 = "result\qas"
-        PARSED_FILES_DIR3 = f"{filename}\\tex_files"
+        PARSED_FILES_DIR2 = os.path.join("result", "qas")
+        PARSED_FILES_DIR3 = os.path.join(filename, "tex_files")
 
         filename3 = filename.split('.')[0]
         parsed_filename2 = f"{filename3}_qa.json"

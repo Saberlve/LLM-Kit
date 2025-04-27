@@ -6,7 +6,6 @@ from model_api.erine.erine import generate_erine
 from model_api.flash.flash import generate_flash
 from model_api.lite.lite import generate_lite
 from model_api.Qwen.Qwen import generate_Qwen
-from model_api.erine.erine import generate_erine
 
 
 def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
