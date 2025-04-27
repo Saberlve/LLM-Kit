@@ -1,4 +1,4 @@
-# LLM-kit
+# LLM-Kit: A Large Language Model Toolkit for Iterative Generation of Structured Data
 
 LLM-Kit 是一个用于处理文本、生成问答对、质量控制和去重的工具包。
 
