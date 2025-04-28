@@ -169,7 +169,7 @@
     };
 
 
-    // 删除选中文件
+    //  
     const deleteSelectedFiles = async () => {
         if (selectedFiles.length === 0) {
             console.log("No files selected"); // Debugging
@@ -545,7 +545,7 @@
     {/if}
 
     {#if successMessage}
-        <!-- 显示成功的提示消息 -->
+        <!--   -->
         <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
             <strong class="font-bold">{t("general.success")}!</strong> {successMessage}
         </div>
@@ -781,7 +781,7 @@
     {/if}
 
     {#if successMessage}
-        <!-- 显示成功的提示消息 -->
+        <!--   -->
         <div class="m-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
             <strong class="font-bold">{t("general.success")}!</strong> {successMessage}
         </div>
@@ -945,7 +945,7 @@
                                     <input
                                             type="text"
                                             bind:value={domain1}
-                                            placeholder={`如: 医疗`}
+                                            placeholder={` :  `}
                                             class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                     />
                                 </div>

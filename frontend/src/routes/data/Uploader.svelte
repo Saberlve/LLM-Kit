@@ -15,7 +15,7 @@
     Input,
     Dropdown,
   } from "flowbite-svelte";
-  // const dataset_types = ['微调数据', 'elastic', 'milvus', 'neo4j'];
+  // const dataset_types = [' ', 'elastic', 'milvus', 'neo4j'];
   // let data_type: number = 0;
 
   import { Label } from "flowbite-svelte";
@@ -154,7 +154,7 @@
           <AccordionItem open={true}>
             <span slot="header">{t("data.uploader.zone")}</span>
             <div class="flex flex-row justify-end items-center text-black">
-              <div>以</div>
+              <div> </div>
               <div class="flex flex-row gap-2 m-4 my-8">
                 {#each dataset_types as type, index}
                   <Radio bind:group={data_type} name="method" value={index}
@@ -203,7 +203,7 @@
                         <button
                           on:click={(_) => remove_from_stage_handle(index)}
                           class="text-blue-500 hover:text-blue-800 hover:underline"
-                          >移出暂存区</button
+                          > </button
                         >
                       </TableBodyCell>
                     </TableBody>

@@ -263,7 +263,7 @@
               { headers: { "Content-Type": "application/json" } }
       );
 
-      // 检查响应数据
+      // Check response data
       if (response.data && typeof response.data.exists === "number") {
         return response.data.exists;
       } else {
@@ -398,7 +398,7 @@
     loading = true;
     errorMessage = null;
     try {
-      // 修改为POST请求并正确传递file_id
+      // Modified to POST request and correctly pass file_id
       const response = await axios.delete<APIResponse>(
               `http://127.0.0.1:8000/parse/deletefiles`,
               {
@@ -429,7 +429,7 @@
     loading = true;
     errorMessage = null;
     try {
-      // 修改为POST请求并正确传递file_id
+      // Modified to POST request and correctly pass file_id
       const response = await axios.delete<APIResponse>(
               `http://127.0.0.1:8000/parse/deletefiles`,
               {

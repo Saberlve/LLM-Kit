@@ -116,12 +116,12 @@
 </div>
 <style>
     :global(.multiline-cell) {
-        word-wrap: break-word; /* 内容超出宽度时换行 */
-        overflow-y: auto;      /* 垂直方向内容超出时显示滚动条 */
-        max-height: 10em;      /*  限制最大显示 5 行的高度 (假设每行高度约为 2em) */
+        word-wrap: break-word; 
+        overflow-y: auto;      
+        max-height: 10em;      
         /* display: block;   <-- Removed display: block; */
-        white-space: pre-line; /* 保留文本中的换行符，并允许正常换行 */
-        max-width: 300px;      /*  可以设置一个最大宽度，防止内容过长撑开表格, 可以根据需要调整 */
+        white-space: pre-line; 
+        max-width: 300px;     
     }
     :global(.table-cell-border) {
         border: 1px solid #ddd;

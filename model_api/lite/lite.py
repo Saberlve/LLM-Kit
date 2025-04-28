@@ -12,7 +12,7 @@ def generate_lite(text, API_KEY, prompt_choice):
     content = content.format(text)
 
     data = {
-            "model": "Lite", # 指定请求的模型
+            "model": "Lite", 
             "messages": [
                 {
                     "role": "user",

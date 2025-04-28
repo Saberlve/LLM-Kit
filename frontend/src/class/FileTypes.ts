@@ -1,6 +1,6 @@
 import type { APIResponse } from './APIResponse';
 
-// 定义上传文件的结构
+// Define the structure of uploaded files
 export interface UploadedFile {
     file_id: string;
     filename: string;
@@ -14,7 +14,7 @@ export interface UploadedFile {
     recordId?: string | null;
 }
 
-// 定义上传二进制文件的结构
+// Define the structure of uploaded binary files
 export interface UploadedBinaryFile {
     file_id: string;
     filename: string;
@@ -29,7 +29,7 @@ export interface UploadedBinaryFile {
     recordId?: string | null;
 }
 
-// 定义统一文件类型
+// Define unified file type
 export type UnifiedFile = UploadedFile | UploadedBinaryFile;
 
 export interface UnifiedFileListResponse extends APIResponse {

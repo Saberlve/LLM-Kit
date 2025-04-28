@@ -17,9 +17,9 @@ class QualityService:
         self.db = db
         self.quality_generations = db.llm_kit.quality_generations
         self.quality_records = db.llm_kit.quality_records
-        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
-        self.qa_generations = db.llm_kit.qa_generations  # 添加对qa_generations的引用
-        self.qa_pairs = db.llm_kit.qa_pairs  # 添加对qa_pairs的引用
+        self.error_logs = db.llm_kit.error_logs  # Add error log collection
+        self.qa_generations = db.llm_kit.qa_generations  # Add reference to qa_generations
+        self.qa_pairs = db.llm_kit.qa_pairs  # Add reference to qa_pairs
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
@@ -46,10 +46,10 @@ class QualityService:
     ):
         generation_id = None
         try:
-            # 获取不带扩展名的文件名
+            # Get filename without extension
             base_filename = filename.rsplit('.', 1)[0]
 
-            # 检查是否已有记录，如果有，重置进度
+            # Check if record already exists, if so, reset progress
             existing_record = await self.quality_generations.find_one({"input_file": filename})
             if existing_record:
                 await self.quality_generations.update_one(
@@ -65,31 +65,31 @@ class QualityService:
                 )
                 generation_id = existing_record["_id"]
             else:
-                # 创建新记录
+                # Create new record
                 generation = QualityControlGeneration(
                     input_file=filename,
                     save_path=save_path,
                     model_name=model_name,
                     status="processing",
                     source_text=json.dumps(content, ensure_ascii=False),
-                    progress=0  # 初始化进度为 0
+                    progress=0  # Initialize progress to 0
                 )
                 result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
                 generation_id = result.inserted_id
 
             try:
-                # 初始化阶段 - 10%
+                # Initialization phase - 10%
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {"progress": 10}}
                 )
 
-                # 创建保存目录
+                # Create save directory
                 os.makedirs(save_path, exist_ok=True)
                 total_qas = len(content)
                 processed_qas = 0
 
-                # 创建 hparams 对象
+                # Create hparams object
                 hparams = HyperParams(
                     file_path=filename,
                     save_path=save_path,
@@ -103,21 +103,21 @@ class QualityService:
                     domain=domain
                 )
 
-                # 创建质量控制器实例
+                # Create quality controller instance
                 quality_generator = QAQualityGenerator(content, hparams)
 
-                # 任务准备阶段 - 20%
+                # Task preparation phase - 20%
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {"progress": 20}}
                 )
 
-                # 使用上下文管理器创建线程池
+                # Use context manager to create thread pool
                 with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
                     loop = asyncio.get_event_loop()
                     futures = []
 
-                    # 创建任务列表
+                    # Create task list
                     for i, qa in enumerate(content):
                         future = loop.run_in_executor(
                             executor,
@@ -130,7 +130,7 @@ class QualityService:
                         )
                         futures.append(future)
 
-                    # 处理阶段 - 20% to 80%
+                    # Processing phase - 20% to 80%
                     optimized_qas = []
                     for i, future in enumerate(asyncio.as_completed(futures)):
                         try:
@@ -140,45 +140,45 @@ class QualityService:
                                     optimized_qas.extend(result)
                                 else:
                                     optimized_qas.append(result)
-                            
-                            # 更新进度 - 处理小数据时的特殊处理
+
+                            # Update progress - special handling for small data
                             processed_qas += 1
                             if total_qas == 1:
-                                # 单个QA时的进度点
+                                # Progress points for single QA
                                 progress_steps = [30, 40, 50, 60, 70]
                                 progress = progress_steps[min(len(progress_steps)-1, i)]
                             else:
-                                # 多个QA的正常进度计算
+                                # Normal progress calculation for multiple QAs
                                 progress = int(20 + (processed_qas / total_qas * 60))
-                            
+
                             await self.quality_generations.update_one(
                                 {"_id": generation_id},
                                 {"$set": {"progress": progress}}
                             )
                         except Exception as e:
-                            logger.error(f"处理QA对失败: {str(e)}")
+                            logger.error(f"Failed to process QA pair: {str(e)}")
                             continue
 
-                    # 保存准备阶段 - 90%
+                    # Save preparation phase - 90%
                     await self.quality_generations.update_one(
                         {"_id": generation_id},
                         {"$set": {"progress": 90}}
                     )
 
                     if not optimized_qas:
-                        raise Exception("没有生成任何优化后的问答对")
+                        raise Exception("No optimized QA pairs were generated")
 
-                    # 使用简化的文件名格式：原文件名_quality.json
+                    # Use simplified filename format: original_filename_quality.json
                     final_save_path = os.path.join(
                         save_path,
                         f"{base_filename}_quality.json"
                     )
 
-                    # 保存最终结果
+                    # Save final results
                     with open(final_save_path, 'w', encoding='utf-8') as f:
                         json.dump(optimized_qas, f, ensure_ascii=False, indent=4)
 
-                    # 完成 - 100%
+                    # Complete - 100%
                     await self.quality_generations.update_one(
                         {"_id": generation_id},
                         {
@@ -199,7 +199,7 @@ class QualityService:
                     }
 
             except Exception as e:
-                # 发生错误时只更新状态，保持当前进度
+                # When an error occurs, only update status, maintain current progress
                 await self.quality_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {
@@ -225,17 +225,17 @@ class QualityService:
             raise Exception(f"Quality control failed: {str(e)}")
 
     async def get_quality_records(self):
-        """获取最近一次的质量控制历史记录"""
+        """Get the most recent quality control history record"""
         try:
-            # 只获取最新的一条记录
+            # Only get the latest record
             record = await self.quality_generations.find_one(
                 sort=[("created_at", -1)]
             )
-            
+
             if not record:
                 return []
-            
-            # 获取该记录对应的所有问答对
+
+            # Get all QA pairs corresponding to this record
             qa_cursor = self.quality_records.find({"generation_id": record["_id"]})
             qa_pairs = []
             async for qa in qa_cursor:
@@ -247,12 +247,12 @@ class QualityService:
                     "status": qa["status"]
                 })
 
-            # 修改：如果source_text是JSON字符串，解析它
+            # Modification: If source_text is a JSON string, parse it
             source_text = record["source_text"]
             try:
                 source_text = json.loads(source_text)
             except:
-                pass  # 如果解析失败，保持原样
+                pass  # If parsing fails, keep as is
 
             return [{
                 "generation_id": str(record["_id"]),
@@ -260,7 +260,7 @@ class QualityService:
                 "output_file": record.get("output_file", ""),
                 "model_name": record["model_name"],
                 "status": record["status"],
-                "source_text": source_text,  # 使用解析后的source_text
+                "source_text": source_text,  # Use parsed source_text
                 "qa_pairs": qa_pairs,
                 "created_at": record["created_at"]
             }]
@@ -268,27 +268,27 @@ class QualityService:
             raise Exception(f"Failed to get records: {str(e)}")
 
     async def get_all_qa_files(self):
-        """获取所有已生成的问答对文件列表，同名文件只返回最新的记录"""
+        """Get a list of all generated QA pair files, only returning the latest record for files with the same name"""
         try:
-            # 获取所有已完成的记录
+            # Get all completed records
             records = await self.qa_generations.find(
                 {"status": "completed"},
                 {"save_path": 1, "created_at": 1, "_id": 1}
             ).to_list(None)
-            
-            # 按文件名分组，保留最新的记录
+
+            # Group by filename, keep the latest record
             filename_dict = {}  # {filename: {"id": id, "filename": filename, "created_at": created_at}}
-            
+
             for record in records:
                 if not record.get("save_path"):
                     continue
-                    
-                # 从save_path中提取文件名
+
+                # Extract filename from save_path
                 filename = os.path.basename(record["save_path"])
                 created_at = record["created_at"]
                 record_id = str(record["_id"])
-                
-                # 如果文件名已存在，比较创建时间
+
+                # If filename already exists, compare creation time
                 if filename in filename_dict:
                     if created_at > filename_dict[filename]["created_at"]:
                         filename_dict[filename] = {
@@ -302,43 +302,43 @@ class QualityService:
                         "filename": filename,
                         "created_at": created_at
                     }
-            
-            # 转换为列表并按创建时间降序排序
+
+            # Convert to list and sort by creation time in descending order
             files = list(filename_dict.values())
             files.sort(key=lambda x: x["created_at"], reverse=True)
-            
+
             return files
-            
+
         except Exception as e:
             await self._log_error(str(e), "get_all_qa_files")
-            raise Exception(f"获取问答对文件列表失败: {str(e)}")
+            raise Exception(f"Failed to get QA pair file list: {str(e)}")
 
     async def get_qa_content(self, filename: str):
-        """根据文件名获取问答对内容"""
+        """Get QA pair content based on filename"""
         try:
-            # 查找指定文件名的最新已完成记录
+            # Find the latest completed record for the specified filename
             record = await self.qa_generations.find_one(
                 {
-                    "input_file": filename,  # 使用保存的文件名查询
+                    "input_file": filename,  # Query using the saved filename
                     "status": "completed"
                 },
                 sort=[("created_at", -1)]
             )
-            
+
             if not record:
-                raise Exception("文件不存在或未完成生成")
-            
-            # 直接从记录中获取问答对内容
+                raise Exception("File does not exist or generation not completed")
+
+            # Get QA pair content directly from the record
             if record.get("content"):
                 qa_pairs = json.loads(record["content"])
             else:
-                # 如果记录中没有内容，从文件中读取
+                # If there's no content in the record, read from the file
                 try:
                     with open(record["save_path"], 'r', encoding='utf-8') as f:
                         qa_pairs = json.load(f)
                 except Exception as e:
-                    raise Exception(f"读取问答对文件失败: {str(e)}")
-                
+                    raise Exception(f"Failed to read QA pair file: {str(e)}")
+
             return {
                 "filename": filename,
                 "created_at": record["created_at"],
@@ -347,32 +347,32 @@ class QualityService:
             }
         except Exception as e:
             await self._log_error(str(e), "get_qa_content")
-            raise Exception(f"获取问答对内容失败: {str(e)}")
+            raise Exception(f"Failed to get QA pair content: {str(e)}")
 
     async def get_qa_content_by_id(self, record_id: str):
-        """根据记录ID获取问答对内容"""
+        """Get QA pair content based on record ID"""
         try:
-            # 将字符串ID转换为ObjectId
+            # Convert string ID to ObjectId
             from bson import ObjectId
             record = await self.qa_generations.find_one({"_id": ObjectId(record_id)})
-            
+
             if not record:
-                raise Exception("记录不存在")
-            
+                raise Exception("Record does not exist")
+
             if record["status"] != "completed":
-                raise Exception("该记录尚未完成生成")
-            
-            # 直接从记录中获取问答对内容
+                raise Exception("This record has not completed generation")
+
+            # Get QA pair content directly from the record
             if record.get("content"):
                 qa_pairs = json.loads(record["content"])
             else:
-                # 如果记录中没有内容，从文件中读取
+                # If there's no content in the record, read from the file
                 try:
                     with open(record["save_path"], 'r', encoding='utf-8') as f:
                         qa_pairs = json.load(f)
                 except Exception as e:
-                    raise Exception(f"读取问答对文件失败: {str(e)}")
-                
+                    raise Exception(f"Failed to read QA pair file: {str(e)}")
+
             return {
                 "id": str(record["_id"]),
                 "filename": os.path.basename(record["save_path"]),
@@ -382,4 +382,4 @@ class QualityService:
             }
         except Exception as e:
             await self._log_error(str(e), "get_qa_content_by_id")
-            raise Exception(f"获取问答对内容失败: {str(e)}")
+            raise Exception(f"Failed to get QA pair content: {str(e)}")

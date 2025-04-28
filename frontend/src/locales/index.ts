@@ -14,7 +14,7 @@ i18next.init({
 
 const supportedLanguages = [
   { display: "English", value: "en" },
-  { display: "简体中文", value: "zh-CN" },
+  { display: "Simplified Chinese", value: "zh-CN" },
 ];
 
 export default () => createI18nStore(i18next);

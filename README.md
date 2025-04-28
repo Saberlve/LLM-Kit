@@ -1,36 +1,36 @@
 # LLM-kit
 
-LLM-Kit 是一个用于处理文本、生成问答对、质量控制和去重的工具包。
+LLM-Kit is a toolkit for processing text, generating question-answer pairs, quality control, and deduplication.
 
-## 模块说明
+## Module Description
 
-### 1. 文本解析模块 (text_parse)
+### 1. Text Parsing Module (text_parse)
 
-- 支持多种文件格式的解析
-- 提供文本到LaTeX的转换功能
+- Supports parsing of multiple file formats
+- Provides text to LaTeX conversion functionality
 
-### 2. 问答生成模块 (generate_qas)
+### 2. Question-Answer Generation Module (generate_qas)
 
-- 基于解析后的文本生成高质量问答对
-- 支持多种大型语言模型
+- Generates high-quality question-answer pairs based on parsed text
+- Supports various large language models
 
-### 3. 质量控制模块 (quality_control)
+### 3. Quality Control Module (quality_control)
 
-- 评估问答对的质量
-- 优化低质量的问答对
+- Evaluates the quality of question-answer pairs
+- Optimizes low-quality question-answer pairs
 
-### 4. 去重模块 (deduplication)
+### 4. Deduplication Module (deduplication)
 
-- 检测并移除重复的问答对
-- 支持基于问题或答案的去重策略
+- Detects and removes duplicate question-answer pairs
+- Supports deduplication strategies based on questions or answers
 
-## 使用说明
+## Usage Instructions
 
-详细的API使用说明请参考 `api.md` 文件。
+For detailed API usage instructions, please refer to the `api.md` file.
 
-## 配置说明
+## Configuration Instructions
 
-配置文件位于 `hparams` 目录下：
+Configuration files are located in the `hparams` directory:
 
-- `config.yaml`: 基本配置
-- `dedup.yaml`: 去重配置
+- `config.yaml`: Basic configuration
+- `dedup.yaml`: Deduplication configuration

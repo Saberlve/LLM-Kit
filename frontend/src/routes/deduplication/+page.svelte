@@ -26,7 +26,7 @@
   import type {
     UnifiedFile
   } from '../../class/Filetypes';
-  
+
   interface APIResponse<T = Record<string, unknown>> {
       status: string;
       message: string;
@@ -43,12 +43,12 @@
   let dedup_by_answer: boolean = true;
   let dedup_threshold: number = 0.8;
   let selected_file_ids: Array<string> = [];
-  let selectedFilename: string = ''; // 用于存储选中的文件名
+  let selectedFilename: string = ''; // Used to store the selected filename
 
-  // 验证条件为选中文件数量
+  // Validation condition is the number of selected files
   $: validFordeduplication = selected_file_ids.length > 0;
 
-  // 添加复选框处理函数
+  // Add checkbox handling function
   function handleCheckboxChange(fileId: string) {
     if (selected_file_ids.includes(fileId)) {
       selected_file_ids = selected_file_ids.filter(id => id !== fileId);
@@ -74,7 +74,7 @@
         }
       );
 
-      // 检查后端返回的数据
+      // Check backend response data
       if (response.status !== 200) {
         console.error("Network Error:", response.statusText);
         return;
@@ -95,7 +95,7 @@
           deletedPairs: deleted_pairs,
         });
 
-        // 根据需求处理结果，例如更新页面显示
+        // Process results according to requirements, such as updating page display
         errorMessage = null;
 
       } else {
@@ -217,13 +217,13 @@
                 <span>{t("deduplication.dedup_by_answer")}</span>
                 <Checkbox
                     bind:checked={dedup_by_answer}
-                    class="ml-2"  
+                    class="ml-2"
                 />
               </div>
-              
+
               <div class="w-full flex flex-row">
                 <div class="m-2 p-2">
-                  <span>{t("deduplication.dedup_threshold")}</span>                
+                  <span>{t("deduplication.dedup_threshold")}</span>
                 </div>
                 <div class="w-7/12 flex-row">
                     <div class="relative w-full mx-2">

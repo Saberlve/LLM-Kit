@@ -81,9 +81,9 @@
                         <tr>
                             <TableBodyCell class="multiline-cell table-cell-border">{qaItem.content}</TableBodyCell>
                             <TableBodyCell class="multiline-cell table-cell-border">
-                                {#if qaItem.result && qaItem.result.推理}
+                                {#if qaItem.result && qaItem.result. }
                                     <ol class="list-decimal pl-5">
-                                        {#each qaItem.result.推理 as reasoningStep}
+                                        {#each qaItem.result.  as reasoningStep}
                                             <li class="mb-2">
                                                 <p class="font-semibold">{reasoningStep.action}{#if reasoningStep.title}: {reasoningStep.title}{/if}</p>
                                                 <p>{reasoningStep.content}</p>
@@ -130,10 +130,10 @@
 </div>
 <style>
     :global(.multiline-cell) {
-        word-wrap: break-word; /* 内容超出宽度时换行 */
-        overflow-y: auto;      /* 垂直方向内容超出时显示滚动条 */
+        word-wrap: break-word; /*   */
+        overflow-y: auto;      /*   */
         max-height: 20em;      /* Increased max height for potentially longer content */
-        white-space: pre-line; /* 保留文本中的换行符，并允许正常换行 */
+        white-space: pre-line; /*  ，  */
         max-width: 600px;      /* Increased max width for content and reasoning, adjust as needed */
     }
     :global(.table-cell-border) {

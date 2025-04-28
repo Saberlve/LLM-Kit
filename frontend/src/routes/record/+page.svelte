@@ -42,7 +42,7 @@
      filename: ""
   };
  
-  let selectedTask = TASK_URLS.parse; // 初始选中任务
+  let selectedTask = TASK_URLS.parse; //  
  
   const col_names = [
       t("record.message"),
@@ -57,7 +57,7 @@
  
   async function fetchData() {
       try {
-          // 根据选中的任务路径发送请求
+          //  
           const res = await axios.post(selectedTask, searchParams);
           records = res.data;
       } catch (error) {
@@ -73,13 +73,13 @@
       fetchData();
   }
  
-  // 切换任务
+  //  
   function switchTask(task: string) {
       selectedTask = TASK_URLS[task] || TASK_URLS.parse;
       fetchData();
   }
  
-  // 新增功能：删除质量控制记录
+  //  ： 
     async function deleteRecord(recordId: string) {
         try {
             const res = await axios.delete(`/quality_records`, {
@@ -88,7 +88,7 @@
                 }
             });
             console.log("Record deleted:", res.data);
-            // 更新记录列表
+            //  
             records = records.filter(record => record.id !== recordId);
         } catch (error) {
             console.error("Error deleting record:", error);
@@ -118,14 +118,14 @@
             </div>
         </div>
         <div class="flex m-1">
-            <!-- 添加任务选择 -->
+            <!--   -->
             <select class="my-2 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-6 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-50"
                 on:change={(e) => switchTask(e.target.value)}>
                 <option value="parse">{t("record.tasks.parse")}</option>
                 <option value="to_tex">{t("record.tasks.to_tex")}</option>
                 <option value="generate_qa">{t("record.tasks.generate_qa")}</option>
-                <option value="dedup">{t("record.tasks.dedup")}</option> <!-- 去重任务 -->
-                <option value="cothistory">{t("record.tasks.cothistory")}</option> <!-- 文件解析任务 -->
+                <option value="dedup">{t("record.tasks.dedup")}</option> <!--   -->
+                <option value="cothistory">{t("record.tasks.cothistory")}</option> <!--   -->
             </select>
         </div>
     </div>
@@ -154,7 +154,7 @@
                         href={`/record/log?id=${record.id}`}
                         class="text-blue-600 hover:underline">{t("view_logs")}</a
                     >
-                    <!-- 添加删除功能 -->
+                    <!--   -->
                     <Button class="ml-2" on:click={() => deleteRecord(record.id)}>
                         {t("delete")}
                     </Button>

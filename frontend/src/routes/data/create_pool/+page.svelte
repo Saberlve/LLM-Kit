@@ -78,7 +78,7 @@
 </script>
 
 {#if !loading}
-  <Modal title="暂存区中仍有未提交的数据" bind:open={next_modal} autoclose>
+  <Modal title="There are still uncommitted data in the staging area" bind:open={next_modal} autoclose>
     <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
       {t("data.task.p1")}
     </p>
