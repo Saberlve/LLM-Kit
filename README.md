@@ -1,36 +1,138 @@
-# LLM-Kit: A Large Language Model Toolkit for Iterative Generation of Structured Data
+# LLM-Kit
 
-LLM-Kit 是一个用于处理文本、生成问答对、质量控制和去重的工具包。
+LLM-Kit is a powerful toolkit for text processing, QA pair generation, quality control, and deduplication. It provides a complete set of API interfaces accessible through the FastAPI framework.
 
-## 模块说明
+## Features
 
-### 1. 文本解析模块 (text_parse)
+- Support for text parsing in multiple file formats
+- Automatic text to LaTeX conversion
+- High-quality QA pair generation based on large language models
+- Intelligent quality control and optimization system
+- Efficient QA pair deduplication algorithm
+- Complete REST API interface
+- Detailed error logging system
+- Support for asynchronous processing and parallel computing
 
-- 支持多种文件格式的解析
-- 提供文本到LaTeX的转换功能
+## Installation
 
-### 2. 问答生成模块 (generate_qas)
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd LLM-Kit
+```
 
-- 基于解析后的文本生成高质量问答对
-- 支持多种大型语言模型
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-### 3. 质量控制模块 (quality_control)
+3. Configure MongoDB database:
+- Ensure MongoDB service is running
+- Default connection address: mongodb://localhost:27017
+- Default database name: llm_kit
 
-- 评估问答对的质量
-- 优化低质量的问答对
+## Module Description
 
-### 4. 去重模块 (deduplication)
+### 1. Text Parsing Module (text_parse)
 
-- 检测并移除重复的问答对
-- 支持基于问题或答案的去重策略
+- Supports parsing of multiple file formats (txt, pdf, etc.)
+- Provides text to LaTeX conversion functionality
+- Supports OCR functionality
+- Automatically saves parsing records
 
-## 使用说明
+### 2. QA Pair Generation Module (generate_qas)
 
-详细的API使用说明请参考 `api.md` 文件。
+- Generates high-quality QA pairs based on parsed text
+- Supports multiple large language models (such as Ernie)
+- Supports parallel processing for improved efficiency
+- Supports custom domain QA generation
 
-## 配置说明
+### 3. Quality Control Module (quality_control)
 
-配置文件位于 `hparams` 目录下：
+- Evaluates QA pair quality
+- Optimizes low-quality QA pairs
+- Supports customizable similarity and coverage thresholds
+- Provides detailed quality assessment records
 
-- `config.yaml`: 基本配置
-- `dedup.yaml`: 去重配置
+### 4. Deduplication Module (deduplication)
+
+- Detects and removes duplicate QA pairs
+- Supports deduplication strategies based on questions or answers
+- Configurable deduplication thresholds
+- Retains highest quality QA pairs
+
+## Configuration Guide
+
+Configuration files are located in the `hparams` directory:
+
+### config.yaml
+```yaml
+file_path: Input file path
+save_path: Results save path
+AK: [API key list]
+SK: [Corresponding secret keys]
+model_name: Model name to use
+parallel_num: Number of parallel processes
+convert_to_tex: Whether to convert to LaTeX
+similarity_rate: Similarity threshold
+coverage_rate: Coverage threshold
+max_attempts: Maximum retry attempts
+domain: Domain setting
+```
+
+### dedup.yaml
+- Contains deduplication-related configuration parameters
+- Configurable deduplication strategy and thresholds
+
+## API Interface
+
+### Main Endpoints
+
+1. Text Parsing Related
+- POST `/parse/upload`: Upload file
+- POST `/parse`: Parse file
+- GET `/parse/files/all`: Get all uploaded files
+
+2. LaTeX Conversion Related
+- POST `/to_tex`: Convert to LaTeX format
+
+3. QA Generation Related
+- POST `/qa/generate_qa`: Generate QA pairs
+- GET `/qa/generate_qa/history`: Get generation history
+
+4. Quality Control Related
+- POST `/quality`: Evaluate and optimize QA pairs
+- GET `/quality/history`: Get quality control history
+
+5. Deduplication Related
+- POST `/dedup/deduplicate_qa`: Execute QA pair deduplication
+- GET `/dedup/deduplicate_qa/history`: Get deduplication history
+
+### Error Handling
+- All interfaces have a unified error handling mechanism
+- Error logs can be viewed via GET `/error-logs` endpoint
+- Supports detailed error tracking and recording
+
+## Development Guide
+
+- Developed using FastAPI framework
+- Supports asynchronous processing
+- Includes comprehensive error handling and logging
+- Modular design, easy to extend
+
+## Usage Examples
+
+For detailed API usage instructions and examples, please refer to the `api.md` file.
+
+## Notes
+
+1. Before using, please ensure:
+- MongoDB service is properly started
+- API keys are correctly set in the configuration file
+- Sufficient disk space is available for storing generated files
+
+2. Performance Optimization Suggestions:
+- Set an appropriate number of parallel processes
+- Adjust similarity and coverage thresholds according to actual needs
+- Regularly clean up unnecessary historical records
+

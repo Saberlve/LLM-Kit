@@ -5,16 +5,16 @@ import yaml
 class HyperParams:
     file_path: str
     save_path: str
-    parallel_num: int=1  # 单个文件的并行数量，要与SK,AK长度相等
+    parallel_num: int=1  
     SK: list[str]=None
     AK: list[str]=None
-    convert_to_tex: bool=True# 是否先将源文本转成latex格式，有利于提升问答对质量
-    model_name: str="erine"  #调用的模型名字
-    save_steps: int=100 #生成100个问答对保存一次
-    similarity_rate: float=0.8 #相似度阈值
-    coverage_rate: float=0.9 #覆盖率阈值
+    convert_to_tex: bool=True
+    model_name: str="erine"  
+    save_steps: int=100 
+    similarity_rate: float=0.8
+    coverage_rate: float=0.9 
     max_attempts: int=3
-    domain: str="medical" #领域
+    domain: str="medical" 
     
 
     @classmethod
@@ -33,7 +33,7 @@ class DedupParams:
     dedup_by_answer: bool
     min_answer_length: int
     deleted_pairs_file: str
-    dedup_threshold: float=0.8  # 去重阈值
+    dedup_threshold: float=0.8 
     dedup_num_perm: int=128
 
     @classmethod

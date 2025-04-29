@@ -19,13 +19,13 @@ logging.basicConfig(
 
 app = FastAPI(title="LLM-Kit API")
 
-# 添加一个中间件类来处理非200响应
+
 class ErrorLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:
             response = await call_next(request)
             
-            # 记录非200状态码的响应
+
             if response.status_code >= 400:
                 error_message = "HTTP {}: {}".format(
                     response.status_code,
@@ -41,7 +41,7 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
             return response
             
         except HTTPException as exc:
-            # 处理HTTP异常
+    
             await log_error(
                 error_message=str(exc.detail),
                 source=request.url.path,
@@ -50,12 +50,10 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
             )
             raise exc
         except Exception as exc:
-            # 让全局异常处理器处理其他未捕获的异常
             raise exc
 
-# 添加中间件（注意顺序很重要）
-app.add_middleware(ErrorLoggingMiddleware)  # 先添加错误日志中间件
-app.add_middleware(                         # 再添加CORS中间件
+app.add_middleware(ErrorLoggingMiddleware)  
+app.add_middleware(                        
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -63,9 +61,8 @@ app.add_middleware(                         # 再添加CORS中间件
     allow_headers=["*"],
 )
 
-# 修改错误日志函数以包含请求体
 async def log_error(error_message: str, source: str, stack_trace: str = None, request=None, status_code: int = 500):
-    """记录错误到数据库"""
+
     db = await get_database()
     error_log = {
         "timestamp": datetime.now(timezone.utc),
@@ -79,19 +76,17 @@ async def log_error(error_message: str, source: str, stack_trace: str = None, re
         "request_query_params": dict(request.query_params) if request else None,
     }
     
-    # 尝试获取请求体
     if request:
         try:
             body = await request.body()
             if body:
                 error_log["request_body"] = body.decode('utf-8', 'replace')
         except Exception:
-            pass  # 如果无法获取请求体，就忽略它
-            
+            pass  
     await db.llm_kit.error_logs.insert_one(error_log)
 
 async def clear_all_collections():
-    """清空所有集合的数据"""
+
     db = await get_database()
     collections = [
         "parse_records",
@@ -103,8 +98,8 @@ async def clear_all_collections():
         "dedup_records",
         "kept_pairs",
         "error_logs",
-        "uploaded_files",           # 添加文本文件集合
-        "uploaded_binary_files"     # 添加二进制文件集合
+        "uploaded_files",          
+        "uploaded_binary_files"    
     ]
     
     for collection_name in collections:
@@ -113,12 +108,10 @@ async def clear_all_collections():
             await collection.delete_many({})
             print(f"Cleared collection: {collection_name}")
             
-            # 如果是文件相关的集合，同时清理文件系统中的文件
             if collection_name in ["uploaded_files", "uploaded_binary_files"]:
                 import shutil
                 import os
                 
-                # 清理 parsed_files 目录
                 parsed_files_dir = os.path.join("parsed_files", "parsed_file")
                 if os.path.exists(parsed_files_dir):
                     shutil.rmtree(parsed_files_dir)
@@ -129,7 +122,6 @@ async def clear_all_collections():
             await log_error(str(e), f"clear_collection_{collection_name}")
             print(f"Error clearing collection {collection_name}: {str(e)}")
 
-# 注册路由
 app.include_router(parse.router, prefix="/parse", tags=["parse"])
 app.include_router(to_tex.router, prefix="/to_tex", tags=["to_tex"])
 app.include_router(qa_generate.router, prefix="/qa", tags=["qa_generate"])
@@ -137,21 +129,19 @@ app.include_router(quality.router, prefix="/quality", tags=["quality"])
 app.include_router(qa_dedup.router, prefix="/dedup", tags=["qa_dedup"])
 app.include_router(cot_generate.router, prefix="/cot", tags=["cot_generate"])
 
-# 健康检查接口
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "LLM-Kit API is running"}
 
 @app.post("/clear-data")
 async def clear_data():
-    """手动清空所有数据的API端点"""
     await clear_all_collections()
     return {"message": "All collections cleared successfully"}
 
-# 修改全局异常处理器
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    """全局异常处理器"""
+
     import traceback
     error_msg = str(exc)
     stack_trace = traceback.format_exc()
@@ -177,12 +167,7 @@ async def get_error_logs(
     limit: int = Query(default=100, ge=1, le=1000),
     skip: int = Query(default=0, ge=0)
 ):
-    """获取最近的错误日志
-    
-    Args:
-        limit: 返回的日志数量限制
-        skip: 跳过的日志数量
-    """
+   
     db = await get_database()
     cursor = db.llm_kit.error_logs.find() \
         .sort("timestamp", -1) \
@@ -193,8 +178,8 @@ async def get_error_logs(
     
     logs = []
     async for log in cursor:
-        log['id'] = str(log['_id'])  # 转换ObjectId为字符串
-        del log['_id']  # 删除原始的_id字段
+        log['id'] = str(log['_id'])  
+        del log['_id']  
         logs.append(log)
     
     return {
@@ -251,7 +236,7 @@ if __name__ == "__main__":
 #                 import traceback
 #                 error_msg = f"Error processing file {file}: {str(e)}"
 #                 stack_trace = traceback.format_exc()
-#                 # 由于命令行模式可能没有运行异步事件循环，这里使用同步方式记录错误
+#                
 #                 import asyncio
 #                 loop = asyncio.get_event_loop()
 #                 loop.run_until_complete(log_error(error_msg, "main_process", stack_trace))
