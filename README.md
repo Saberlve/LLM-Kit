@@ -17,7 +17,7 @@ LLM-Kit is a powerful toolkit for text processing, QA pair generation, quality c
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone https://github.com/Saberlve/LLM-Kit.git
 cd LLM-Kit
 ```
 
@@ -114,17 +114,6 @@ domain: Domain setting
 - All interfaces have a unified error handling mechanism
 - Error logs can be viewed via GET `/error-logs` endpoint
 - Supports detailed error tracking and recording
-
-## Development Guide
-
-- Developed using FastAPI framework
-- Supports asynchronous processing
-- Includes comprehensive error handling and logging
-- Modular design, easy to extend
-
-## Usage Examples
-
-For detailed API usage instructions and examples, please refer to the `api.md` file.
 
 ## Notes
 
