@@ -15,12 +15,14 @@ from model_api.prompts import PROMPT_DICT
 class QAQualityGenerator:
     def __init__(self, qa_path: str, hparams: HyperParams):
         # Basic configuration
+        # Basic configuration
         self.hparams = hparams
         self.qa_path = qa_path
         self.save_dir_path = os.path.join('result', 'qas_iterated',
                                           f"qa_iteratedfor_{os.path.basename(qa_path).split('.')[0]}")
         os.makedirs(self.save_dir_path, exist_ok=True)
         self.model_name = hparams.model_name
+        # API related
         # API related
         self.ak_list = hparams.AK
         self.sk_list = hparams.SK
@@ -37,6 +39,7 @@ class QAQualityGenerator:
         if len(self.ak_list) != len(self.sk_list):
             raise ValueError('AKs and SKs must have the same length!')
         if len(self.ak_list) < self.parallel_num:
+            raise ValueError('Please add enough AK and SK!')
             raise ValueError('Please add enough AK and SK!')
 
 
@@ -91,6 +94,7 @@ class QAQualityGenerator:
                 return selected_qa
         except Exception as e:
             print(f'Error regenerating QA pair: {e}')
+            print(f'Error regenerating QA pair: {e}')
         return None
 
     def generate_more_qas(self, qa: Dict, nearby_qas: List[Dict], ak: str, sk: str) -> Optional[Dict]:
@@ -101,6 +105,7 @@ class QAQualityGenerator:
                     new_qa = extract_qa(response)
                     return new_qa
             except Exception as e:
+                print(f'Error generating more QA pairs: {e}')
                 print(f'Error generating more QA pairs: {e}')
         return None
 
@@ -123,6 +128,7 @@ class QAQualityGenerator:
                         return None
                     continue
             except Exception as e:
+                print(f'Error during quality check: {e}')
                 print(f'Error during quality check: {e}')
                 attempt += 1
         return qa
@@ -196,6 +202,7 @@ class QAQualityGenerator:
 
         except Exception as e:
             print(f"Quality control processing failed: {str(e)}")
+            print(f"Quality control processing failed: {str(e)}")
             raise e
 
     @staticmethod
@@ -204,10 +211,12 @@ class QAQualityGenerator:
         nearby_qas = []
         nearby_qas.append(qas[i])
         # Check backward
+        # Check backward
         j = i - 1
         while j >= 0 and target_text in qas[j]['text']:
             nearby_qas.append(qas[j])
             j -= 1
+        # Check forward
         # Check forward
         j = i + 1
         while j < len(qas) and target_text in qas[j]['text']:

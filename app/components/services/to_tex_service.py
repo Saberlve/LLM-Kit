@@ -20,6 +20,7 @@ class ToTexService:
         self.error_logs = db.llm_kit.error_logs
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
+        """Log error to database"""
         error_log = {
             "timestamp": datetime.utcnow(),
             "error_message": error_message,
@@ -29,48 +30,48 @@ class ToTexService:
         await self.error_logs.insert_one(error_log)
 
     def _process_chunk_with_api(self, chunk: str, ak: str, sk: str, model_name: str, max_tokens: int = 650) -> list:
-        """同步处理单个文本块"""
+        """Synchronously process a single text chunk"""
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
         for sub_chunk in sub_chunks:
             for attempt in range(3):
                 try:
-                    # 直接调用同步的generate函数
+                    # Directly call the synchronous generate function
                     tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
                     results.append(self._clean_result(tex_text))
                     break
                 except Exception as e:
                     if attempt == 2:
-                        raise Exception(f"处理文本块失败: {str(e)}")
+                        raise Exception(f"Failed to process text chunk: {str(e)}")
         return results
 
     def _clean_result(self, text: str) -> str:
-        """清理API返回的结果"""
+        """Clean up API response result"""
         start_index = max(text.find('```') + 3 if '```' in text else -1, 0)
         end_index = text.rfind('```')
         return text[start_index:end_index].strip()
 
     async def get_parsed_files(self):
-        """获取所有已解析的文件列表（同名文件只返回最新的）"""
+        """Get a list of all parsed files (only returns the latest for files with the same name)"""
         try:
-            # 使用聚合管道，按文件名分组并获取每组最新的记录
+            # Use aggregation pipeline to group by filename and get the latest record for each group
             pipeline = [
-                # 只查找已完成的记录
+                # Only look for completed records
                 {"$match": {"status": "completed"}},
-                
-                # 按文件名分组，保留最新的记录
+
+                # Group by filename, keep the latest record
                 {"$group": {
                     "_id": "$input_file",
                     "created_at": {"$max": "$created_at"},
                     "file_type": {"$first": "$file_type"},
                     "latest_doc": {"$first": "$$ROOT"}
                 }},
-                
-                # 按创建时间降序排序
+
+                # Sort by creation time in descending order
                 {"$sort": {"created_at": -1}},
-                
-                # 重新格式化输出
+
+                # Reformat output
                 {"$project": {
                     "_id": 0,
                     "file_id": "$latest_doc._id",
@@ -79,7 +80,7 @@ class ToTexService:
                     "file_type": 1
                 }}
             ]
-            
+
             cursor = self.parse_records.aggregate(pipeline)
             files = []
             async for record in cursor:
@@ -89,29 +90,29 @@ class ToTexService:
                     "created_at": record["created_at"],
                     "file_type": record.get("file_type", "")
                 })
-            
+
             return files
         except Exception as e:
-            logger.error(f"获取解析文件列表失败: {str(e)}")
-            raise Exception(f"获取解析文件列表失败: {str(e)}")
+            logger.error(f"Failed to retrieve parsed file list: {str(e)}")
+            raise Exception(f"Failed to retrieve parsed file list: {str(e)}")
 
     async def get_parsed_content(self, file_id: str):
-        """根据文件ID获取解析后的内容"""
+        """Get parsed content based on file ID"""
         try:
-            # 查找指定ID的已完成记录
+            # Find completed record with the specified ID
             record = await self.parse_records.find_one(
                 {
                     "_id": ObjectId(file_id),
                     "status": "completed"
                 }
             )
-            
+
             if not record:
-                raise Exception(f"未找到ID为 {file_id} 的解析记录")
-            
+                raise Exception(f"Parse record with ID {file_id} not found")
+
             if not record.get("content"):
-                raise Exception(f"ID为 {file_id} 的解析内容为空")
-            
+                raise Exception(f"Parse content for ID {file_id} is empty")
+
             return {
                 "content": record["content"],
                 "filename": record["input_file"],
@@ -119,8 +120,8 @@ class ToTexService:
                 "file_type": record["file_type"]
             }
         except Exception as e:
-            logger.error(f"获取解析内容失败: {str(e)}")
-            raise Exception(f"获取解析内容失败: {str(e)}")
+            logger.error(f"Failed to retrieve parsed content: {str(e)}")
+            raise Exception(f"Failed to retrieve parsed content: {str(e)}")
 
     async def convert_to_latex(
             self,
@@ -132,10 +133,10 @@ class ToTexService:
             parallel_num: int,
             model_name: str
     ):
-        # 使用上下文管理器创建线程池
+        # Use context manager to create thread pool
         with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
             try:
-                # 初始化进度为0
+                # Initialize progress to 0
                 await self.tex_records.update_one(
                     {"input_file": filename},
                     {"$set": {
@@ -145,16 +146,16 @@ class ToTexService:
                     upsert=True
                 )
 
-                # 验证输入
-                assert len(AK) >= parallel_num, '请提供足够的AK和SK'
+                # Validate input
+                assert len(AK) >= parallel_num, 'Please provide enough AK and SK'
 
-                # 创建保存目录
+                # Create save directory
                 os.makedirs(save_path, exist_ok=True)
 
-                # 获取不带扩展名的文件名
+                # Get filename without extension
                 base_filename = filename.rsplit('.', 1)[0]
 
-                # 检查是否已有记录，如果有，重置进度
+                # Check if record already exists, if so, reset progress
                 existing_record = await self.tex_records.find_one({"input_file": filename})
                 if existing_record:
                     await self.tex_records.update_one(
@@ -162,40 +163,40 @@ class ToTexService:
                         {"$set": {"status": "processing", "progress": 0}}
                     )
                 else:
-                    # 创建新记录
+                    # Create new record
                     record = TexConversionRecord(
                         input_file=filename,
                         status="processing",
                         model_name=model_name,
                         save_path=save_path,
-                        progress=0  # 初始化进度为 0
+                        progress=0  # Initialize progress to 0
                     )
                     result = await self.tex_records.insert_one(record.dict(by_alias=True))
                     record_id = result.inserted_id
 
                 try:
-                    # 文本预处理阶段 - 10%
+                    # Text preprocessing stage - 10%
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {"$set": {"progress": 10}}
                     )
 
-                    # 切分文本
+                    # Split text
                     text_chunks = split_text_into_chunks(parallel_num, content)
                     total_chunks = len(text_chunks)
                     processed_chunks = 0
 
-                    # 创建任务列表 - 20%
+                    # Create task list - 20%
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {"$set": {"progress": 20}}
                     )
 
-                    # 使用线程池异步执行任务
+                    # Use thread pool to execute tasks asynchronously
                     results = []
                     loop = asyncio.get_event_loop()
-                    
-                    # 创建任务列表
+
+                    # Create task list
                     futures = []
                     for i, chunk in enumerate(text_chunks):
                         future = loop.run_in_executor(
@@ -207,60 +208,60 @@ class ToTexService:
                             model_name
                         )
                         futures.append(future)
-                    
-                    # 文本处理阶段 - 20% to 80%
+
+                    # Text processing stage - 20% to 80%
                     for i, future in enumerate(asyncio.as_completed(futures)):
                         try:
                             chunk_result = await future
                             results.extend(chunk_result)
-                            
-                            # 更新进度 - 即使只有一个chunk也会有渐进的进度
+
+                            # Update progress - even with just one chunk there will be progressive progress
                             processed_chunks += 1
                             if total_chunks == 1:
-                                # 如果只有一个chunk，分多个步骤显示进度
+                                # If there's only one chunk, show progress in multiple steps
                                 progress_steps = [30, 40, 50, 60, 70]
                                 progress = progress_steps[min(len(progress_steps)-1, i)]
                             else:
-                                # 多个chunks时的正常进度计算
+                                # Normal progress calculation for multiple chunks
                                 progress = int(20 + (processed_chunks / total_chunks * 60))
-                            
+
                             await self.tex_records.update_one(
                                 {"input_file": filename},
                                 {"$set": {"progress": progress}}
                             )
                         except Exception as e:
-                            logger.error(f"处理chunk失败: {str(e)}")
-                            # 继续处理其他chunks
+                            logger.error(f"Failed to process chunk: {str(e)}")
+                            # Continue processing other chunks
                             continue
 
-                    # 准备保存 - 90%
+                    # Prepare to save - 90%
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {"$set": {"progress": 90}}
                     )
 
-                    # 合并所有LaTeX内容
+                    # Combine all LaTeX content
                     combined_tex = '\n'.join(results)
 
-                    # 准备保存的数据格式
+                    # Prepare data format for saving
                     data_to_save = [
                         {"id": i + 1, "chunk": result}
                         for i, result in enumerate(results)
                     ]
 
-                    # 生成简化的保存路径
+                    # Generate simplified save path
                     tex_file_path = os.path.join(
                         save_path,
                         'tex_files',
-                        f'{base_filename}.json'  # 修改为.json后缀
+                        f'{base_filename}.json'  # Changed to .json extension
                     )
                     os.makedirs(os.path.dirname(tex_file_path), exist_ok=True)
 
-                    # 保存为JSON格式
+                    # Save as JSON format
                     with open(tex_file_path, 'w', encoding='utf-8') as json_file:
                         json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
-                    # 完成 - 100%
+                    # Complete - 100%
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {
@@ -273,24 +274,24 @@ class ToTexService:
                         }
                     )
 
-                    # 更新上传文件的状态为completed
+                    # Update uploaded file status to completed
                     await self.db.llm_kit.uploaded_files.update_one(
                         {"filename": filename},
                         {"$set": {"status": "completed"}}
                     )
 
-                    # 同时更新二进制文件集合中的状态（如果存在）
+                    # Also update the status in the binary file collection (if it exists)
                     await self.db.llm_kit.uploaded_binary_files.update_one(
                         {"filename": filename},
                         {"$set": {"status": "completed"}}
                     )
 
-                    # 添加一条新记录，使用简化的文件名
+                    # Add a new record using the simplified filename
                     saved_file_record = {
                         "input_file": os.path.basename(tex_file_path),
                         "original_file": filename,
                         "status": "completed",
-                        "content": data_to_save,  # 使用JSON格式的数据
+                        "content": data_to_save,  # Use JSON format data
                         "created_at": datetime.now(timezone.utc),
                         "save_path": tex_file_path,
                         "model_name": model_name
@@ -304,19 +305,19 @@ class ToTexService:
                     }
 
                 except Exception as e:
-                    # 发生错误时保持当前进度，只更新状态
+                    # When an error occurs, maintain the current progress, only update the status
                     await self.tex_records.update_one(
                         {"input_file": filename},
                         {"$set": {"status": "failed", "error_message": str(e)}}
                     )
 
-                    # 更新上传文件的状态为failed
+                    # Update uploaded file status to failed
                     await self.db.llm_kit.uploaded_files.update_one(
                         {"filename": filename},
                         {"$set": {"status": "failed"}}
                     )
 
-                    # 同时更新二进制文件的状态（如果存在）
+                    # Also update the binary file status (if it exists)
                     await self.db.llm_kit.uploaded_binary_files.update_one(
                         {"filename": filename},
                         {"$set": {"status": "failed"}}
@@ -327,19 +328,19 @@ class ToTexService:
             except Exception as e:
                 import traceback
                 await self._log_error(str(e), "convert_to_latex", traceback.format_exc())
-                raise Exception(f"转换失败: {str(e)}")
+                raise Exception(f"Conversion failed: {str(e)}")
 
     async def get_tex_records(self):
-        """获取最近一次的LaTeX转换历史记录"""
+        """Get the most recent LaTeX conversion history record"""
         try:
-            # 只获取最新的一条记录
+            # Only get the latest record
             record = await self.tex_records.find_one(
                 sort=[("created_at", -1)]
             )
-            
+
             if not record:
                 return []
-            
+
             return [{
                 "record_id": str(record["_id"]),
                 "input_file": record["input_file"],

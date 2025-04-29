@@ -37,9 +37,9 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
                     request=request,
                     status_code=response.status_code
                 )
-            
+
             return response
-            
+
         except HTTPException as exc:
     
             await log_error(
@@ -62,6 +62,7 @@ app.add_middleware(
 )
 
 async def log_error(error_message: str, source: str, stack_trace: str = None, request=None, status_code: int = 500):
+
 
     db = await get_database()
     error_log = {
@@ -101,7 +102,7 @@ async def clear_all_collections():
         "uploaded_files",          
         "uploaded_binary_files"    
     ]
-    
+
     for collection_name in collections:
         collection = db.llm_kit[collection_name]
         try:
@@ -117,7 +118,7 @@ async def clear_all_collections():
                     shutil.rmtree(parsed_files_dir)
                     os.makedirs(parsed_files_dir, exist_ok=True)
                     print(f"Cleared directory: {parsed_files_dir}")
-                
+
         except Exception as e:
             await log_error(str(e), f"clear_collection_{collection_name}")
             print(f"Error clearing collection {collection_name}: {str(e)}")
@@ -146,9 +147,9 @@ async def global_exception_handler(request, exc):
     error_msg = str(exc)
     stack_trace = traceback.format_exc()
     await log_error(
-        error_msg, 
-        request.url.path, 
-        stack_trace, 
+        error_msg,
+        request.url.path,
+        stack_trace,
         request,
         status_code=500
     )
@@ -173,15 +174,15 @@ async def get_error_logs(
         .sort("timestamp", -1) \
         .skip(skip) \
         .limit(limit)
-    
+
     total = await db.llm_kit.error_logs.count_documents({})
-    
+
     logs = []
     async for log in cursor:
         log['id'] = str(log['_id'])  
         del log['_id']  
         logs.append(log)
-    
+
     return {
         "total": total,
         "logs": logs
@@ -208,7 +209,7 @@ if __name__ == "__main__":
 # def main():
 #     try:
 #         hparams = HyperParams.from_hparams('hyparams/config.yaml')
-        
+
 #         file_list = []
 #         if os.path.isdir(hparams.file_path):
 #             files = os.listdir(hparams.file_path)
@@ -222,16 +223,16 @@ if __name__ == "__main__":
 #                 print('Start iterative optimization of ' + os.path.basename(file))
 #                 parsed_file_path = parse(hparams)
 #                 latex_converter = LatexConverter(parsed_file_path, hparams)
-                
+
 #                 if file.split('.')[-1] != 'tex' and hparams.convert_to_tex:
 #                     latex_converter.convert_to_latex()
-                
+
 #                 qa_generator = QAGenerator(latex_converter.save_path, hparams)
 #                 qa_path = qa_generator.convert_tex_to_qas()
 
 #                 quality_control = QAQualityGenerator(qa_path, hparams)
 #                 it_path = quality_control.iterate_optim_qa()
-                
+
 #             except Exception as e:
 #                 import traceback
 #                 error_msg = f"Error processing file {file}: {str(e)}"
@@ -242,7 +243,7 @@ if __name__ == "__main__":
 #                 loop.run_until_complete(log_error(error_msg, "main_process", stack_trace))
 #                 print(error_msg)
 #                 continue
-                
+
 #     except Exception as e:
 #         import traceback
 #         error_msg = f"Main process error: {str(e)}"
@@ -254,16 +255,16 @@ if __name__ == "__main__":
 # if __name__=='__main__':
 #     main()
 
-        
-        
-        
-    
 
-            
-                
-    
- 
-        
-    
+
+
+
+
+
+
+
+
+
+
 
 

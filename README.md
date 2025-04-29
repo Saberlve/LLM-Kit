@@ -48,12 +48,14 @@ pip install -r requirements.txt
 - Supports custom domain QA generation
 
 ### 3. Quality Control Module (quality_control)
+### 3. Quality Control Module (quality_control)
 
 - Evaluates QA pair quality
 - Optimizes low-quality QA pairs
 - Supports customizable similarity and coverage thresholds
 - Provides detailed quality assessment records
 
+### 4. Deduplication Module (deduplication)
 ### 4. Deduplication Module (deduplication)
 
 - Detects and removes duplicate QA pairs

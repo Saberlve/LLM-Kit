@@ -5,17 +5,17 @@ import yaml
 class HyperParams:
     file_path: str
     save_path: str
-    parallel_num: int=1  
+    parallel_num: int=1  # Number of parallel processes per file, must equal the length of SK,AK
     SK: list[str]=None
     AK: list[str]=None
-    convert_to_tex: bool=True
-    model_name: str="erine"  
-    save_steps: int=100 
-    similarity_rate: float=0.8
-    coverage_rate: float=0.9 
+    convert_to_tex: bool=True  # Whether to convert source text to LaTeX format, helps improve QA pair quality
+    model_name: str="erine"  # Name of the model to call
+    save_steps: int=100  # Save after generating 100 QA pairs
+    similarity_rate: float=0.8  # Similarity threshold
+    coverage_rate: float=0.9  # Coverage threshold
     max_attempts: int=3
-    domain: str="medical" 
-    
+    domain: str="medical"  # Domain
+
 
     @classmethod
     def from_hparams(cls, hparams_name_or_path: str):
@@ -25,7 +25,7 @@ class HyperParams:
         with open(hparams_name_or_path, "r") as stream:
             config = yaml.safe_load(stream)
         return cls(**config)
-    
+
 @dataclass
 class DedupParams:
     input_file: list[str]
@@ -33,7 +33,7 @@ class DedupParams:
     dedup_by_answer: bool
     min_answer_length: int
     deleted_pairs_file: str
-    dedup_threshold: float=0.8 
+    dedup_threshold: float=0.8  # Deduplication threshold
     dedup_num_perm: int=128
 
     @classmethod

@@ -3,7 +3,7 @@ from typing import Optional, Literal, List
 from pydantic import BaseModel, Field
 from bson import ObjectId
 
-# 基础ID和模型定义
+# Base ID and model definitions
 class PyObjectId(ObjectId):
     @classmethod
     def __get_validators__(cls):
@@ -16,7 +16,7 @@ class PyObjectId(ObjectId):
         return ObjectId(v)
 
 class MongoBaseModel(BaseModel):
-    """所有MongoDB模型的基类"""
+    """Base class for all MongoDB models"""
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -25,58 +25,58 @@ class MongoBaseModel(BaseModel):
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
-# 1. 解析模块
+# 1. Parse Module
 class ParseRecord(MongoBaseModel):
-    """解析记录"""
+    """Parse record"""
     input_file: str
     content: Optional[str] = None
     parsed_file_path: Optional[str] = None
     status: str = "processing"  # processing, completed, failed
     file_type: str
     save_path: str
-    progress: int = 0  # 添加进度字段
-    task_type: str = "parse"  # parse 或 ocr，用于区分任务类型
+    progress: int = 0  # Progress field
+    task_type: str = "parse"  # parse or ocr, used to distinguish task types
 
-# 2. LaTeX转换模块
+# 2. LaTeX Conversion Module
 class TexConversionRecord(MongoBaseModel):
-    """LaTeX转换记录"""
-    input_file: str  # 输入文件路径
-    content: Optional[str] = None  # 转换后的内容
-    save_path: Optional[str] = None  # 保存路径
+    """LaTeX conversion record"""
+    input_file: str  # Input file path
+    content: Optional[str] = None  # Converted content
+    save_path: Optional[str] = None  # Save path
     status: str = "processing"  # processing, completed, failed
-    file_type: str = "tex"  # 固定为tex
-    model_name: str  # 使用的模型名称
-    progress: int = 0  # 添加进度字段
+    file_type: str = "tex"  # Fixed as tex
+    model_name: str  # Model name used
+    progress: int = 0  # Progress field
 
-# 3. 问答生成模块
+# 3. Q&A Generation Module
 class QAGeneration(MongoBaseModel):
-    """问答生成记录"""
+    """Q&A generation record"""
     input_file: str
     save_path: str
     model_name: str
     domain: str
     status: str = "processing"  # processing, completed, failed
     source_text: str
-    progress: int = 0  # 添加进度字段
+    progress: int = 0  # Progress field
 
 class QAPairDB(MongoBaseModel):
-    """问答对数据库记录"""
+    """Q&A pair database record"""
     generation_id: PyObjectId
     question: str
     answer: str
 
-# 4. 质量控制模块
+# 4. Quality Control Module
 class QualityControlGeneration(MongoBaseModel):
-    """质量控制记录"""
+    """Quality control record"""
     input_file: str
     save_path: str
     model_name: str
     status: str = "processing"  # processing, completed, failed
     source_text: str
-    progress: int = 0  # 添加进度字段
+    progress: int = 0  # Progress field
 
 class QAQualityRecord(MongoBaseModel):
-    """问答质量记录"""
+    """Q&A quality record"""
     generation_id: PyObjectId
     question: str
     answer: str
@@ -86,9 +86,9 @@ class QAQualityRecord(MongoBaseModel):
     coverage_rate: float = Field(ge=0.0, le=1.0)
     status: Literal["passed", "failed"]
 
-# 5. 去重模块
+# 5. Deduplication Module
 class DedupRecord(MongoBaseModel):
-    """去重记录"""
+    """Deduplication record"""
     input_file: list[str]
     output_file: str
     deleted_pairs_file: str
@@ -99,17 +99,17 @@ class DedupRecord(MongoBaseModel):
     source_text: str
     original_count: Optional[int] = Field(ge=0)
     kept_count: Optional[int] = Field(ge=0)
-    progress: int = 0  # 添加进度字段
+    progress: int = 0  # Progress field
 
 class KeptQAPair(MongoBaseModel):
-    """保留的问答对"""
+    """Kept Q&A pair"""
     dedup_id: PyObjectId
     qa_id: str
     question: str
     answer: str
 
 class ErrorLog(MongoBaseModel):
-    """错误日志模型"""
+    """Error log model"""
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     error_message: str
     source: str
@@ -137,26 +137,26 @@ class ErrorLog(MongoBaseModel):
         }
 
 class DeletedQAPair(MongoBaseModel):
-    """被删除的问答对"""
+    """Deleted Q&A pair"""
     dedup_id: PyObjectId
     qa_id: str
     question: str
     answer: str
-    similar_pairs: List[dict]  # 存储相似的问答对信息
+    similar_pairs: List[dict]  # Store similar Q&A pair information
 
 class UploadedFile(MongoBaseModel):
-    """上传的文件记录"""
+    """Uploaded file record"""
     filename: str
-    content: str  # 文件内容
-    file_type: str  # 文件类型
-    size: int  # 文件大小(字节)
-    status: str = "to_parse"  # to_parse(待解析), pending(解析中), finish(解析完成)
+    content: str  # File content
+    file_type: str  # File type
+    size: int  # File size (bytes)
+    status: str = "to_parse"  # to_parse(waiting to be parsed), pending(parsing), finish(parsing completed)
 
 class UploadedBinaryFile(MongoBaseModel):
-    """上传的二进制文件记录"""
+    """Uploaded binary file record"""
     filename: str
-    content: bytes  # 二进制文件内容
-    file_type: str  # 文件类型 (pdf, jpg, png等)
-    mime_type: str  # MIME类型
-    size: int  # 文件大小(字节)
-    status: str = "to_parse"  # to_parse(待解析), pending(解析中), finish(解析完成)
+    content: bytes  # Binary file content
+    file_type: str  # File type (pdf, jpg, png, etc.)
+    mime_type: str  # MIME type
+    size: int  # File size (bytes)
+    status: str = "to_parse"  # to_parse(waiting to be parsed), pending(parsing), finish(parsing completed)

@@ -20,7 +20,7 @@ async def deduplicate_qa(
     request: DedupRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """执行问答对去重"""
+    """Perform QA pair deduplication"""
     try:
         service = QADedupService(db)
         result = await service.deduplicate_qa(
@@ -35,14 +35,14 @@ async def deduplicate_qa(
             data=result
         )
     except Exception as e:
-        logger.error(f"问答对去重失败: {str(e)}", exc_info=True)
+        logger.error(f"QA pair deduplication failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/deduplicate_qa/history")
 async def get_dedup_history(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取去重历史记录"""
+    """Get deduplication history records"""
     try:
         service = QADedupService(db)
         records = await service.get_dedup_records()
@@ -60,13 +60,13 @@ async def get_dedup_progress(
         request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取去重进度"""
+    """Get deduplication progress"""
     try:
-        # 查询去重记录
+        # Query deduplication record
         record = await db.llm_kit.dedup_records.find_one({"input_file": request.filename})
 
         if not record:
-            raise HTTPException(status_code=404, detail=f"文件 {request.filename} 的去重记录未找到")
+            raise HTTPException(status_code=404, detail=f"Deduplication record for file {request.filename} not found")
 
         return APIResponse(
             status="success",
@@ -77,7 +77,7 @@ async def get_dedup_progress(
             }
         )
     except Exception as e:
-        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get progress: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/quality_content")
@@ -85,17 +85,17 @@ async def get_quality_content(
     request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取指定quality文件的内容"""
+    """Get content of specified quality file"""
     try:
         service = QADedupService(db)
         content = await service.get_quality_content_by_filename(request.filename)
         return APIResponse(
             status="success",
-            message="获取文件内容成功",
+            message="File content retrieved successfully",
             data=content
         )
     except Exception as e:
-        logger.error(f"获取quality文件内容失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get quality file content: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/dedup_content")
@@ -103,15 +103,15 @@ async def get_dedup_content(
     request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取指定去重文件的内容"""
+    """Get content of specified deduplication file"""
     try:
         service = QADedupService(db)
         content = await service.get_dedup_content_by_filename(request.filename)
         return APIResponse(
             status="success",
-            message="获取文件内容成功",
+            message="File content retrieved successfully",
             data=content
         )
     except Exception as e:
-        logger.error(f"获取去重文件内容失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get deduplication file content: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tqdm import tqdm  # 用于显示进度条
+from tqdm import tqdm 
 import json
 from utils.helper import generate
 from utils.helper import split_chunk_by_tokens, split_text_into_chunks
@@ -20,7 +20,7 @@ class LatexConverter:
         assert len(self.ak_list) >= self.parallel_num, 'Please add enough AK and SK!'
 
     def process_chunk_with_api(self, chunk: str, ak: str, sk: str, chunk_index: int, total_chunks: int, max_tokens: int = 650) -> list:
-        """处理单个文本块并更新进度"""
+        """Process a single text chunk and update progress"""
         sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
         results = []
 
@@ -29,14 +29,14 @@ class LatexConverter:
                 try:
                     tex_text = generate(sub_chunk, self.hparams.model_name, 'ToTex', ak, sk)
                     results.append(self.clean_result(tex_text))
-                    
-                    # 更新进度 - 使用浮点数计算以提高精度
+
+                    # Update progress - using floating point calculation for better precision
                     if self.progress_callback:
-                        # 当前块的基础进度 (0-80)
+                        # Current chunk base progress (0-80)
                         base_progress = (chunk_index / float(total_chunks)) * 80
-                        # 当前子块的进度
+                        # Current sub-chunk progress
                         sub_progress = ((i + 1) / float(len(sub_chunks))) * (80 / float(total_chunks))
-                        # 合并进度并确保不超过80
+                        # Combine progress and ensure it doesn't exceed 80
                         progress = min(int(base_progress + sub_progress), 80)
                         self.progress_callback(progress)
                     break
@@ -47,42 +47,42 @@ class LatexConverter:
         return results
 
     def convert_to_latex(self):
-        """将解析后的文件内容转为LaTeX格式"""
+        """Convert parsed file content to LaTeX format"""
         try:
             with open(self.parsed_file_path, "r", encoding="utf-8") as f:
                 text = f.read()
 
-            # 更新初始进度
+            # Update initial progress
             if self.progress_callback:
-                self.progress_callback(10)  # 文件读取完成
+                self.progress_callback(10)  # File reading completed
 
             file_name = os.path.basename(self.parsed_file_path)
             save_path = os.path.join(
-                self.hparams.save_path, 'tex_files', 
+                self.hparams.save_path, 'tex_files',
                 file_name.split('.')[0] + '.json'
             )
             self.save_path = save_path
 
             if os.path.exists(self.save_path):
                 if self.progress_callback:
-                    self.progress_callback(100)  # 文件已存在，直接完成
+                    self.progress_callback(100)  # File already exists, complete directly
                 return save_path
 
-            # 切分文本
+            # Split text
             text_chunks = split_text_into_chunks(self.parallel_num, text)
             total_chunks = len(text_chunks)
 
             if self.progress_callback:
-                self.progress_callback(20)  # 文本分块完成
+                self.progress_callback(20)  # Text chunking completed
 
-            # 并行处理文本块
+            # Process text chunks in parallel
             results = []
             with ThreadPoolExecutor(max_workers=self.parallel_num) as executor:
                 futures = [
                     executor.submit(
-                        self.process_chunk_with_api, 
-                        chunk, 
-                        self.ak_list[i], 
+                        self.process_chunk_with_api,
+                        chunk,
+                        self.ak_list[i],
                         self.sk_list[i],
                         i,
                         total_chunks
@@ -93,19 +93,19 @@ class LatexConverter:
                 for future in as_completed(futures):
                     results.extend(future.result())
 
-            # 准备保存数据
+            # Prepare data to save
             data_to_save = [
                 {"id": i + 1, "chunk": result}
                 for i, result in enumerate(results)
             ]
 
-            # 保存结果
+            # Save results
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             with open(save_path, 'w', encoding='utf-8') as json_file:
                 json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
 
             if self.progress_callback:
-                self.progress_callback(100)  # 完成
+                self.progress_callback(100)  # Completed
 
             return save_path
 
@@ -114,22 +114,22 @@ class LatexConverter:
 
     def clean_result(self, text: str) -> str:
         """
-        清理结果文本，提取 LaTeX 内容。
+        Clean result text, extract LaTeX content.
 
         Args:
-            text (str): 原始文本。
+            text (str): Original text.
 
         Returns:
-            str: 清理后的 LaTeX 文本。
+            str: Cleaned LaTeX text.
         """
-        # 尝试找到起始位置
+        # Try to find the start position
         start_index = max(
             text.find('```') + 3 if '```' in text else -1,
-            0  # 默认从头开始
+            0  # Default to start from beginning
         )
-        # 尝试找到结束位置
+        # Try to find the end position
         end_index = text.rfind('```')
-        # 提取并返回清理后的文本
+        # Extract and return the cleaned text
         return text[start_index:end_index].strip()
 
 
