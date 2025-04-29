@@ -24,7 +24,7 @@ async def evaluate_and_optimize_qa(
     request: QualityControlRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """评估和优化问答对"""
+    """Evaluate and optimize QA pairs"""
     try:
         service = QualityService(db)
         result = await service.evaluate_and_optimize_qa(
@@ -46,14 +46,14 @@ async def evaluate_and_optimize_qa(
             data=result
         )
     except Exception as e:
-        logger.error(f"问答对质量评估优化失败: {str(e)}", exc_info=True)
+        logger.error(f"QA pair quality evaluation and optimization failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/quality/history")
 async def get_quality_history(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取质量控制历史记录"""
+    """Get quality control history records"""
     try:
         service = QualityService(db)
         records = await service.get_quality_records()
@@ -69,17 +69,17 @@ async def get_quality_history(
 async def get_qa_files(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取所有已生成的问答对文件列表"""
+    """Get list of all generated QA pair files"""
     try:
         service = QualityService(db)
         files = await service.get_all_qa_files()
         return APIResponse(
             status="success",
-            message="获取文件列表成功",
+            message="File list retrieved successfully",
             data={"files": files}
         )
     except Exception as e:
-        logger.error(f"获取问答对文件列表失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get QA pair file list: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/qa_content")
@@ -87,17 +87,17 @@ async def get_qa_content(
     request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """根据记录ID获取指定问答对文件的内容"""
+    """Get content of specified QA pair file by record ID"""
     try:
         service = QualityService(db)
         content = await service.get_qa_content_by_id(request.record_id)
         return APIResponse(
             status="success",
-            message="获取文件内容成功",
+            message="File content retrieved successfully",
             data=content
         )
     except Exception as e:
-        logger.error(f"获取问答对文件内容失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get QA pair file content: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -106,53 +106,53 @@ async def get_quality_progress(
         request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取质量控制进度"""
+    """Get quality control progress"""
     try:
-        # 使用更精确的查询条件
+        # Use more precise query conditions
         record = await db.llm_kit.quality_generations.find_one(
             {
                 "input_file": request.filename,
                 "status": {"$in": ["processing", "completed", "failed", "timeout"]}
             },
-            sort=[("created_at", -1)]  # 获取最新的记录
+            sort=[("created_at", -1)]  # Get the most recent record
         )
-        
+
         if not record:
             return APIResponse(
                 status="not_found",
-                message=f"文件 {request.filename} 的质量控制记录未找到",
+                message=f"Quality control record for file {request.filename} not found",
                 data={
                     "progress": 0,
                     "status": "not_found"
                 }
             )
-        
-        # 标准化状态
+
+        # Normalize status
         status = record.get("status", "processing")
         progress = record.get("progress", 0)
-        
-        # 如果状态是completed，确保进度是100%
+
+        # If status is completed, ensure progress is 100%
         if status == "completed":
             progress = 100
-        # 如果状态是failed或timeout，保持当前进度
+        # If status is failed or timeout, maintain current progress
         elif status in ["failed", "timeout"]:
             progress = progress
-        
+
         return APIResponse(
             status="success",
-            message="进度获取成功",
+            message="Progress retrieved successfully",
             data={
                 "progress": progress,
                 "status": status,
-                "error_message": record.get("error_message", ""),  # 添加错误信息
-                "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat()  # 添加最后更新时间
+                "error_message": record.get("error_message", ""),  # Add error message
+                "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat()  # Add last update time
             }
         )
     except Exception as e:
-        logger.error(f"获取进度失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to get progress: {str(e)}", exc_info=True)
         return APIResponse(
             status="error",
-            message=f"获取进度失败: {str(e)}",
+            message=f"Failed to get progress: {str(e)}",
             data={
                 "progress": 0,
                 "status": "error"
@@ -164,25 +164,25 @@ async def delete_quality_record(
     request: RecordIDRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """根据ID删除质量控制记录及相关质量评估记录"""
+    """Delete quality control record and related quality assessment records by ID"""
     try:
         from bson import ObjectId
-        
-        # 删除质量控制记录
+
+        # Delete quality control record
         result = await db.llm_kit.quality_generations.delete_one({"_id": ObjectId(request.record_id)})
-        
+
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Record not found")
-            
-        # 删除相关的质量评估记录
+
+        # Delete related quality assessment records
         await db.llm_kit.quality_records.delete_many({"generation_id": ObjectId(request.record_id)})
-        
+
         return APIResponse(
             status="success",
             message="Quality control record and related assessments deleted successfully",
             data={"record_id": request.record_id}
         )
-        
+
     except Exception as e:
-        logger.error(f"删除质量控制记录失败 record_id: {request.record_id}, 错误: {str(e)}", exc_info=True)
+        logger.error(f"Failed to delete quality control record, record_id: {request.record_id}, error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

@@ -75,7 +75,7 @@ def extract_qa(response):
 
 
 def generate(text, Model_Name, prompt_choice, API_KEY, SECRET_KEY=None):
-    # 转换为小写并赋值
+    # Convert to lowercase and assign
     model_name = Model_Name.lower()
 
     if model_name == "erine":
@@ -87,4 +87,4 @@ def generate(text, Model_Name, prompt_choice, API_KEY, SECRET_KEY=None):
     elif model_name == "qwen":
         return generate_Qwen(text, API_KEY, prompt_choice)
     else:
-        raise ValueError(f"不支持的模型名称：{Model_Name}，支持的模型包括：erine, flash, lite, qwen")
+        raise ValueError(f"Unsupported model name: {Model_Name}, supported models include: erine, flash, lite, qwen")

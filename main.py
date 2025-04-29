@@ -19,12 +19,10 @@ logging.basicConfig(
 
 app = FastAPI(title="LLM-Kit API")
 
-
 class ErrorLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:
             response = await call_next(request)
-            
 
             if response.status_code >= 400:
                 error_message = "HTTP {}: {}".format(
@@ -37,11 +35,11 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
                     request=request,
                     status_code=response.status_code
                 )
-            
+
             return response
-            
+
         except HTTPException as exc:
-    
+
             await log_error(
                 error_message=str(exc.detail),
                 source=request.url.path,
@@ -52,8 +50,8 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             raise exc
 
-app.add_middleware(ErrorLoggingMiddleware)  
-app.add_middleware(                        
+app.add_middleware(ErrorLoggingMiddleware)
+app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -75,18 +73,20 @@ async def log_error(error_message: str, source: str, stack_trace: str = None, re
         "request_headers": dict(request.headers) if request else None,
         "request_query_params": dict(request.query_params) if request else None,
     }
-    
+
+    # Try to get the request body
     if request:
         try:
             body = await request.body()
             if body:
                 error_log["request_body"] = body.decode('utf-8', 'replace')
         except Exception:
-            pass  
+            pass  # If unable to get the request body, ignore it
+
     await db.llm_kit.error_logs.insert_one(error_log)
 
 async def clear_all_collections():
-
+    """Clear data from all collections"""
     db = await get_database()
     collections = [
         "parse_records",
@@ -98,30 +98,33 @@ async def clear_all_collections():
         "dedup_records",
         "kept_pairs",
         "error_logs",
-        "uploaded_files",          
-        "uploaded_binary_files"    
+        "uploaded_files",           # Add text file collection
+        "uploaded_binary_files"     # Add binary file collection
     ]
-    
+
     for collection_name in collections:
         collection = db.llm_kit[collection_name]
         try:
             await collection.delete_many({})
             print(f"Cleared collection: {collection_name}")
-            
+
+            # If it's a file-related collection, also clean up files in the file system
             if collection_name in ["uploaded_files", "uploaded_binary_files"]:
                 import shutil
                 import os
-                
+
+                # Clean up parsed_files directory
                 parsed_files_dir = os.path.join("parsed_files", "parsed_file")
                 if os.path.exists(parsed_files_dir):
                     shutil.rmtree(parsed_files_dir)
                     os.makedirs(parsed_files_dir, exist_ok=True)
                     print(f"Cleared directory: {parsed_files_dir}")
-                
+
         except Exception as e:
             await log_error(str(e), f"clear_collection_{collection_name}")
             print(f"Error clearing collection {collection_name}: {str(e)}")
 
+# Register routes
 app.include_router(parse.router, prefix="/parse", tags=["parse"])
 app.include_router(to_tex.router, prefix="/to_tex", tags=["to_tex"])
 app.include_router(qa_generate.router, prefix="/qa", tags=["qa_generate"])
@@ -129,26 +132,28 @@ app.include_router(quality.router, prefix="/quality", tags=["quality"])
 app.include_router(qa_dedup.router, prefix="/dedup", tags=["qa_dedup"])
 app.include_router(cot_generate.router, prefix="/cot", tags=["cot_generate"])
 
+# Health check endpoint
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "LLM-Kit API is running"}
 
 @app.post("/clear-data")
 async def clear_data():
+    """API endpoint to manually clear all data"""
     await clear_all_collections()
     return {"message": "All collections cleared successfully"}
 
-
+# Modify global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-
+    """Global exception handler"""
     import traceback
     error_msg = str(exc)
     stack_trace = traceback.format_exc()
     await log_error(
-        error_msg, 
-        request.url.path, 
-        stack_trace, 
+        error_msg,
+        request.url.path,
+        stack_trace,
         request,
         status_code=500
     )
@@ -167,21 +172,26 @@ async def get_error_logs(
     limit: int = Query(default=100, ge=1, le=1000),
     skip: int = Query(default=0, ge=0)
 ):
-   
+    """Get recent error logs
+
+    Args:
+        limit: Limit on the number of logs to return
+        skip: Number of logs to skip
+    """
     db = await get_database()
     cursor = db.llm_kit.error_logs.find() \
         .sort("timestamp", -1) \
         .skip(skip) \
         .limit(limit)
-    
+
     total = await db.llm_kit.error_logs.count_documents({})
-    
+
     logs = []
     async for log in cursor:
-        log['id'] = str(log['_id'])  
-        del log['_id']  
+        log['id'] = str(log['_id'])  # Convert ObjectId to string
+        del log['_id']  # Delete the original _id field
         logs.append(log)
-    
+
     return {
         "total": total,
         "logs": logs
@@ -208,7 +218,7 @@ if __name__ == "__main__":
 # def main():
 #     try:
 #         hparams = HyperParams.from_hparams('hyparams/config.yaml')
-        
+
 #         file_list = []
 #         if os.path.isdir(hparams.file_path):
 #             files = os.listdir(hparams.file_path)
@@ -222,27 +232,27 @@ if __name__ == "__main__":
 #                 print('Start iterative optimization of ' + os.path.basename(file))
 #                 parsed_file_path = parse(hparams)
 #                 latex_converter = LatexConverter(parsed_file_path, hparams)
-                
+
 #                 if file.split('.')[-1] != 'tex' and hparams.convert_to_tex:
 #                     latex_converter.convert_to_latex()
-                
+
 #                 qa_generator = QAGenerator(latex_converter.save_path, hparams)
 #                 qa_path = qa_generator.convert_tex_to_qas()
 
 #                 quality_control = QAQualityGenerator(qa_path, hparams)
 #                 it_path = quality_control.iterate_optim_qa()
-                
+
 #             except Exception as e:
 #                 import traceback
 #                 error_msg = f"Error processing file {file}: {str(e)}"
 #                 stack_trace = traceback.format_exc()
-#                
+#                 # Since command line mode may not have an async event loop running, use synchronous method to log errors
 #                 import asyncio
 #                 loop = asyncio.get_event_loop()
 #                 loop.run_until_complete(log_error(error_msg, "main_process", stack_trace))
 #                 print(error_msg)
 #                 continue
-                
+
 #     except Exception as e:
 #         import traceback
 #         error_msg = f"Main process error: {str(e)}"
@@ -254,16 +264,16 @@ if __name__ == "__main__":
 # if __name__=='__main__':
 #     main()
 
-        
-        
-        
-    
 
-            
-                
-    
- 
-        
-    
+
+
+
+
+
+
+
+
+
+
 
 

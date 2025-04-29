@@ -11,7 +11,7 @@ class TexFile(BaseModel):
 class TexContentRequest(BaseModel):
     file_id: str
 
-# API 请求/响应基础模型
+# API Request/Response Base Model
 class BaseRequest(BaseModel):
     save_path: str = "result/"
     SK: Optional[List[str]] = None
@@ -20,7 +20,7 @@ class BaseRequest(BaseModel):
 
 class QAGenerateRequest(BaseRequest):
     content: str = None
-    filename: str  # 添加文件名参数，用于跟踪文件
+    filename: str  # Filename parameter for tracking files
     model_name: str
     domain: str
 
@@ -28,7 +28,7 @@ class COTGenerateRequest(BaseRequest):
     #content: str
     filename: str
     model_name: str
-    domain: str = "医学"
+    domain: str = "Medicine"
 
 class DedupRequest(BaseModel):
     quality_filenames: List[str]
@@ -37,8 +37,8 @@ class DedupRequest(BaseModel):
     dedup_threshold: float = 0.8
 
 class QualityControlRequest(BaseModel):
-    content: str  # 问答对内容，是一个字典列表
-    filename: str  # 文件名
+    content: str  # QA pair content, a list of dictionaries
+    filename: str  # Filename
     save_path: str = "result/"
     SK: Optional[List[str]] = None
     AK: Optional[List[str]] = None
@@ -54,8 +54,8 @@ class ParseRequest(BaseRequest):
     convert_to_tex: Optional[bool] = False
 
 class ToTexRequest(BaseRequest):
-    content: str  # 文本内容
-    filename: str  # 文件名
+    content: str  # Text content
+    filename: str  # Filename
     model_name: str
 
 class APIResponse(BaseModel):
@@ -67,7 +67,7 @@ class OCRRequest(BaseRequest):
     file_path: str
 
 class ErrorLogResponse(BaseModel):
-    """错误日志响应模型"""
+    """Error log response model"""
     id: str
     timestamp: datetime
     error_message: str
@@ -86,22 +86,22 @@ class ErrorLogResponse(BaseModel):
         }
 
 class ErrorLogsListResponse(BaseModel):
-    """错误日志列表响应"""
+    """Error log list response"""
     total: int
     logs: List[ErrorLogResponse]
 
 class FileUploadRequest(BaseModel):
-    filename: str  # 不包含扩展名的文件名
+    filename: str  # Filename without extension
     content: str
-    file_type: Literal['tex', 'txt', 'json', 'pdf']  # 文件扩展名
+    file_type: Literal['tex', 'txt', 'json', 'pdf']  # File extension
 
     @property
     def full_filename(self) -> str:
-        """获取完整文件名（包含扩展名）"""
+        """Get full filename (including extension)"""
         return f"{self.filename}.{self.file_type}"
 
 class BinaryFileResponse(BaseModel):
-    """二进制文件响应模型"""
+    """Binary file response model"""
     file_id: str
     filename: str
     file_type: str
@@ -111,13 +111,13 @@ class BinaryFileResponse(BaseModel):
     created_at: datetime
 
 class ParsedFileListResponse(BaseModel):
-    """已解析文件列表的响应模型"""
+    """Response model for parsed file list"""
     filename: str
     created_at: datetime
     file_type: str
 
 class ParsedContentResponse(BaseModel):
-    """解析内容的响应模型"""
+    """Response model for parsed content"""
     content: str
     filename: str
     created_at: datetime

@@ -3,27 +3,27 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # MongoDB配置
+    # MongoDB configuration
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "llm_kit"
 
-    # 使用 ClassVar 标注静态配置
+    # Use ClassVar to annotate static configuration
     COLLECTIONS: ClassVar[Dict[str, str]] = {
-        # 1. 解析模块
+        # 1. Parsing module
         "parse_records": "parse_records",
 
-        # 2. LaTeX转换模块
+        # 2. LaTeX conversion module
         "tex_records": "tex_records",
 
-        # 3. 问答生成模块
+        # 3. QA generation module
         "qa_generations": "qa_generations",
         "qa_pairs": "qa_pairs",
 
-        # 4. 质量控制模块
+        # 4. Quality control module
         "quality_generations": "quality_generations",
         "quality_records": "quality_records",
 
-        # 5. 去重模块
+        # 5. Deduplication module
         "dedup_records": "dedup_records",
         "kept_pairs": "kept_pairs",
         "error_logs": "error_logs"

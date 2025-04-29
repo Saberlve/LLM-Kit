@@ -11,48 +11,48 @@ logger = logging.getLogger(__name__)
 
 def extract(response: str) -> dict:
     """
-    从API响应中提取```json和```之间的JSON内容
+    Extract JSON content between ```json and ``` from API response
 
     Args:
-        response (str): API返回的原始响应文本
+        response (str): Raw response text from API
 
     Returns:
-        dict: 解析后的JSON对象
+        dict: Parsed JSON object
 
     Raises:
-        json.JSONDecodeError: 当JSON解析失败时
-        ValueError: 当响应格式不正确时
+        json.JSONDecodeError: When JSON parsing fails
+        ValueError: When response format is incorrect
     """
     try:
-        # 查找```json和```之间的内容
+        # Find content between ```json and ```
         start_marker = "```json"
         end_marker = "```"
 
         start_idx = response.find(start_marker)
         if start_idx == -1:
-            raise ValueError("未找到JSON开始标记")
+            raise ValueError("JSON start marker not found")
 
-        # 从start_marker后开始查找
+        # Start searching after start_marker
         start_idx += len(start_marker)
         end_idx = response.find(end_marker, start_idx)
 
         if end_idx == -1:
-            raise ValueError("未找到JSON结束标记")
+            raise ValueError("JSON end marker not found")
 
-        # 提取JSON字符串并解析
+        # Extract JSON string and parse
         json_str = response[start_idx:end_idx].strip()
         result = json.loads(json_str)
 
         return result
 
     except json.JSONDecodeError as e:
-        logger.error(f"JSON解析失败: {str(e)}")
+        logger.error(f"JSON parsing failed: {str(e)}")
         raise
     except ValueError as e:
-        logger.error(f"响应格式错误: {str(e)}")
+        logger.error(f"Response format error: {str(e)}")
         raise
     except Exception as e:
-        logger.error(f"提取过程中发生错误: {str(e)}")
+        logger.error(f"Error occurred during extraction: {str(e)}")
         raise
 
 
@@ -62,28 +62,28 @@ class COTGenerateService:
 
     async def process_chunk_with_api(self, text: str, ak: str, sk: str, model_name: str, domain: str,
                                      begin_prompt: str):
-        """处理单个文本块并生成COT"""
+        """Process a single text chunk and generate COT"""
         max_retries = 5
 
         for attempt in range(max_retries):
             try:
-                # 构造提示词
+                # Construct prompt
                 print(begin_prompt)
                 prompt = begin_prompt.replace('{text}', text)
 
-                # 调用API
+                # Call API
                 response = generate(prompt, model_name, 'ToCOT', ak, sk)
                 result = extract(response)
                 return result
             except Exception as e:
                 if attempt == max_retries - 1:
-                    print(f"处理文本块失败: {str(e)}")
+                    print(f"Failed to process text chunk: {str(e)}")
                     raise
         return None
 
     async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list,
                                       parallel_num: int, model_name: str, domain: str, begin_prompt: str):
-        """并行处理多个文本块"""
+        """Process multiple text chunks in parallel"""
         tasks = set()
         total_chunks = len(chunks)
         processed_chunks = 0
@@ -100,7 +100,7 @@ class COTGenerateService:
             sk = sk_list[i % len(sk_list)]
 
             if len(tasks) >= parallel_num:
-                # 等待一个任务完成后再添加新任务
+                # Wait for one task to complete before adding a new one
                 done, pending = await asyncio.wait(
                     tasks,
                     return_when=asyncio.FIRST_COMPLETED
@@ -115,7 +115,7 @@ class COTGenerateService:
             task = asyncio.create_task(process_single_chunk(chunk, ak, sk))
             tasks.add(task)
 
-        # 等待所有剩余任务完成
+        # Wait for all remaining tasks to complete
         if tasks:
             done, _ = await asyncio.wait(tasks)
             for task in done:
@@ -134,41 +134,41 @@ class COTGenerateService:
             sk_list: list,
             parallel_num: int,
             begin_prompt: str,
-            domain: str = "医学"
+            domain: str = "Medicine"
     ):
-        """生成COT推理并保存"""
+        """Generate COT reasoning and save"""
         try:
-            logger.info(f"开始生成COT，模型：{model_name}，文件名：{filename}")
+            logger.info(f"Starting COT generation, model: {model_name}, filename: {filename}")
 
-            # 参数验证
+            # Parameter validation
             if not content or not content.strip():
-                raise ValueError("内容不能为空")
+                raise ValueError("Content cannot be empty")
             if not filename or not filename.strip():
-                raise ValueError("文件名不能为空")
+                raise ValueError("Filename cannot be empty")
             if not model_name or not model_name.strip():
-                raise ValueError("模型名称不能为空")
+                raise ValueError("Model name cannot be empty")
             if not ak_list or not sk_list:
-                raise ValueError("API密钥不能为空")
+                raise ValueError("API keys cannot be empty")
             if len(ak_list) != len(sk_list):
-                raise ValueError("AK和SK的数量必须相同")
+                raise ValueError("Number of AK and SK must be the same")
             if parallel_num > len(ak_list):
-                raise ValueError("并行数量不能大于API密钥对数量")
+                raise ValueError("Parallel number cannot be greater than the number of API key pairs")
 
-            # 解析JSON内容获取chunks
+            # Parse JSON content to get chunks
             try:
                 content_json = json.loads(content)
                 chunks = [item.get("chunk", "") for item in content_json if item.get("chunk")]
             except json.JSONDecodeError as e:
-                logger.error(f"解析内容JSON失败：{str(e)}")
-                raise ValueError("输入内容必须是有效的JSON格式")
+                logger.error(f"Failed to parse content JSON: {str(e)}")
+                raise ValueError("Input content must be valid JSON format")
             except Exception as e:
-                logger.error(f"处理输入内容失败：{str(e)}")
+                logger.error(f"Failed to process input content: {str(e)}")
                 raise
 
             if not chunks:
-                raise ValueError("没有找到有效的文本块")
+                raise ValueError("No valid text chunks found")
 
-            # 并行处理所有文本块
+            # Process all text chunks in parallel
             cot_results = await self.process_chunks_parallel(
                 chunks,
                 ak_list,
@@ -180,33 +180,33 @@ class COTGenerateService:
             )
 
             if not cot_results:
-                logger.error("生成结果为空")
+                logger.error("Generated result is empty")
                 raise Exception("No COT result generated")
 
-            # 构建最终结果数组
+            # Build final results array
             final_results = []
             for i, result in enumerate(cot_results):
-                if result and "推理" in result:
+                if result and "reasoning" in result:
                     final_results.append({
                         "id": i + 1,
                         "content": chunks[i],
                         "result": result
                     })
 
-            # 构建保存路径
+            # Build save path
             try:
                 base_filename = filename.rsplit('.', 1)[0]
                 save_dir_path = os.path.join('result', 'cot')
                 os.makedirs(save_dir_path, exist_ok=True)
                 final_save_path = os.path.join(save_dir_path, f"{base_filename}_cot.json")
 
-                # 保存结果到文件
+                # Save results to file
                 with open(final_save_path, 'w', encoding='utf-8') as f:
                     json.dump(final_results, f, ensure_ascii=False, indent=4)
-                logger.info(f"COT结果已保存到：{final_save_path}")
+                logger.info(f"COT results saved to: {final_save_path}")
             except Exception as e:
-                logger.error(f"保存文件失败：{str(e)}")
-                raise Exception(f"保存COT结果失败：{str(e)}")
+                logger.error(f"Failed to save file: {str(e)}")
+                raise Exception(f"Failed to save COT results: {str(e)}")
 
             return {
                 "filename": os.path.basename(final_save_path),
@@ -214,14 +214,14 @@ class COTGenerateService:
             }
 
         except Exception as e:
-            logger.error(f"生成COT失败：{str(e)}")
-            raise Exception(f"生成COT失败: {str(e)}")
+            logger.error(f"Failed to generate COT: {str(e)}")
+            raise Exception(f"Failed to generate COT: {str(e)}")
 
     async def get_cot_content(self, filename: str):
-        """获取COT文件内容"""
+        """Get COT file content"""
         try:
             if not filename or not filename.strip():
-                raise ValueError("文件名不能为空")
+                raise ValueError("Filename cannot be empty")
 
             parsed_dir = os.path.join("result", "cot")
             raw_filename = filename.split('.')[0]
@@ -229,7 +229,7 @@ class COTGenerateService:
             target_path = os.path.join(parsed_dir, parsed_filename)
 
             if not os.path.isfile(target_path):
-                logger.error(f"文件不存在：{target_path}")
+                logger.error(f"File does not exist: {target_path}")
                 raise FileNotFoundError("COT file not found")
 
             with open(target_path, 'r', encoding='utf-8') as f:
@@ -237,14 +237,14 @@ class COTGenerateService:
 
             return content
         except Exception as e:
-            logger.error(f"获取COT内容失败：{str(e)}")
-            raise Exception(f"获取COT内容失败: {str(e)}")
+            logger.error(f"Failed to get COT content: {str(e)}")
+            raise Exception(f"Failed to get COT content: {str(e)}")
 
     async def delete_cot_file(self, filename: str):
-        """删除COT文件"""
+        """Delete COT file"""
         try:
             if not filename or not filename.strip():
-                raise ValueError("文件名不能为空")
+                raise ValueError("Filename cannot be empty")
 
             parsed_dir = os.path.join("result", "cot")
             raw_filename = filename.split('.')[0]
@@ -260,10 +260,10 @@ class COTGenerateService:
                 os.remove(target_path)
                 if os.path.exists(file_path1):
                     os.remove(file_path1)
-                logger.info(f"成功删除文件：{target_path}")
+                logger.info(f"Successfully deleted file: {target_path}")
                 return True
-            logger.info(f"文件不存在：{target_path}")
+            logger.info(f"File does not exist: {target_path}")
             return False
         except Exception as e:
-            logger.error(f"删除COT文件失败：{str(e)}")
-            raise Exception(f"删除COT文件失败: {str(e)}")
+            logger.error(f"Failed to delete COT file: {str(e)}")
+            raise Exception(f"Failed to delete COT file: {str(e)}")

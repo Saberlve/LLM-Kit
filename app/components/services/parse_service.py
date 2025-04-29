@@ -33,13 +33,13 @@ class ParseService:
 
         self.parse_records = db.llm_kit.parse_records
 
-        self.error_logs = db.llm_kit.error_logs  # 添加错误日志集合
+        self.error_logs = db.llm_kit.error_logs  # Add error log collection
 
-        self.last_progress_update = {}  # 用于存储每个任务的最后更新时间
+        self.last_progress_update = {}  # Used to store the last update time for each task
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
 
-        """记录错误到数据库"""
+        """Log errors to the database"""
 
         error_log = {
 
@@ -59,11 +59,11 @@ class ParseService:
 
         try:
 
-            # 获取文件类型
+            # Get file type
 
             file_type = os.path.splitext(file_path)[1].lower().replace('.', '')
 
-            # 按照 HyperParams 的要求传入所有必需参数
+            # Pass all required parameters according to HyperParams requirements
 
             hparams = HyperParams(
 
@@ -79,27 +79,27 @@ class ParseService:
 
             )
 
-            # 读取并解析文件
+            # Read and parse the file
 
             parsed_file_path = parse.parse(hparams)
 
-            # 读取解析后的文件内容
+            # Read the parsed file content
 
             with open(parsed_file_path, 'r', encoding='utf-8') as f:
 
                 content = f.read()
 
-            # 创建记录时包含所有必需字段
+            # Include all required fields when creating the record
 
             parse_record = ParseRecord(
 
-                input_file=os.path.basename(file_path),  # 只存储文件名
+                input_file=os.path.basename(file_path),  # Only store the filename
 
-                content=content,  # 存储解析后的文件内容
+                content=content,  # Store the parsed file content
 
                 parsed_file_path=parsed_file_path,
 
-                status="completed",  # 直接设置为completed
+                status="completed",  # Set directly to completed
 
                 file_type=file_type,
 
@@ -131,11 +131,11 @@ class ParseService:
 
     async def get_parse_records(self):
 
-        """获取最近一次的解析历史记录"""
+        """Get the most recent parsing history record"""
 
         try:
 
-            # 只获取最新的一条记录
+            # Only get the latest record
 
             record = await self.parse_records.find_one(
 
@@ -162,9 +162,9 @@ class ParseService:
 
                 "content": record.get("content", ""),
 
-                "progress": record.get("progress", 0),  # 添加进度信息
+                "progress": record.get("progress", 0),  # Add progress information
 
-                "task_type": record.get("task_type", "parse"),  # 添加任务类型
+                "task_type": record.get("task_type", "parse"),  # Add task type
 
                 "created_at": record["created_at"]
 
@@ -180,13 +180,13 @@ class ParseService:
 
     async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str],
                             parallel_num: int = 4, record_id: str = None):
-        """解析文件内容"""
+        """Parse file content"""
         try:
-            # 获取文件类型并验证
+            # Get and validate file type
             file_type = filename.split('.')[-1].lower()
             base_filename = filename.rsplit('.', 1)[0]
 
-            # 检查是否已有记录，如果有，重置进度
+            # Check if there is an existing record, if so, reset the progress
             if record_id:
                 await self.parse_records.update_one(
                     {"_id": ObjectId(record_id)},
@@ -207,37 +207,37 @@ class ParseService:
                 raise ValueError(
                     f"Unsupported file type: {file_type}. Supported types are: {', '.join(supported_types)}")
 
-            # 创建临时文件
+            # Create temporary file
             with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{file_type}', delete=False,
                                              encoding='utf-8') as temp_file:
                 temp_file.write(content)
                 temp_file_path = temp_file.name
 
-            # 修改进度更新逻辑
+            # Modify progress update logic
             async def update_progress(progress: int):
-                """异步更新进度（优化的节流控制）"""
+                """Asynchronously update progress (optimized throttling control)"""
                 if record_id:
                     try:
                         current_time = time.time()
                         last_update = self.last_progress_update.get(record_id, 0)
                         content_length = len(content)
 
-                        # 小文件的进度处理（小于1KB）
+                        # Progress handling for small files (less than 1KB)
                         if content_length < 1024:
-                            # 预定义的进度点，确保平滑过渡
+                            # Predefined progress points to ensure smooth transition
                             progress_steps = [
-                                10,  # 初始化
-                                20,  # 文件准备
-                                30, 40, 50, 60, 70,  # 处理阶段
-                                90,  # 保存准备
-                                100  # 完成
+                                10,  # Initialization
+                                20,  # File preparation
+                                30, 40, 50, 60, 70,  # Processing stage
+                                90,  # Save preparation
+                                100  # Completion
                             ]
-                            
-                            # 根据原始进度映射到预定义的进度点
+
+                            # Map original progress to predefined progress points
                             step_index = min(len(progress_steps)-1, int(progress/12))
                             adjusted_progress = progress_steps[step_index]
-                            
-                            # 每0.1秒更新一次
+
+                            # Update every 0.1 seconds
                             if current_time - last_update >= 0.1:
                                 await self.parse_records.update_one(
                                     {"_id": ObjectId(record_id)},
@@ -245,11 +245,11 @@ class ParseService:
                                 )
                                 self.last_progress_update[record_id] = current_time
                         else:
-                            # 大文件的进度处理
-                            # 将原始进度(0-100)映射到处理阶段(20-80)
+                            # Progress handling for large files
+                            # Map original progress (0-100) to processing stage (20-80)
                             adjusted_progress = int(20 + (progress * 0.6))
-                            
-                            # 每0.5秒更新一次
+
+                            # Update every 0.5 seconds
                             if current_time - last_update >= 0.5:
                                 await self.parse_records.update_one(
                                     {"_id": ObjectId(record_id)},
@@ -260,7 +260,7 @@ class ParseService:
                         logger.error(f"Progress update failed: {str(e)}")
 
             try:
-                # 使用现有的解析逻辑
+                # Use existing parsing logic
                 hparams = HyperParams(
                     SK=SK,
                     AK=AK,
@@ -269,7 +269,7 @@ class ParseService:
                     save_path=save_path
                 )
 
-                # 立即设置初始进度并更新状态为解析中
+                # Immediately set initial progress and update status to parsing
                 await update_progress(0)
                 await self.db.llm_kit.uploaded_files.update_one(
                     {"filename": base_filename + "." + file_type},
@@ -280,41 +280,41 @@ class ParseService:
                     {"$set": {"status": "pending"}}
                 )
 
-                # 执行解析，传入进度回调
+                # Execute parsing, pass in progress callback
                 parsed_file_path = parse.parse(
                     hparams,
                     progress_callback=lambda p: asyncio.create_task(update_progress(p))
                 )
 
-                # 读取解析后的文件内容
+                # Read the parsed file content
                 with open(parsed_file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                # 创建新的简化文件名
+                # Create a new simplified filename
                 new_filename = f"{base_filename}_parsed.txt"
                 new_file_path = os.path.join(os.path.dirname(parsed_file_path), new_filename)
 
-                # 重命名文件
+                # Rename the file
                 if os.path.exists(parsed_file_path):
                     os.rename(parsed_file_path, new_file_path)
                     parsed_file_path = new_file_path
 
-                # 确保设置最终进度
+                # Ensure final progress is set
                 await update_progress(100)
 
-                # 更新原始文件状态为finish
+                # Update original file status to finish
                 await self.db.llm_kit.uploaded_files.update_one(
                     {"filename": base_filename + "." + file_type},
                     {"$set": {"status": "finish"}}
                 )
 
-                # 同时更新二进制文件集合中的状态（如果存在）
+                # Also update the status in the binary file collection (if it exists)
                 await self.db.llm_kit.uploaded_binary_files.update_one(
                     {"filename": base_filename + "." + file_type},
                     {"$set": {"status": "finish"}}
                 )
 
-                # 完成时设置状态和进度
+                # Set status and progress when completed
                 if record_id:
                     await self.parse_records.update_one(
                         {"_id": ObjectId(record_id)},
@@ -334,7 +334,7 @@ class ParseService:
                 }
 
             except Exception as e:
-                # 发生错误时只更新状态，保持当前进度
+                # When an error occurs, only update the status, maintain the current progress
                 if record_id:
                     await self.parse_records.update_one(
                         {"_id": ObjectId(record_id)},
