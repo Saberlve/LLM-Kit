@@ -9,8 +9,12 @@ from model_api.Qwen.Qwen import generate_Qwen
 
 
 def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
-
-    enc = tiktoken.get_encoding("o200k_base")
+    # Use a supported encoding model (cl100k_base is used by gpt-4, gpt-3.5-turbo)
+    try:
+        enc = tiktoken.get_encoding("cl100k_base")
+    except:
+        # Fallback to p50k_base which is commonly available
+        enc = tiktoken.get_encoding("p50k_base")
 
     lines = chunk.splitlines()
     sub_chunks = []

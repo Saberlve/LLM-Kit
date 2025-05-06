@@ -13,8 +13,7 @@ from utils.hparams import HyperParams
 from model_api.prompts import PROMPT_DICT
 
 class QAQualityGenerator:
-    def __init__(self, qa_path: str, hparams: HyperParams):
-        # Basic configuration
+    def __init__(self, qa_path: str, hparams: HyperParams, progress_callback=None):
         # Basic configuration
         self.hparams = hparams
         self.qa_path = qa_path
@@ -23,10 +22,10 @@ class QAQualityGenerator:
         os.makedirs(self.save_dir_path, exist_ok=True)
         self.model_name = hparams.model_name
         # API related
-        # API related
         self.ak_list = hparams.AK
         self.sk_list = hparams.SK
         self.parallel_num = hparams.parallel_num
+        self.progress_callback = progress_callback
         self._validate_keys()
         PROMPT_DICT['RELATIVE'] = PROMPT_DICT['RELATIVE'].replace("'domain'", self.hparams.domain)
         PROMPT_DICT['ToQA'] = PROMPT_DICT['ToQA'].replace("'domain'", self.hparams.domain)
@@ -40,18 +39,27 @@ class QAQualityGenerator:
             raise ValueError('AKs and SKs must have the same length!')
         if len(self.ak_list) < self.parallel_num:
             raise ValueError('Please add enough AK and SK!')
-            raise ValueError('Please add enough AK and SK!')
 
 
     def calculate_coverage(self, qa: Dict, nearby_qas: List[Dict]) -> float:
-        tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        try:
+            # Try to use the gpt-3.5-turbo encoding
+            tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        except:
+            # Fallback to cl100k_base which is used by gpt-3.5-turbo and gpt-4
+            try:
+                tokenizer = tiktoken.get_encoding("cl100k_base")
+            except:
+                # Further fallback to p50k_base which is commonly available
+                tokenizer = tiktoken.get_encoding("p50k_base")
+
         text_tokens = tokenizer.encode(qa['text'])
         answer_tokens = []
         for nearby_qa in nearby_qas:
             answer_tokens.extend(tokenizer.encode(nearby_qa['answer']))
         answer_tokens = set(answer_tokens)
         text_tokens = set(text_tokens)
-    
+
         remaining_tokens = text_tokens - answer_tokens
         coverage = 1 - len(remaining_tokens) / len(text_tokens)
         return coverage
@@ -150,17 +158,17 @@ class QAQualityGenerator:
                 qas = json.load(f)
 
             if self.progress_callback:
-                self.progress_callback(20) 
+                self.progress_callback(20)
 
             print(f"Starting processing {os.path.basename(self.qa_path)}")
             qa_result = []
             total_qas = len(qas)
 
-            with ThreadPoolExecutor(max_workers=1) as executor: 
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 futures = []
                 for i, qa in enumerate(qas):
-                    ak = self.ak_list[0] 
-                    sk = self.sk_list[0]  
+                    ak = self.ak_list[0]
+                    sk = self.sk_list[0]
                     nearby_qas = self.get_nearby_qas(qas, i)
                     futures.append(
                         executor.submit(
@@ -185,7 +193,7 @@ class QAQualityGenerator:
                         pbar.update(1)
 
                         if self.progress_callback:
-                            progress = int(20 + (i + 1) / total_qas * 70)  
+                            progress = int(20 + (i + 1) / total_qas * 70)
                             self.progress_callback(progress)
 
             save_file_path = os.path.join(
@@ -196,7 +204,7 @@ class QAQualityGenerator:
                 json.dump(qa_result, f, ensure_ascii=False, indent=4)
 
             if self.progress_callback:
-                self.progress_callback(100)  
+                self.progress_callback(100)
 
             return save_file_path
 

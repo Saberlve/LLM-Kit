@@ -1,9 +1,7 @@
-input_file: [result/qas_iterated/qa_iteratedfor_ceshi/ceshi.json,result/qas_iterated/qa_iteratedfor_ceshi/ceshi-copy.json]
-output_file: output.json
-dedup_by_answer: false
+input_file: [results/qas_iterated/qa_iterated.json]
+output_file: results/dedup/dedup_result.json
+dedup_by_answer: false  # Set to false to deduplicate by question
 min_answer_length: 10
-deleted_pairs_file: deleted.json
-dedup_threshold: 0.8
+deleted_pairs_file: results/dedup/deleted_pairs.json
+dedup_threshold: 0.5  # Lower threshold to detect more duplicates
 dedup_num_perm: 128
-
-
