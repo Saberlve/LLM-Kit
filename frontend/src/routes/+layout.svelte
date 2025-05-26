@@ -13,7 +13,7 @@
   setContext("t", t);
 
   
-  let loaded = true; true，
+  let loaded = true; true,
 
   
   onMount(() => {
