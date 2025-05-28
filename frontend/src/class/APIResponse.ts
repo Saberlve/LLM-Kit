@@ -14,7 +14,11 @@ export interface UploadResponse extends APIResponse {
 
 // Define parse response type
 export interface ParseResponse extends APIResponse {
-    data: { record_id: string };
+    data: { 
+        record_id: string;
+        parsed_file_path?: string;
+        content?: string;
+    };
 }
 
 // Define task progress response type

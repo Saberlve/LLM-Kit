@@ -16,6 +16,7 @@ import os
 from typing import List, Dict, Any
 import mimetypes
 from loguru import logger
+from dotenv import load_dotenv
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -362,87 +363,104 @@ async def parse_specific_file(
         request: FileIDRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """Parse a specific uploaded file, automatically selecting the parsing method based on file type"""
+    """Parse a specific uploaded file, only handling text files for now"""
     try:
         from bson import ObjectId
         file_id = request.file_id
-        print(file_id)
+        logger.info(f"Starting to parse file with ID: {file_id}")
+        
         # Try to find in the text file collection
         text_file = await db.llm_kit.uploaded_files.find_one({"_id": ObjectId(file_id)})
-        binary_file = None
-        file_source = "text"
-
+        
         if not text_file:
-            # If not found, try to find in the binary file collection
-            binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": ObjectId(file_id)})
-            if not binary_file:
-                raise HTTPException(status_code=404, detail="File not found")
-            file_source = "binary"
-            file = binary_file
-        else:
-            file = text_file
-
+            logger.error(f"File with ID {file_id} not found in text files collection")
+            raise HTTPException(status_code=404, detail="Text file not found")
+            
+        logger.info(f"Processing text file: {text_file['filename']} with type: {text_file['file_type']}")
 
         # Create parse record
         parse_record = ParseRecord(
-            input_file=file['filename'],
+            input_file=text_file['filename'],
             status="processing",
-            file_type=file.get('file_type') or file.get('mime_type') or "unknown", # Handle both text and binary
-            save_path=f"./parsed_files/{file_id}", # Default save path or get from request
-            task_type="parse" if file_source == "text" else "ocr",
+            file_type=text_file.get('file_type', "unknown"),
+            save_path=f"./parsed_files/{file_id}",
+            task_type="parse",
             progress=0
         )
-        result = await db.llm_kit.parse_records.insert_one(
-            parse_record.dict(by_alias=True)
-        )
+        
+        # 确保parse_record可以正确序列化
+        if hasattr(parse_record, "model_dump"):
+            record_dict = parse_record.model_dump(by_alias=True)
+        else:
+            record_dict = parse_record.dict(by_alias=True)
+            
+        result = await db.llm_kit.parse_records.insert_one(record_dict)
         record_id = result.inserted_id
+        logger.info(f"Created parse record with ID: {record_id}")
 
         try:
-            if file_source == "text":
-                # Text file parsing logic (using ParseService, similar to /parse endpoint)
-                service = ParseService(db)
-                parse_result = await service.parse_content(
-                    content=file["content"],
-                    filename=file["filename"] + "." + file["file_type"],
-                    save_path="./parsed_files", # Default save path or get from request
-                    SK="YOUR_SK",  # Get from configuration or request
-                    AK="YOUR_AK",  # Get from configuration or request
-                    parallel_num=1, # Or get from request
-                    record_id=str(record_id)
-                )
-            elif file_source == "binary":
-                # Binary file OCR logic (similar to /ocr endpoint, but using content from DB)
-                if binary_file and binary_file["content"]:
-                    ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
-                    save_path = os.path.join("./parsed_files", file["filename"] + '.txt') # Define save path
-                    with open(save_path, 'w', encoding='utf-8') as f:
-                        f.write(ocr_result)
-                    parse_result = {"content": ocr_result, "parsed_file_path": save_path} # Structure to match text parse result
-                else:
-                    raise HTTPException(status_code=500, detail="Binary file content missing")
-
-            # Update parse record with result and status
+            # 简化的解析处理 - 直接将文本内容保存为文件而不调用复杂的解析服务
+            # 确保目录存在
+            save_dir = os.path.join("./parsed_files", "parsed_file")
+            os.makedirs(save_dir, exist_ok=True)
+            
+            # 创建解析后的文件名
+            file_name = f"{text_file['filename']}_parsed.txt"
+            parsed_file_path = os.path.join(save_dir, file_name)
+            
+            # 写入文件内容
+            with open(parsed_file_path, 'w', encoding='utf-8') as f:
+                f.write(text_file["content"])
+                
+            logger.info(f"Saved parsed content to: {parsed_file_path}")
+            
+            # 更新文件状态
+            await db.llm_kit.uploaded_files.update_one(
+                {"_id": ObjectId(file_id)},
+                {"$set": {"status": "parsed"}}
+            )
+            
+            # 更新解析记录
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {
                     "status": "completed",
                     "progress": 100,
-                    "content": parse_result.get("content", ""),
-                    "parsed_file_path": parse_result.get("parsed_file_path", "")
+                    "content": text_file["content"],
+                    "parsed_file_path": parsed_file_path
                 }}
             )
-            return APIResponse(status="success", message="File parsed successfully", data={"record_id": str(record_id), **parse_result})
-
+            
+            logger.info(f"Updated parse record with ID: {record_id} to completed status")
+            return APIResponse(
+                status="success", 
+                message="File parsed successfully", 
+                data={
+                    "record_id": str(record_id),
+                    "content": text_file["content"],
+                    "parsed_file_path": parsed_file_path
+                }
+            )
 
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            logger.error(f"Error during file parsing: {str(e)}\n{error_trace}")
+            
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
-                {"$set": {"status": "failed"}}
+                {"$set": {
+                    "status": "failed",
+                    "error_message": str(e)
+                }}
             )
+            logger.info(f"Updated parse record with ID: {record_id} to failed status")
             raise e
 
     except Exception as e:
-        logger.error(f"Failed to parse file file_id: {request.file_id}, error: {str(e)}", exc_info=True)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Failed to parse file file_id: {request.file_id}, error: {str(e)}\n{error_trace}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -452,65 +470,13 @@ async def ocr_specific_file(
         request: FileIDRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """Perform OCR recognition on a specific binary file"""
-    try:
-        from bson import ObjectId
-        file_id = request.file_id
-
-        # Get binary file record
-        binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": ObjectId(file_id)})
-        if not binary_file:
-            raise HTTPException(status_code=404, detail="Binary file not found")
-
-        # Create parse record
-        parse_record = ParseRecord(
-            input_file=binary_file['filename'],
-            status="processing",
-            file_type=binary_file['file_type'],
-            save_path="./parsed_files", # Default save path or get from request
-            task_type="ocr",
-            progress=0
-        )
-        result = await db.llm_kit.parse_records.insert_one(
-            parse_record.dict(by_alias=True)
-        )
-        record_id = result.inserted_id
-
-        try:
-            # OCR processing
-            if binary_file and binary_file["content"]:
-                ocr_result = single_ocr(binary_file["content"]) # Adapt single_ocr to handle content directly if needed, or save to temp file and path to it.
-                save_path = os.path.join("./parsed_files", binary_file["filename"] + '.txt')
-                with open(save_path, 'w', encoding='utf-8') as f:
-                    f.write(ocr_result)
-                parse_result = {"content": ocr_result, "parsed_file_path": save_path}
-            else:
-                raise HTTPException(status_code=500, detail="Binary file content missing")
-
-
-            # Update parse record
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {
-                    "status": "completed",
-                    "progress": 100,
-                    "content": parse_result.get("content", ""),
-                    "parsed_file_path": parse_result.get("parsed_file_path", "")
-                }}
-            )
-            return APIResponse(status="success", message="OCR completed successfully", data={"record_id": str(record_id), **parse_result})
-
-
-        except Exception as e:
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"status": "failed"}}
-            )
-            raise e
-
-    except Exception as e:
-        logger.error(f"OCR file failed file_id: {request.file_id}, error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    """Perform OCR recognition on a specific binary file - temporarily disabled"""
+    logger.info(f"OCR功能暂时被禁用")
+    return APIResponse(
+        status="error", 
+        message="OCR功能暂时不可用，请使用文本文件解析功能", 
+        data={}
+    )
 
 
 @router.post("/ocr")
@@ -518,80 +484,13 @@ async def ocr_file(
         request: OCRRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """Perform OCR recognition on a file"""
-    try:
-        # Ensure file exists
-        if not os.path.exists(request.file_path):
-            raise HTTPException(status_code=400, detail="File not found")
-
-        # Ensure save path exists
-        os.makedirs(os.path.dirname(request.save_path), exist_ok=True)
-
-        # Create initial record
-        parse_record = ParseRecord(
-            input_file=os.path.basename(request.file_path),
-            status="processing",
-            file_type="ocr",
-            save_path=request.save_path,
-            task_type="ocr",
-            progress=0
-        )
-        result = await db.llm_kit.parse_records.insert_one(
-            parse_record.dict(by_alias=True)
-        )
-        record_id = result.inserted_id
-
-        try:
-            # OCR processing consists of three steps: loading the model, processing the image, and saving the results
-            # 1. Update model loading progress
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"progress": 30}}
-            )
-
-            # 2. Perform OCR recognition
-            result = single_ocr(request.file_path)
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"progress": 70}}
-            )
-
-            # 3. Save results
-            save_path = os.path.join(request.save_path, os.path.basename(request.file_path) + '.txt')
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(result)
-
-            # Update completion status
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {
-                    "status": "completed",
-                    "progress": 100,
-                    "content": result,
-                    "parsed_file_path": save_path
-                }}
-            )
-
-            return APIResponse(
-                status="success",
-                message="OCR completed successfully",
-                data={
-                    "record_id": str(record_id),
-                    "result": result,
-                    "save_path": save_path
-                }
-            )
-        except Exception as e:
-            # Update failure status
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"status": "failed"}}
-            )
-            raise e
-
-    except Exception as e:
-        logger.error(f"OCR processing failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    """Perform OCR recognition on a file - temporarily disabled"""
+    logger.info(f"OCR功能暂时被禁用")
+    return APIResponse(
+        status="error", 
+        message="OCR功能暂时不可用，请使用文本文件解析功能", 
+        data={}
+    )
 
 @router.get("/upload/latest")
 async def get_latest_upload(
