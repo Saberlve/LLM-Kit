@@ -1,4 +1,4 @@
-import type { UploadedFile, UploadedBinaryFile } from "./filetypes";
+import type { UploadedFile, UploadedBinaryFile, UnifiedFile } from "./FileTypes";
 
 // Define common API response structure
 export interface APIResponse {
@@ -29,5 +29,18 @@ export interface ParseHistoryResponse extends APIResponse {
 
 // Define unified file list response type
 export interface UnifiedFileListResponse extends APIResponse {
-    data: Array<UploadedFile | UploadedBinaryFile>; // Using file type definition
+    data: UnifiedFile[]; // Using unified file type definition
+}
+
+// Request interfaces
+export interface FileIDRequest {
+    file_id: string;
+}
+
+export interface RecordIDRequest {
+    record_id: string;
+}
+
+export interface FilenameRequest {
+    filename: string;
 }

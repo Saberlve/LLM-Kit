@@ -1,8 +1,7 @@
-from deduplication.qa_deduplication import QADeduplication, DedupRecord, KeptQAPair, DeletedQAPair
 from utils.hparams import DedupParams
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
-from typing import List
+from typing import List, Callable, Optional, Tuple, Dict, Any
 from datetime import datetime, timezone
 import os
 import time
@@ -10,8 +9,257 @@ import asyncio
 from bson import ObjectId
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import numpy as np
+from datasketch import MinHash, MinHashLSH
+import uuid
+from pydantic import BaseModel, Field
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
+# Set log level for this module
 logger = logging.getLogger(__name__)
+# Uncomment the line below to enable debug logging
+# logger.setLevel(logging.DEBUG)
+
+class QADeduplication:
+    """
+    Class for deduplicating question-answer pairs using MinHash LSH algorithm.
+    """
+    def __init__(self, hparams: DedupParams, progress_callback: Optional[Callable[[int], None]] = None):
+        """
+        Initialize the QA deduplication class.
+
+        Args:
+            hparams: Deduplication parameters
+            progress_callback: Optional callback function to report progress
+        """
+        self.hparams = hparams
+        self.progress_callback = progress_callback
+        self.num_perm = hparams.dedup_num_perm
+        self.threshold = hparams.dedup_threshold
+        self.dedup_by_answer = hparams.dedup_by_answer
+        self.min_answer_length = hparams.min_answer_length
+
+    def _report_progress(self, progress: int):
+        """Report progress if callback is provided"""
+        if self.progress_callback:
+            self.progress_callback(progress)
+
+    def _create_minhash(self, text: str) -> MinHash:
+        """Create a MinHash object from text"""
+        minhash = MinHash(num_perm=self.num_perm)
+        # Convert text to lowercase and split into words
+        for word in text.lower().split():
+            minhash.update(word.encode('utf-8'))
+        return minhash
+
+    def _load_qa_pairs(self, file_path: str) -> List[Dict[str, Any]]:
+        """Load QA pairs from a JSON file"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                qa_pairs = json.load(f)
+
+            # Ensure each QA pair has an ID
+            for qa in qa_pairs:
+                if 'id' not in qa:
+                    qa['id'] = str(uuid.uuid4())
+
+            return qa_pairs
+        except Exception as e:
+            logger.error(f"Error loading QA pairs from {file_path}: {str(e)}")
+            raise
+
+    def process_qa_file(self, hparams: DedupParams) -> Tuple[List[Dict[str, Any]], List[List[Dict[str, Any]]]]:
+        """
+        Process QA file to deduplicate QA pairs.
+
+        Args:
+            hparams: Deduplication parameters
+
+        Returns:
+            Tuple containing:
+            - List of kept QA pairs
+            - List of deleted QA pair groups (each group is a list where the first item is the kept pair)
+        """
+        # Load all QA pairs from input files
+        all_qa_pairs = []
+        for file_path in hparams.input_file:
+            all_qa_pairs.extend(self._load_qa_pairs(file_path))
+
+        total_pairs = len(all_qa_pairs)
+        logger.info(f"Loaded {total_pairs} QA pairs from {len(hparams.input_file)} files")
+        logger.info(f"Deduplication parameters: threshold={self.threshold}, dedup_by_answer={self.dedup_by_answer}")
+
+        # Print all questions for debugging (only in debug mode)
+        if logger.isEnabledFor(logging.DEBUG):
+            for i, qa in enumerate(all_qa_pairs):
+                logger.debug(f"QA pair {i+1}: {qa['question'][:50]}...")
+
+        self._report_progress(10)  # 10% progress after loading
+
+        # Initialize LSH index
+        lsh = MinHashLSH(threshold=self.threshold, num_perm=self.num_perm)
+
+        # Track processed and kept QA pairs
+        processed_ids = set()
+        kept_pairs = []
+        deleted_groups = []
+
+        # First pass: create MinHash for each QA pair and insert into LSH index
+        minhashes = {}
+        for qa in all_qa_pairs:
+            # Determine text to use for deduplication
+            if self.dedup_by_answer and len(qa['answer']) >= self.min_answer_length:
+                text = qa['answer']
+            else:
+                text = qa['question']
+
+            # Create MinHash for the text
+            minhash = self._create_minhash(text)
+            minhashes[qa['id']] = minhash
+
+        # Second pass: find duplicates
+        for i, qa in enumerate(all_qa_pairs):
+            # Report progress periodically
+            if i % max(1, total_pairs // 10) == 0:
+                progress = 10 + int(80 * i / total_pairs)  # Map to 10-90% range
+                self._report_progress(progress)
+
+            # Skip if already processed
+            if qa['id'] in processed_ids:
+                continue
+
+            # Get the MinHash for this QA pair
+            minhash = minhashes[qa['id']]
+
+            # Check for similar pairs in the LSH index
+            similar_ids = lsh.query(minhash) if i > 0 else []
+
+            if not similar_ids:
+                # No similar pairs found, keep this one
+                lsh.insert(qa['id'], minhash)
+                kept_pairs.append(qa)
+                processed_ids.add(qa['id'])
+            else:
+                # Similar pairs found, mark as processed
+                processed_ids.add(qa['id'])
+
+                # Find all similar pairs
+                similar_group = [qa]
+                for similar_id in similar_ids:
+                    similar_qa = next((q for q in all_qa_pairs if q['id'] == similar_id), None)
+                    if similar_qa:
+                        similar_group.append(similar_qa)
+
+                # Add to deleted groups
+                deleted_groups.append(similar_group)
+                continue
+
+            # Now check for similar pairs in the remaining QA pairs
+            similar_group = []
+            for other_qa in all_qa_pairs:
+                if other_qa['id'] == qa['id'] or other_qa['id'] in processed_ids:
+                    continue
+
+                other_minhash = minhashes[other_qa['id']]
+                similarity = minhash.jaccard(other_minhash)
+
+                # Log comparison details at debug level
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Comparing '{qa['question'][:30]}...' with '{other_qa['question'][:30]}...': similarity = {similarity}")
+
+                if similarity >= self.threshold:
+                    if not similar_group:
+                        similar_group = [qa]
+                    similar_group.append(other_qa)
+                    processed_ids.add(other_qa['id'])
+                    logger.info(f"Found duplicate: '{qa['question'][:30]}...' and '{other_qa['question'][:30]}...' (similarity: {similarity:.2f})")
+
+            # If we found similar pairs, add to deleted groups
+            if similar_group:
+                deleted_groups.append(similar_group)
+                logger.info(f"Added group with {len(similar_group)} similar QA pairs to deleted groups")
+
+        # Save kept QA pairs to output file
+        with open(hparams.output_file, 'w', encoding='utf-8') as f:
+            json.dump(kept_pairs, f, ensure_ascii=False, indent=4)
+
+        # Save deleted QA pairs to deleted pairs file
+        with open(hparams.deleted_pairs_file, 'w', encoding='utf-8') as f:
+            json.dump(deleted_groups, f, ensure_ascii=False, indent=4)
+
+        logger.info(f"Kept {len(kept_pairs)} QA pairs, deleted {len(deleted_groups)} groups")
+        self._report_progress(100)  # 100% progress after completion
+
+        return kept_pairs, deleted_groups
+
+# Pydantic models for database records
+class DedupRecord(BaseModel):
+    input_file: List[str]
+    output_file: str
+    deleted_pairs_file: str
+    dedup_by_answer: bool
+    threshold: float
+    min_answer_length: int
+    status: str
+    source_text: str
+    original_count: int
+    kept_count: int
+    progress: int
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    error_message: Optional[str] = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        
+    def dict(self, by_alias=False):
+        """兼容旧版Pydantic API"""
+        if hasattr(self, "model_dump"):
+            return self.model_dump(by_alias=by_alias)
+        else:
+            return super().dict(by_alias=by_alias)
+
+class KeptQAPair(BaseModel):
+    dedup_id: ObjectId
+    qa_id: str
+    question: str
+    answer: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Config:
+        arbitrary_types_allowed = True
+        
+    def dict(self, by_alias=False):
+        """兼容旧版Pydantic API"""
+        if hasattr(self, "model_dump"):
+            return self.model_dump(by_alias=by_alias)
+        else:
+            return super().dict(by_alias=by_alias)
+
+class DeletedQAPair(BaseModel):
+    dedup_id: ObjectId
+    qa_id: str
+    question: str
+    answer: str
+    similar_pairs: List[Dict[str, Any]]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Config:
+        arbitrary_types_allowed = True
+        
+    def dict(self, by_alias=False):
+        """兼容旧版Pydantic API"""
+        if hasattr(self, "model_dump"):
+            return self.model_dump(by_alias=by_alias)
+        else:
+            return super().dict(by_alias=by_alias)
 
 class QADedupService:
     def __init__(self, db: AsyncIOMotorClient):
@@ -28,7 +276,7 @@ class QADedupService:
 
     async def _log_error(self, error_message: str, source: str, stack_trace: str = None):
         error_log = {
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "error_message": error_message,
             "source": source,
             "stack_trace": stack_trace
@@ -294,12 +542,16 @@ class QADedupService:
                 if kept_pairs:
                     kept_records = []
                     for qa in kept_pairs:
-                        record = KeptQAPair(
+                        kept_pair = KeptQAPair(
                             dedup_id=record_id,
                             qa_id=qa['id'],
                             question=qa['question'],
                             answer=qa['answer']
-                        ).dict(by_alias=True)
+                        )
+                        if hasattr(kept_pair, "model_dump"):
+                            record = kept_pair.model_dump(by_alias=True)
+                        else:
+                            record = kept_pair.dict(by_alias=True)
                         kept_records.append(record)
 
                     if kept_records:
@@ -311,7 +563,7 @@ class QADedupService:
                     for group in deleted_groups:
                         main_pair = group[0]
                         similar_pairs = group[1:]
-                        record = DeletedQAPair(
+                        deleted_pair = DeletedQAPair(
                             dedup_id=record_id,
                             qa_id=main_pair['id'],
                             question=main_pair['question'],
@@ -321,7 +573,11 @@ class QADedupService:
                                 'question': pair['question'],
                                 'answer': pair['answer']
                             } for pair in similar_pairs]
-                        ).dict(by_alias=True)
+                        )
+                        if hasattr(deleted_pair, "model_dump"):
+                            record = deleted_pair.model_dump(by_alias=True)
+                        else:
+                            record = deleted_pair.dict(by_alias=True)
                         deleted_records.append(record)
 
                     if deleted_records:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.components.routers import parse, to_tex, qa_generate, quality, qa_dedup, cot_generate
+from app.components.routers import parse, to_tex, qa_generate, quality, qa_dedup, cot_generate, dataset
 from app.components.core.database import init_db, get_database
 from datetime import datetime, timezone
 import logging
@@ -18,6 +18,11 @@ logging.basicConfig(
 )
 
 app = FastAPI(title="LLM-Kit API")
+
+# 初始化数据库
+@app.on_event("startup")
+async def startup_db_client():
+    await init_db()
 
 class ErrorLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -99,7 +104,8 @@ async def clear_all_collections():
         "kept_pairs",
         "error_logs",
         "uploaded_files",           # Add text file collection
-        "uploaded_binary_files"     # Add binary file collection
+        "uploaded_binary_files",    # Add binary file collection
+        "dataset_entries"           # Add dataset entries collection
     ]
 
     for collection_name in collections:
@@ -131,6 +137,7 @@ app.include_router(qa_generate.router, prefix="/qa", tags=["qa_generate"])
 app.include_router(quality.router, prefix="/quality", tags=["quality"])
 app.include_router(qa_dedup.router, prefix="/dedup", tags=["qa_dedup"])
 app.include_router(cot_generate.router, prefix="/cot", tags=["cot_generate"])
+app.include_router(dataset.router, prefix="/api", tags=["dataset"])
 
 # Health check endpoint
 @app.get("/")
@@ -200,80 +207,6 @@ async def get_error_logs(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
-
-# import os
-
-# from deduplication.qa_deduplication import QADeduplication
-# from generate_qas.qa_generator import QAGenerator
-# from quality_control.quality_control import QAQualityGenerator
-# from text_parse.parse import parse
-# from text_parse.to_tex import LatexConverter
-# from utils.hparams import DedupParams, HyperParams
-
-# def dedup():
-#     hparams=DedupParams.from_dedup_yaml('hparams/dedup.yaml')
-#     qa_dedup=QADeduplication(hparams)
-#     qa_dedup.process_qa_file(hparams)
-
-# def main():
-#     try:
-#         hparams = HyperParams.from_hparams('hyparams/config.yaml')
-
-#         file_list = []
-#         if os.path.isdir(hparams.file_path):
-#             files = os.listdir(hparams.file_path)
-#             for file in files:
-#                 file_list.append(file)
-#         elif os.path.isfile(hparams.file_path):
-#             file_list.append(hparams.file_path)
-
-#         for file in file_list:
-#             try:
-#                 print('Start iterative optimization of ' + os.path.basename(file))
-#                 parsed_file_path = parse(hparams)
-#                 latex_converter = LatexConverter(parsed_file_path, hparams)
-
-#                 if file.split('.')[-1] != 'tex' and hparams.convert_to_tex:
-#                     latex_converter.convert_to_latex()
-
-#                 qa_generator = QAGenerator(latex_converter.save_path, hparams)
-#                 qa_path = qa_generator.convert_tex_to_qas()
-
-#                 quality_control = QAQualityGenerator(qa_path, hparams)
-#                 it_path = quality_control.iterate_optim_qa()
-
-#             except Exception as e:
-#                 import traceback
-#                 error_msg = f"Error processing file {file}: {str(e)}"
-#                 stack_trace = traceback.format_exc()
-#                 # Since command line mode may not have an async event loop running, use synchronous method to log errors
-#                 import asyncio
-#                 loop = asyncio.get_event_loop()
-#                 loop.run_until_complete(log_error(error_msg, "main_process", stack_trace))
-#                 print(error_msg)
-#                 continue
-
-#     except Exception as e:
-#         import traceback
-#         error_msg = f"Main process error: {str(e)}"
-#         stack_trace = traceback.format_exc()
-#         loop = asyncio.get_event_loop()
-#         loop.run_until_complete(log_error(error_msg, "main_process", stack_trace))
-#         print(error_msg)
-
-# if __name__=='__main__':
-#     main()
-
-
-
-
-
-
-
-
-
-
-
 
 
 

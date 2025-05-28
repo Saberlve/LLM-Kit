@@ -84,23 +84,45 @@
     loadingTotal = submissions.length;
     loadingProgress = 0;
     loading = true;
-    for (var i = 0; i < submissions.length; i++) {
-      const form = new FormData();
-      const entry = submissions[i];
-      form.append("file", entry.file);
-      await axios.post(`/api/dataset`, form, {
-        params: {
-          name: entry.name,
-          description: entry.description,
-          pool_id: poolId,
-          kind: data_type,
-        },
-      });
-      loadingProgress += 1;
+    try {
+      for (var i = 0; i < submissions.length; i++) {
+        try {
+          const form = new FormData();
+          const entry = submissions[i];
+          form.append("file", entry.file);
+          console.log(`正在上传文件: ${entry.name}, pool_id: ${poolId}, kind: ${data_type}`);
+          
+          const response = await axios.post(`/api/dataset`, form, {
+            params: {
+              name: entry.name,
+              description: entry.description,
+              pool_id: poolId,
+              kind: data_type,
+            },
+          });
+          
+          console.log("上传成功:", response.data);
+          loadingProgress += 1;
+        } catch (err) {
+          console.error(`上传文件 ${submissions[i].name} 失败:`, err);
+          if (err.response) {
+            console.error("服务器响应:", err.response.data);
+          }
+          // 继续下一个文件上传，不中断
+          loadingProgress += 1;
+        }
+      }
+    } catch (err) {
+      console.error("提交过程中发生错误:", err);
+    } finally {
+      try {
+        await fetch_dataset_entries();
+      } catch (err) {
+        console.error("获取数据集条目失败:", err);
+      }
+      submissions = [];
+      loading = false;
     }
-    await fetch_dataset_entries();
-    submissions = [];
-    loading = false;
   }
   let fetch_entries_updater: any;
   onMount(async () => {
@@ -117,7 +139,22 @@
   $: stageEmpty = submissions.length == 0;
 
   async function fetch_dataset_entries() {
-    entries = (await axios.get(`/api/dataset_entry/by_pool/${poolId}`)).data;
+    try {
+      console.log(`获取池ID ${poolId} 的数据集条目`);
+      const response = await axios.get(`/api/dataset_entry/by_pool/${poolId}`);
+      console.log("获取数据集条目成功:", response.data);
+      entries = response.data;
+      if (!Array.isArray(entries)) {
+        console.error("获取的数据集条目不是数组:", entries);
+        entries = [];
+      }
+    } catch (err) {
+      console.error("获取数据集条目失败:", err);
+      if (err.response) {
+        console.error("服务器响应:", err.response.data);
+      }
+      entries = [];
+    }
   }
 
   onMount(async () => {
@@ -203,7 +240,7 @@
                         <button
                           on:click={(_) => remove_from_stage_handle(index)}
                           class="text-blue-500 hover:text-blue-800 hover:underline"
-                          > </button
+                          >{t("data.uploader.remove")}</button
                         >
                       </TableBodyCell>
                     </TableBody>

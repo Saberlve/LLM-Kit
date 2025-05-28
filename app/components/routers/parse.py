@@ -993,3 +993,31 @@ async def delete_files(request: Request):
             os.remove(file_path)
             return {"status": "success"}
     return {"status": "failed"}
+
+@router.get("/task/progress")
+async def get_task_progress(
+        record_id: str,
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    """Get task progress by record ID"""
+    try:
+        from bson import ObjectId
+
+        # Get record from database
+        record = await db.llm_kit.parse_records.find_one({"_id": ObjectId(record_id)})
+
+        if not record:
+            raise HTTPException(status_code=404, detail="Record not found")
+
+        return APIResponse(
+            status="success",
+            message="Progress retrieved successfully",
+            data={
+                "progress": record.get("progress", 0),
+                "status": record.get("status", "processing"),
+                "task_type": record.get("task_type", "parse")
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to get task progress: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

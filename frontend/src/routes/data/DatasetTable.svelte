@@ -31,8 +31,22 @@
     if (id_to_delete == null) {
       throw "Attempting to delete without an id";
     }
-    await axios.delete(`/api/dataset/${id_to_delete}`);
-    dispatch("modified");
+    
+    try {
+      console.log(`删除数据集ID: ${id_to_delete}`);
+      const response = await axios.delete(`/api/dataset/${id_to_delete}`);
+      console.log("删除数据集成功:", response.data);
+      dispatch("modified");
+      delete_modal = false;
+    } catch (err) {
+      console.error(`删除数据集ID ${id_to_delete} 失败:`, err);
+      if (err.response) {
+        console.error("服务器响应:", err.response.data);
+        alert(`删除失败: ${err.response.data.detail || "未知错误"}`);
+      } else {
+        alert(`删除失败: ${err.message || "未知错误"}`);
+      }
+    }
   }
 </script>
 

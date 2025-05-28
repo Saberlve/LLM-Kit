@@ -107,11 +107,12 @@ class ParseService:
 
             )
 
-            result = await self.parse_records.insert_one(
+            if hasattr(parse_record, "model_dump"):
+                record_dict = parse_record.model_dump(by_alias=True)
+            else:
+                record_dict = parse_record.dict(by_alias=True)
 
-                parse_record.model_dump(by_alias=True)
-
-            )
+            result = await self.parse_records.insert_one(record_dict)
 
             return {
 

@@ -26,7 +26,10 @@ class Settings(BaseSettings):
         # 5. Deduplication module
         "dedup_records": "dedup_records",
         "kept_pairs": "kept_pairs",
-        "error_logs": "error_logs"
+        "error_logs": "error_logs",
+        
+        # 6. Dataset module
+        "dataset_entries": "dataset_entries"
     }
 
     INDEXES: ClassVar[Dict[str, List[tuple]]] = {
@@ -38,7 +41,8 @@ class Settings(BaseSettings):
         "quality_records": [("generation_id", 1)],
         "dedup_records": [("created_at", -1)],
         "kept_pairs": [("dedup_id", 1)],
-        "error_logs": [("timestamp", -1)]
+        "error_logs": [("timestamp", -1)],
+        "dataset_entries": [("created_at", -1), ("pool_id", 1)]
     }
 
     class Config:

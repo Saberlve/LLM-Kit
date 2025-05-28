@@ -22,80 +22,8 @@
   import { goto } from "$app/navigation";
   const t: any = getContext("t");
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
-
-  // --- Types ---
-
-  interface APIResponse {
-    status: "success" | "fail";
-    message: string;
-    data: any;
-  }
-
-  interface UploadResponse extends APIResponse {
-    data: { file_id: string };
-  }
-  // interface APIResponse {
-  //   status: "success" | "fail";
-  //   message: string;
-  //   data: any;
-  // }
-
-  // interface UploadResponse extends APIResponse {
-  //   data: { file_id: string };
-  // }
-
-  interface ParseResponse extends APIResponse {
-    data: { record_id: string };
-  }
-  // interface ParseResponse extends APIResponse {
-  //   data: { record_id: string };
-  // }
-
-  interface TaskProgressResponse extends APIResponse {
-    data: { progress: number, status: string, task_type: string };
-  }
-  // interface TaskProgressResponse extends APIResponse {
-  //   data: { progress: number, status: string, task_type: string };
-  // }
-
-  // interface ParseHistoryResponse extends APIResponse {
-  //   data: { exists: number };
-  // }
-
-  // interface UploadedFile {
-  //   file_id: string;
-  //   filename: string;
-  //   file_type: string;
-  //   size: number;
-  //   status: string;
-  //   created_at: string;
-  //   type: string;
-  //   parseStatus?: string;
-  //   parseProgress?: number;
-  //   recordId?: string | null;
-  // }
-  // interface UploadedBinaryFile {
-  //   file_id: string;
-  //   filename: string;
-  //   file_type: string;
-  //   mime_type: string;
-  //   size: number;
-  //   status: string;
-  //   created_at: string;
-  //   type: string;
-  //   parseStatus?: string;
-  //   parseProgress?: number;
-  //   recordId?: string | null;
-  // }
-
-  type UnifiedFile = UploadedFile | UploadedBinaryFile;
-  interface UnifiedFileListResponse extends APIResponse {
-    data: UnifiedFile[];
-  }
-  // type UnifiedFile = UploadedFile | UploadedBinaryFile;
-  // interface UnifiedFileListResponse extends APIResponse {
-  //   data: UnifiedFile[];
-  // }
+  import type { UploadedFile, UploadedBinaryFile, UnifiedFile, UnifiedFileListResponse } from "../../class/FileTypes";
+  import type { APIResponse, UploadResponse, ParseResponse, TaskProgressResponse, FileIDRequest, FilenameRequest } from "../../class/APIResponse";
 
   // --- Component State ---
   let loading = false;
@@ -108,8 +36,6 @@
 
   let showDeleteConfirmation = false;
   let fileToDelete: UnifiedFile | null = null; // Store the file object to be deleted
-  let showDeleteConfirmation = false;
-  let fileToDelete: UnifiedFile | null = null;
 
   const uploaded_file_heads = [
     t("data.uploader.filename"),
@@ -119,11 +45,7 @@
     t("data.uploader.upload_status"),
     t("data.uploader.action"),
     t("data.uploader.delete_action") // "Delete File" column header
-    t("data.uploader.upload_status"),
-    t("data.uploader.action"),
-    t("data.uploader.delete_action")
   ]
-
 
   // --- Helper Functions ---
   function generateUniqueId(): string {
@@ -187,28 +109,6 @@
     fileToDelete = null;
   }
 
-  function handleParseButtonClick(file: UnifiedFile) {
-    parseFileForEntry(file);
-  }
-
-  function handleDeleteButtonClick(file: UnifiedFile) {
-    fileToDelete = file;
-    showDeleteConfirmation = true;
-  }
-
-  async function confirmDelete() {
-    if (fileToDelete && fileToDelete.file_id) {
-      await deleteFile(fileToDelete.file_id);
-    }
-    showDeleteConfirmation = false;
-    fileToDelete = null;
-  }
-
-  function cancelDelete() {
-    showDeleteConfirmation = false;
-    fileToDelete = null;
-  }
-
   // --- API Functions ---
   async function uploadFile(file: File): Promise<UploadResponse> {
     try {
@@ -255,11 +155,60 @@
     }
   }
 
+  async function parseFileForEntry(file: UnifiedFile) {
+    if (!file.file_id) {
+      console.error("File ID is missing, cannot parse.");
+      return;
+    }
+
+    uploadedFiles = uploadedFiles.map(f =>
+      f.file_id === file.file_id ? { ...f, parseStatus: "pending", parseProgress: 0, recordId: null } : f
+    );
+
+    try {
+      let parseResponse: ParseResponse;
+      const fileRequest: FileIDRequest = { file_id: file.file_id };
+      
+      if (file.type === 'binary') {
+        parseResponse = await axios.post<ParseResponse>(
+          `http://127.0.0.1:8000/parse/ocr/`, 
+          fileRequest
+        );
+      } else {
+        parseResponse = await axios.post<ParseResponse>(
+          `http://127.0.0.1:8000/parse/file`, 
+          fileRequest
+        );
+      }
+
+      if (parseResponse.data.status === "success") {
+        const recordId = parseResponse.data.data.record_id;
+        
+        uploadedFiles = uploadedFiles.map(f =>
+          f.file_id === file.file_id ? { ...f, recordId: recordId, parseStatus: "processing" } : f
+        );
+        
+        startPollingParsingProgress(file.file_id, recordId);
+      } else {
+        uploadedFiles = uploadedFiles.map(f =>
+          f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        );
+        console.error("Parsing failed:", parseResponse);
+      }
+    } catch (error) {
+      uploadedFiles = uploadedFiles.map(f =>
+        f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+      );
+      console.error("Error starting parsing:", error);
+    }
+  }
+
   async function checkParseHistory(filename: string): Promise<number> {
     try {
+      const filenameRequest: FilenameRequest = { filename };
       const response = await axios.post(
               "http://127.0.0.1:8000/parse/phistory",
-              { filename },
+              filenameRequest,
               { headers: { "Content-Type": "application/json" } }
       );
 
@@ -279,25 +228,35 @@
   async function fetchUploadedFiles(): Promise<void> {
     try {
       const response = await axios.get<UnifiedFileListResponse>(
-              `http://127.0.0.1:8000/parse/files/all`
+        `http://127.0.0.1:8000/parse/files/all`
       );
+      
       if (response.data.status === "success") {
-
-        uploadedFiles = response.data.data.map(async file => {
-          let status = file.status;
-          const exists = await checkParseHistory(file.filename);
-          status = exists === 1 ? "parsed" : file.status; // Update status based on parse history
-          return {
-            ...file,
-            status: status,
-            parseStatus: file.parseStatus || "",
-            parseProgress: file.parseProgress || 0,
-            recordId: file.recordId || null
-          };
-        });
-
-        uploadedFiles = await Promise.all(uploadedFiles) as UnifiedFile[];
-
+        // 处理返回的文件列表，为每个文件添加解析状态信息
+        const filesWithStatus = await Promise.all(
+          response.data.data.map(async file => {
+            // 检查文件是否已解析
+            let status = file.status;
+            const exists = await checkParseHistory(file.filename);
+            
+            // 根据解析历史更新文件状态
+            if (exists === 1) {
+              status = "parsed";
+            }
+            
+            // 返回带状态的文件对象
+            return {
+              ...file,
+              status: status,
+              parseStatus: file.parseStatus || "",
+              parseProgress: file.parseProgress || 0,
+              recordId: file.recordId || null
+            };
+          })
+        );
+        
+        // 更新上传文件列表
+        uploadedFiles = filesWithStatus as UnifiedFile[];
       } else {
         console.error("Error fetching uploaded files:", response);
         errorMessage = t("data.uploader.fetch_fail");
@@ -308,47 +267,17 @@
     }
   }
 
-  async function parseFileForEntry(file: UnifiedFile) {
-    if (!file.file_id) {
-      console.error("File ID is missing, cannot parse.");
-      return;
-    }
-
-    uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === file.file_id ? { ...f, parseStatus: "pending", parseProgress: 0, recordId: null } : f
-    );
-
-    try {
-      let parseResponse: ParseResponse;
-      if (file.type === 'binary') {
-        parseResponse = await axios.post<ParseResponse>(`http://127.0.0.1:8000/parse/parse/ocr`, { file_id: file.file_id }); // Send file_id in body
-      } else {
-        parseResponse = await axios.post<ParseResponse>(`http://127.0.0.1:8000/parse/parse/file`, { file_id: file.file_id }); // Send file_id in body
-      }
-
-      if (parseResponse.data.status === "success") {
-        const recordId = parseResponse.data.data.record_id;
-        uploadedFiles = uploadedFiles.map(f =>
-                f.file_id === file.file_id ? { ...f, recordId: recordId } : f
-        );
-        startPollingParsingProgress(file.file_id, recordId);
-      } else {
-        uploadedFiles = uploadedFiles.map(f =>
-                f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
-        );
-        console.error("Parsing failed:", parseResponse);
-      }
-    } catch (error) {
-      uploadedFiles = uploadedFiles.map(f =>
-              f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
-      );
-      console.error("Error starting parsing:", error);
-    }
-  }
-
   async function fetchTaskProgress(recordId: string): Promise<TaskProgressResponse> {
-
-     return await axios.get<TaskProgressResponse>(`http://127.0.0.1:8000/parse/task/progress`, { params: { record_id: recordId } }); // Send record_id as query parameter
+    try {
+      const response = await axios.get<TaskProgressResponse>(
+        `http://127.0.0.1:8000/parse/task/progress`, 
+        { params: { record_id: recordId } }
+      );
+      return response;
+    } catch (error) {
+      console.error("Error fetching task progress:", error);
+      throw error;
+    }
   }
 
   function startPollingParsingProgress(fileId: string, recordId: string) {
@@ -362,15 +291,21 @@
         if (progressResponse.data.status === "success") {
           const progress = progressResponse.data.data.progress;
           const status = progressResponse.data.data.status;
+          
+          // Update file processing status
           uploadedFiles = uploadedFiles.map(f =>
-                  f.file_id === fileId ? { ...f, parseProgress: progress, parseStatus: status } : f
+            f.file_id === fileId ? { ...f, parseProgress: progress, parseStatus: status } : f
           );
+          
+          // Check if processing is complete or failed
           if (status === "completed" || status === "failed") {
             clearInterval(parsingProgressIntervals[fileId]);
             delete parsingProgressIntervals[fileId];
+            
+            // If completed, update the file status to "parsed"
             if (status === "completed") {
               uploadedFiles = uploadedFiles.map(f =>
-                      f.file_id === fileId ? { ...f, status: "parsed" } : f
+                f.file_id === fileId ? { ...f, status: "parsed" } : f
               );
             }
           }
@@ -379,7 +314,7 @@
           clearInterval(parsingProgressIntervals[fileId]);
           delete parsingProgressIntervals[fileId];
           uploadedFiles = uploadedFiles.map(f =>
-                  f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+            f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
           );
         }
       } catch (error) {
@@ -387,7 +322,7 @@
         clearInterval(parsingProgressIntervals[fileId]);
         delete parsingProgressIntervals[fileId];
         uploadedFiles = uploadedFiles.map(f =>
-                f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+          f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
         );
       }
     }, 2000); // Poll every 2 seconds
@@ -398,15 +333,17 @@
     loading = true;
     errorMessage = null;
     try {
-      // Modified to POST request and correctly pass file_id
+      // 使用正确的请求格式
+      const fileRequest: FileIDRequest = { file_id: fileId };
       const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/deletefiles`,
-              {
-                data: { file_id: fileId }
-              }
+        `http://127.0.0.1:8000/parse/deletefiles`,
+        {
+          data: fileRequest
+        }
       );
 
       if (response.data.status === "success") {
+        // 从列表中移除删除的文件
         uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId);
       } else {
         errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
@@ -420,54 +357,35 @@
     }
   }
 
-
-    }, 200);
-  }
-
-  // --- API Functions ---
-  async function deleteFile(fileId: string) {
-    loading = true;
-    errorMessage = null;
-    try {
-      // Modified to POST request and correctly pass file_id
-      const response = await axios.delete<APIResponse>(
-              `http://127.0.0.1:8000/parse/deletefiles`,
-              {
-                data: { file_id: fileId }
-              }
-      );
-
-      if (response.data.status === "success") {
-        uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId);
-      } else {
-        errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
-        console.error("Error deleting file:", response);
-      }
-    } catch (error) {
-      errorMessage = t("data.uploader.delete_fail_all");
-      console.error("Error deleting file:", error);
-    } finally {
-      loading = false;
-    }
-  }
   // --- Upload Logic ---
   async function uploadAndProcessFile(file: File) {
     loading = true;
     errorMessage = null;
     try {
+      // 上传文件
       const response = await uploadFile(file);
 
       if (response.status !== "success") {
         errorMessage = t("data.uploader.upload_fail") + ": " + file.name;
         console.error(`Error uploading file ${file.name}:`, response);
-      } else {
-        console.log("File uploaded successfully, id is", response.data.file_id);
+        loading = false;
+        return;
       }
+      
+      console.log("File uploaded successfully, id is", response.data.file_id);
+      
+      // 刷新文件列表
       await fetchUploadedFiles();
 
+      // 查找刚上传的文件
       const latestFile = uploadedFiles.find(f => f.filename === file.name);
-      if (latestFile) {
-        parseFileForEntry(latestFile);
+      
+      // 如果找到文件，开始解析
+      if (latestFile && latestFile.file_id) {
+        console.log("Starting parsing for file:", latestFile.filename);
+        await parseFileForEntry(latestFile);
+      } else {
+        console.error("Uploaded file not found in file list:", file.name);
       }
 
     } catch (error) {
@@ -539,13 +457,9 @@
                     <TableBodyCell>
                       <Button size="xs" color="red" on:click={() => handleDeleteButtonClick(file)}>{t("data.uploader.delete_button")}</Button> <!-- Delete button always shown -->
                     </TableBodyCell>
-                    <TableBodyCell>
-                      <Button size="xs" color="red" on:click={() => handleDeleteButtonClick(file)}>{t("data.uploader.delete_button")}</Button> <!-- Delete button always shown -->
-                    </TableBodyCell>
                   </tr>
                   {#if file.parseStatus}
                     <tr>
-                      <td colspan="7">
                       <td colspan="7">
                         <div class="flex flex-row items-center gap-2">
                           <span>{t("data.uploader.parse_status")}: {file.parseStatus}</span>
@@ -609,20 +523,6 @@
     </div>
   </div>
 {/if}
-
-<!-- Delete Confirmation Modal -->
-<Modal bind:open={showDeleteConfirmation} size="xs" autoclose={false}>
-  <h3 slot="header" class="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-    {t("data.uploader.delete_confirmation_title")}
-  </h3>
-  <div class="my-4 text-gray-500 dark:text-gray-400">
-    <p>{t("data.uploader.delete_confirmation_message")}</p>
-  </div>
-  <div slot="footer">
-    <Button color="red" on:click={confirmDelete}>{t("data.uploader.delete_confirm_button")}</Button>
-    <Button color="gray" on:click={cancelDelete}>{t("data.uploader.delete_cancel_button")}</Button>
-  </div>
-</Modal>
 
 <!-- Delete Confirmation Modal -->
 <Modal bind:open={showDeleteConfirmation} size="xs" autoclose={false}>
