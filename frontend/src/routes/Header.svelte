@@ -1,21 +1,22 @@
 <script lang="ts">
   import "../app.css";
-  import { supportedLanguages } from "../locales";
   import { onMount } from "svelte";
   import { getContext } from "svelte";
   import { type i18n as i18nType } from "i18next"; // Renamed the type import
   import type { Writable } from "svelte/store";
-  import { language } from "./store";
 
 
   const i18n: Writable<i18nType> = getContext("i18n"); // Use the renamed type
-  let selectedLanguage = $language;
-  $: {
-    $language = selectedLanguage;
-    $i18n.changeLanguage(selectedLanguage);
-  }
-
   const t = $i18n.t;
+  
+  // 导航项
+  const navItems = [
+    { text: t("nav.home"), link: "/" },
+    { text: t("nav.data"), link: "/data" },
+    { text: t("nav.construct"), link: "/construct" },
+    { text: t("nav.quality"), link: "/quality_eval" },
+    { text: t("nav.dedup"), link: "/deduplication" }
+  ];
 </script>
 
 <div class="header w-full h-16 justify-between bg-gray-000 flex">
@@ -29,17 +30,12 @@
 			>&nbsp;&nbsp;{t("root.subtitle")}</span
 		> -->
   </div>
-  <div class="right w-100 h-2/3 text-center pt-4 px-2 flex">
-    <div>
-      <select
-              bind:value={selectedLanguage}
-              class="form-select block w-full px-2 py-1 pr-8 rounded border border-gray-300 bg-white text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-      >
-        {#each supportedLanguages as lang (lang.value)}
-          <option value={lang.value}>{lang.display}</option>
-        {/each}
-      </select>
+  <div class="right w-100 h-2/3 text-center pt-4 px-2 flex items-center">
+    <!-- 导航栏 -->
+    <div class="flex">
+      {#each navItems as item}
+        <a href={item.link} class="mx-3 text-gray-700 hover:text-blue-600 font-medium">{item.text}</a>
+      {/each}
     </div>
   </div>
-</div>
-<hr />
+</div><hr />

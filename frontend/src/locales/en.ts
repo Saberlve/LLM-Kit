@@ -2,6 +2,51 @@ export default {
   root: {
     title: "LLM-Kit"
   },
+  nav: {
+    home: "Home",
+    data: "Data Management",
+    construct: "Dataset Construction",
+    quality: "Quality Evaluation",
+    dedup: "Deduplication"
+  },
+  home: {
+    hero: {
+      title: "LLM-Kit: Knowledge Iteration Kit for LLM",
+      subtitle: "Advanced data iteration optimization tool for knowledge refinement and LLM development",
+      get_started: "Get Started"
+    },
+    features: {
+      heading: "Core Features",
+      data: {
+        title: "Data Management",
+        description: "Create and manage data pools, upload datasets, perform operations"
+      },
+      construct: {
+        title: "Dataset Construction",
+        description: "Build high-quality training datasets through various methods"
+      },
+      quality: {
+        title: "Quality Evaluation",
+        description: "Evaluate dataset quality to ensure training effectiveness"
+      },
+      dedup: {
+        title: "Data Deduplication",
+        description: "Identify and remove duplicate data to improve training efficiency"
+      },
+      deploy: {
+        title: "Deployment Management",
+        description: "Simplify model deployment process and optimize inference performance"
+      },
+      config: {
+        title: "System Settings",
+        description: "Configure system parameters and manage model lists"
+      }
+    },
+    about: {
+      title: "About LLM-Kit",
+      description: "LLM-Kit is a knowledge iteration toolkit designed to optimize large language model data processing. It helps you refine and improve your datasets through iterative cycles, enhancing model performance at each step from data collection to evaluation and deployment."
+    }
+  },
   sidebar: {
     data_manager: "Data Manage",
     dataset_construct: "Dataset Construction",
@@ -55,7 +100,12 @@ export default {
   },
   data: {
     title: "Data Management",
-    description: "Create and manage data pools, upload datasets to data pools",
+    description: "Manage and organize your data",
+    upload: {
+      title: "Data Upload",
+    },
+    preview: "Preview",
+    download: "Download",
     create_pool: "Create Data Pool",
     no_dataset: "No dataset in the data pool",
     detail: {
@@ -80,10 +130,11 @@ export default {
     },
     table: {
       col_name: "Name",
-      col_time: "Creation Time",
-      col_size: "Data Volume",
+      col_time: "Time",
+      col_size: "Size",
       col_format: "Format",
-      col_des: "Description"
+      col_des: "Description",
+      col_operation: "Operation"
     },
     delete: {
       title: "Confirm Deletion",
@@ -312,9 +363,102 @@ export default {
   construct: {
     title: "Dataset Construction",
     subtitle: "Construct a question-answer pair data set",
-    create_task: "Create Constrcut Task",
+    create_task: "Create Construction Task",
     next_step: "Next Step",
     previous_step: "Previous Step",
+    main_settings: "Construction Settings",
+    uploaded_files: "Parsed Files",
+    filename: "Filename",
+    upload_status: "Status",
+    select_all: "Select All",
+    deselect_all: "Deselect All",
+    status_generated: "Generated",
+    status_generating: "Generating...",
+    status_unknown: "Not Generated",
+    delete_qa_button: "Delete QA",
+    delete_cot_button: "Delete COT",
+    delete_button: "Delete Selected",
+    latex_converting: "Converting LaTeX...",
+    qa_generating: "Generating QA Pairs...",
+    qa_generated_success: "QA Generation Complete",
+    qa_generation_failed: "QA Generation Failed",
+    qa_generation_network_error: "Network Error During QA Generation",
+    latex_conversion_failed: "LaTeX Conversion Failed",
+    latex_conversion_network_error: "Network Error During LaTeX Conversion",
+    qa_generation_settings: "QA Generation Settings",
+    cot_generation_settings: "CoT Generation Settings",
+    parallel_num: "Parallel Processing Threads",
+    save_path: "Save Path",
+    save_path_placeholder: "Path to save generated files",
+    model_name: "Model",
+    erine: "ERNIE",
+    flash: "Flash",
+    lite: "Lite",
+    qwen: "Qwen",
+    sk: "Secret Key",
+    ak: "Access Key",
+    domain: "Domain",
+    domain_placeholder: "Enter domain (optional)",
+    generate_qa_button: "Generate QA Pairs",
+    generating_qa: "Generating QA Pairs...",
+    qa_delete_success: "QA file deleted successfully",
+    qa_delete_failed: "Failed to delete QA file",
+    qa_delete_network_error: "Network error deleting QA file",
+    qa_preview_failed: "Failed to preview QA file",
+    qa_preview_network_error: "Network error previewing QA file",
+    generate_cot_button: "Generate CoT Data",
+    generating_cot: "Generating CoT Data...",
+    cot_delete_success: "CoT file deleted successfully",
+    cot_delete_failed: "Failed to delete CoT file",
+    cot_delete_network_error: "Network error deleting CoT file",
+    cot_preview_failed: "Failed to preview CoT file",
+    cot_preview_network_error: "Network error previewing CoT file",
+    delete_confirmation_title: "Confirm Deletion",
+    delete_confirmation_message: "Are you sure you want to delete the selected files? This action cannot be undone.",
+    delete_confirm_button: "Delete",
+    delete_cancel_button: "Cancel",
+    qa_preview_title: "QA Preview",
+    cot_preview_title: "COT Preview",
+    no_reasoning_available: "No Results Available",
+    qa_preview_for_file: "Original file name:",
+    question: "Question",
+    answer: "Answer",
+    text_context: "Context Text",
+    previous_page: "Previous",
+    next_page: "Next",
+    page: "Page",
+    go_to_page: "Go to page:",
+    preview_qa_fetch_failed: "Failed to fetch QA content for preview",
+    preview_qa_network_error: "Network error fetching QA content",
+    no_qa_content_available: "No QA content available for this file.",
+    preview_cot_fetch_failed: "Failed to fetch COT content for preview",
+    preview_cot_network_error: "Network error fetching COT content",
+    no_cot_content_available: "No COT content available for this file.",
+    invalid_sk_ak: "Invalid Secret Key and Access Key",
+    qa_preview: "QA Preview",
+    cot_preview: "COT Preview",
+    file_preview: "File:",
+    raw_file_preview_title: "File Preview",
+    content: "Content",
+    reasoning: "Reasoning",
+    context: "Context",
+    previous: "Previous",
+    next: "Next",
+    go_to: "Go to page:",
+    no_content: "No content available",
+    no_reasoning: "No reasoning available",
+    preview_failed: "Failed to fetch content",
+    network_error: "Network error fetching content",
+    no_file_selected: "No file selected",
+    preview_raw_fetch_failed: "Failed to fetch file content",
+    preview_raw_network_error: "Network error fetching file content",
+    raw_file_preview_for_file: "File:",
+    no_raw_content_available: "No content available for this file",
+    cot_generating: "Generating CoT Data...",
+    cot_generated_success: "CoT Generation Complete",
+    cot_generation_failed: "CoT Generation Failed",
+    cot_generation_network_error: "Network Error During CoT Generation",
+    cot_all_generated_success: "All CoT Generation Complete"
   },
   record: {
     title: "Record Management",

@@ -3,95 +3,80 @@
     import axios from 'axios';
     import { page } from '$app/stores';
     import ActionPageTitle from '../../components/ActionPageTitle.svelte';
-    import { Button } from 'flowbite-svelte';
+    import { Button, Table, TableHead, TableHeadCell, TableBody, TableBodyCell } from 'flowbite-svelte';
     import { getContext } from "svelte";
-    import { Table, TableHead, TableHeadCell, TableBody, TableBodyCell } from 'flowbite-svelte'; // Import Table components
 
     const t: any = getContext("t");
     let filename: string = '';
-    let qaContent = []; // Changed to reflect new data structure
+    let cotContent = [];
     let errorMessage = null;
     let currentPage = 1;
-    const itemsPerPage = 3;
     let totalPages = 1;
+    let itemsPerPage = 10;
+    let pageInput = '1';
 
     onMount(async () => {
         filename = $page.url.searchParams.get('filename') || '';
         if (filename) {
-            await fetchQaContent();
+            await fetchCotContent();
         }
     });
 
-    const fetchQaContent = async () => {
+    const fetchCotContent = async () => {
         try {
-            const response = await axios.post(`http://127.0.0.1:8000/cot/content`,
-                {
-                    filename:filename
-                });
-
+            const response = await axios.get(`http://127.0.0.1:8000/cot/preview/${filename}?page=${currentPage}&page_size=${itemsPerPage}`);
             if (response.status === 200) {
-                qaContent = response.data; // Directly use the returned array
-                totalPages = Math.ceil(qaContent.length / itemsPerPage);
-                if (totalPages === 0) totalPages = 1;
+                cotContent = response.data.items || [];
+                totalPages = response.data.total_pages || 1;
             } else {
-                errorMessage = t("data.construct.preview_qa_fetch_failed") + (response.data?.detail ? `: ${response.data.detail}` : '');
+                errorMessage = t("construct.preview_failed") + (response.data?.detail ? `: ${response.data.detail}` : '');
             }
         } catch (error) {
-            errorMessage = t("data.construct.preview_qa_network_error");
-            console.error("Error fetching cot content:", error);
+            console.error('Error fetching COT content:', error);
+            errorMessage = t("construct.network_error");
         }
     };
 
-    $: displayedContent = qaContent.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-    const goToPage = (pageNumber: number) => {
-        if (pageNumber >= 1 && pageNumber <= totalPages) {
-            currentPage = pageNumber;
+    const goToPage = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            currentPage = page;
+            fetchCotContent();
         }
     };
 
-    const goToPreviousPage = () => goToPage(currentPage - 1);
-    const goToNextPage = () => goToPage(currentPage + 1);
-    const handlePageInput = (event: Event) => {
-        const pageNumber = parseInt((event.target as HTMLInputElement).value, 10);
-        goToPage(pageNumber);
+    const handlePageInputChange = () => {
+        const newPage = parseInt(pageInput);
+        if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
+            goToPage(newPage);
+        }
     };
 </script>
 
-<ActionPageTitle returnTo="/construct" title={t("data.construct.cot_preview_title")} />
+<ActionPageTitle returnTo="/construct" title={t("construct.cot_preview")} />
 
-<div class="container mx-auto p-4">
+<div class="container mx-auto px-4 py-6">
     {#if errorMessage}
-        <div class="m-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {errorMessage}
-        </div>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{errorMessage}</div>
     {/if}
 
-    {#if !errorMessage && qaContent.length > 0}
-        <h2 class="text-2xl font-bold mb-4">{t("data.construct.qa_preview_for_file")} {filename}</h2>
+    <h2 class="text-2xl font-bold mb-4">{t("construct.file_preview")} {filename}</h2>
 
-        <div class="overflow-x-auto">
-            <Table striped={false}>
+    {#if cotContent && cotContent.length > 0}
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-4">
+            <Table striped={true}>
                 <TableHead>
-                    <TableHeadCell class="table-cell-border">{t("data.construct.content")}</TableHeadCell>
-                    <TableHeadCell class="table-cell-border">{t("data.construct.reasoning_process")}</TableHeadCell>
+                    <TableHeadCell class="table-cell-border">{t("construct.content")}</TableHeadCell>
+                    <TableHeadCell class="table-cell-border">{t("construct.reasoning")}</TableHeadCell>
                 </TableHead>
                 <TableBody>
-                    {#each displayedContent as qaItem}
+                    {#each cotContent as item}
                         <tr>
-                            <TableBodyCell class="multiline-cell table-cell-border">{qaItem.content}</TableBodyCell>
-                            <TableBodyCell class="multiline-cell table-cell-border">
-                                {#if qaItem.result && qaItem.result. }
-                                    <ol class="list-decimal pl-5">
-                                        {#each qaItem.result.  as reasoningStep}
-                                            <li class="mb-2">
-                                                <p class="font-semibold">{reasoningStep.action}{#if reasoningStep.title}: {reasoningStep.title}{/if}</p>
-                                                <p>{reasoningStep.content}</p>
-                                            </li>
-                                        {/each}
-                                    </ol>
+                            <TableBodyCell class="whitespace-normal break-words">{item.content}</TableBodyCell>
+                            <TableBodyCell class="whitespace-normal break-words">
+                                {#if item.reasoning}
+                                    {item.reasoning}
                                 {:else}
-                                    {t("data.construct.no_reasoning_available")}
+                                    {t("construct.no_reasoning")}
                                 {/if}
                             </TableBodyCell>
                         </tr>
@@ -100,34 +85,34 @@
             </Table>
         </div>
 
-        <div class="flex justify-center items-center space-x-4 mt-4">
-            <Button on:click={goToPreviousPage} disabled={currentPage === 1}>
-                {t("data.construct.previous_page")}
+        <div class="flex items-center justify-between">
+            <Button color="blue" disabled={currentPage === 1} on:click={() => goToPage(currentPage - 1)}>
+                {t("construct.previous")}
             </Button>
-            <span>
-                {t("data.construct.page")} {currentPage} / {totalPages}
+            <span class="text-gray-700">
+                {t("construct.page")} {currentPage} / {totalPages}
             </span>
-            <Button on:click={goToNextPage} disabled={currentPage === totalPages}>
-                {t("data.construct.next_page")}
+            <Button color="blue" disabled={currentPage === totalPages} on:click={() => goToPage(currentPage + 1)}>
+                {t("construct.next")}
             </Button>
-            <div class="flex items-center">
-                <label for="pageInput" class="mr-2">{t("data.construct.go_to_page")}</label>
+            <div class="flex items-center ml-4">
+                <label for="pageInput" class="mr-2">{t("construct.go_to")}</label>
                 <input
-                        type="number"
-                        id="pageInput"
-                        min="1"
-                        max={totalPages}
-                        value={currentPage}
-                        class="w-16 border rounded px-2 py-1 text-center"
-                        on:change={handlePageInput}
+                    id="pageInput"
+                    type="number"
+                    class="w-16 px-2 py-1 border border-gray-300 rounded"
+                    min="1"
+                    max={totalPages}
+                    bind:value={pageInput}
+                    on:change={handlePageInputChange}
                 />
             </div>
         </div>
-    {:else if !errorMessage && qaContent.length === 0}
-        <p>{t("data.construct.no_qa_content_available")}</p>
+    {:else}
+        <p>{t("construct.no_content")}</p>
     {/if}
-
 </div>
+
 <style>
     :global(.multiline-cell) {
         word-wrap: break-word; /*   */

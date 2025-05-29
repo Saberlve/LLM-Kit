@@ -12,8 +12,9 @@
   import type FinetuneDatasetEntry from "../../class/DatasetEntry";
   import axios from "axios";
   import { getContext } from "svelte";
+  import { goto } from "$app/navigation";
   const t: any = getContext("t");
-  const col_names = ["id", t("data.table.col_name"), t("data.table.col_time"), t("data.table.col_size"), t("data.table.col_format"), t("data.table.col_des")];
+  const col_names = ["id", t("data.table.col_name"), t("data.table.col_time"), t("data.table.col_size"), t("data.table.col_format"), t("data.table.col_des"), t("data.table.col_operation")];
 
   export let datasetEntries: Array<FinetuneDatasetEntry>;
   export let noOperation = false;
@@ -46,6 +47,32 @@
       } else {
         alert(`删除失败: ${err.message || "未知错误"}`);
       }
+    }
+  }
+
+  // 预览数据集
+  function previewDataset(dataset) {
+    // 检查是否为QA或COT数据集
+    if (dataset.is_qa) {
+      goto(`/qa/preview/${dataset.id}`);
+    } else if (dataset.is_cot) {
+      goto(`/cot/preview/${dataset.id}`);
+    } else {
+      // 一般数据集
+      window.open(`/api/dataset/preview/${dataset.id}`, '_blank');
+    }
+  }
+
+  // 下载数据集
+  function downloadDataset(dataset) {
+    // 检查是否为QA或COT数据集
+    if (dataset.is_qa) {
+      window.open(`/qa/download/${dataset.id}`, '_blank');
+    } else if (dataset.is_cot) {
+      window.open(`/cot/download/${dataset.id}`, '_blank');
+    } else {
+      // 一般数据集
+      window.open(`/api/dataset/download/${dataset.id}`, '_blank');
     }
   }
 </script>
@@ -90,19 +117,30 @@
         <td class="px-6 py-4 whitespace-nowrap">{row.type}</td>
         <td class="px-6 py-4 whitespace-nowrap">{row.description}</td>
         {#if !noOperation}
-        <td class="px-6 py-4 whitespace-nowrap">
+        <td class="px-6 py-4 whitespace-nowrap flex space-x-2">
           <button
             class="text-blue-500 hover:underline hover:text-blue-700"
-            on:click={(_) => {
+            on:click|stopPropagation={(_) => {
               id_to_delete = row.id;
               delete_modal = true;
-            }}>{t("data.delete.data")}</button
-          >
+            }}>{t("data.delete.data")}</button>
           <VisbilityButton
             id={row.id.toString()}
             asset="dataset"
             interactStyle="link"
           />
+          <!-- 预览按钮 -->
+          <button
+            class="text-green-500 hover:underline hover:text-green-700"
+            on:click|stopPropagation={(_) => previewDataset(row)}>
+            {t("data.preview")}
+          </button>
+          <!-- 下载按钮 -->
+          <button
+            class="text-purple-500 hover:underline hover:text-purple-700"
+            on:click|stopPropagation={(_) => downloadDataset(row)}>
+            {t("data.download")}
+          </button>
         </td>
         {/if}
       </tr>

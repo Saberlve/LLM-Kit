@@ -17,6 +17,9 @@ from typing import List, Dict, Any
 import mimetypes
 from loguru import logger
 from dotenv import load_dotenv
+import urllib.parse
+import json
+import glob
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -919,4 +922,103 @@ async def get_task_progress(
         )
     except Exception as e:
         logger.error(f"Failed to get task progress: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/preview_raw/{filename}")
+async def preview_raw_file(
+    filename: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """预览原始文件内容"""
+    try:
+        # URL解码文件名
+        decoded_filename = urllib.parse.unquote(filename)
+        logger.info(f"预览文件: 原始文件名={filename}, 解码后文件名={decoded_filename}")
+        
+        # 首先从数据库中查找文件
+        file_record = await db.llm_kit.uploaded_files.find_one({"filename": decoded_filename})
+        logger.info(f"数据库查询结果: {'找到文件' if file_record else '未找到文件'}")
+        
+        if file_record and "content" in file_record:
+            # 如果在文本文件集合中找到
+            logger.info(f"在文本文件集合中找到文件: {decoded_filename}")
+            return {
+                "status": "success",
+                "message": "文件内容获取成功",
+                "data": {
+                    "content": file_record["content"],
+                    "file_type": file_record.get("file_type", "txt"),
+                    "size": file_record.get("size", len(file_record["content"].encode("utf-8"))),
+                    "created_at": file_record.get("created_at", datetime.utcnow()).isoformat()
+                }
+            }
+        
+        # 尝试在二进制文件集合中查找
+        binary_file_record = await db.llm_kit.uploaded_binary_files.find_one({"filename": decoded_filename})
+        if binary_file_record:
+            # 对于二进制文件，我们只返回元数据，不返回二进制内容
+            logger.info(f"在二进制文件集合中找到文件: {decoded_filename}")
+            return {
+                "status": "success",
+                "message": "文件元数据获取成功",
+                "data": {
+                    "content": "二进制文件，无法直接预览内容",
+                    "file_type": binary_file_record.get("file_type", "binary"),
+                    "mime_type": binary_file_record.get("mime_type", "application/octet-stream"),
+                    "size": binary_file_record.get("size", 0),
+                    "created_at": binary_file_record.get("created_at", datetime.utcnow()).isoformat()
+                }
+            }
+        
+        # 尝试使用文件ID查找
+        try:
+            from bson import ObjectId
+            # 检查filename是否为有效的ObjectId
+            if len(decoded_filename) == 24:
+                try:
+                    obj_id = ObjectId(decoded_filename)
+                    # 尝试用ObjectId查找
+                    file_record = await db.llm_kit.uploaded_files.find_one({"_id": obj_id})
+                    if file_record and "content" in file_record:
+                        logger.info(f"通过ID在文本文件集合中找到文件: {decoded_filename}")
+                        return {
+                            "status": "success",
+                            "message": "文件内容获取成功",
+                            "data": {
+                                "content": file_record["content"],
+                                "file_type": file_record.get("file_type", "txt"),
+                                "size": file_record.get("size", len(file_record["content"].encode("utf-8"))),
+                                "created_at": file_record.get("created_at", datetime.utcnow()).isoformat()
+                            }
+                        }
+                    
+                    # 也尝试在二进制文件集合中查找
+                    binary_file_record = await db.llm_kit.uploaded_binary_files.find_one({"_id": obj_id})
+                    if binary_file_record:
+                        logger.info(f"通过ID在二进制文件集合中找到文件: {decoded_filename}")
+                        return {
+                            "status": "success",
+                            "message": "文件元数据获取成功",
+                            "data": {
+                                "content": "二进制文件，无法直接预览内容",
+                                "file_type": binary_file_record.get("file_type", "binary"),
+                                "mime_type": binary_file_record.get("mime_type", "application/octet-stream"),
+                                "size": binary_file_record.get("size", 0),
+                                "created_at": binary_file_record.get("created_at", datetime.utcnow()).isoformat()
+                            }
+                        }
+                except:
+                    pass
+        except Exception as e:
+            logger.warning(f"尝试通过ID查找文件时出错: {str(e)}")
+        
+        # 如果都没有找到
+        logger.error(f"文件 {decoded_filename} 未找到，在数据库中未找到")
+        raise HTTPException(status_code=404, detail=f"文件 {decoded_filename} 在数据库中未找到")
+        
+    except HTTPException as e:
+        logger.error(f"预览文件HTTP异常: {str(e)}")
+        raise e
+    except Exception as e:
+        logger.error(f"预览文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

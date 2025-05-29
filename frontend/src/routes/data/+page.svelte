@@ -74,6 +74,20 @@
 
   let showDeleteConfirmation = false;
   let fileToDelete: UnifiedFile | null = null; // Store the file object to be deleted
+  
+  // 添加文件预览相关变量
+  let previewModalOpen = false;
+  let previewModalTitle = '';
+  let previewContent = [];
+  let previewContentType = ''; // 'raw'
+  let previewErrorMessage = null;
+  let previewLoading = false;
+  let previewCurrentPage = 1;
+  let previewTotalPages = 1;
+  let previewItemsPerPage = 10;
+  let previewPageInput = '1';
+  let previewDatasetId = '';
+  let rawContent = '';
 
   const uploaded_file_heads = [
     t("data.uploader.filename"),
@@ -146,6 +160,58 @@
     showDeleteConfirmation = false;
     fileToDelete = null;
   }
+
+  // 文件预览功能
+  const previewRawFile = async (file: UnifiedFile) => {
+    previewModalTitle = `${file.filename}`;
+    previewContentType = 'raw';
+    previewLoading = true;
+    previewErrorMessage = null;
+    previewModalOpen = true;
+    
+    await fetchRawContent(file.filename);
+  };
+
+  const fetchRawContent = async (filename: string) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/parse/preview_raw/${filename}`);
+      if (response.status === 200 && response.data.status === "success") {
+        rawContent = response.data.data.content || '';
+      } else {
+        previewErrorMessage = "Failed to preview file" + (response.data?.detail ? `: ${response.data.detail}` : '');
+      }
+    } catch (error) {
+      console.error('Error fetching raw content:', error);
+      previewErrorMessage = "Network error previewing file";
+    } finally {
+      previewLoading = false;
+    }
+  };
+
+  const downloadContent = async () => {
+    try {
+      if (previewContentType === 'raw') {
+        // 支持原始内容下载
+        if (!rawContent) {
+          previewErrorMessage = "Download failed";
+          return;
+        }
+        const blob = new Blob([rawContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${previewModalTitle.replace(/\s+/g, '_')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+    } catch (error) {
+      console.error('Error downloading content:', error);
+      previewErrorMessage = "Download failed";
+    }
+  };
 
   // --- API Functions ---
   async function uploadFile(file: File): Promise<UploadResponse> {
@@ -637,13 +703,26 @@
                   {/if}
                 </TableBodyCell>
                 <TableBodyCell>
-                  <Button size="xs" color="blue" class="mr-2" disabled={file.parseStatus === 'processing' || file.parseStatus === 'completed' || file.status === 'parsed'} on:click={() => handleParseButtonClick(file)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                      <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
-                    </svg>
-                    {t("data.uploader.parse_button")}
-                  </Button>
+                  <div class="flex space-x-2">
+                    {#if file.parseStatus !== "completed"}
+                      <Button size="xs" color="blue" on:click={() => handleParseButtonClick(file)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                          <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                        </svg>
+                        {t("data.uploader.parse_button")}
+                      </Button>
+                    {/if}
+                    
+                    <!-- 添加预览按钮 -->
+                    <Button size="xs" color="green" on:click={() => previewRawFile(file)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                      </svg>
+                      Preview
+                    </Button>
+                  </div>
                 </TableBodyCell>
                 <TableBodyCell>
                   <Button size="xs" color="red" on:click={() => handleDeleteButtonClick(file)}>
@@ -733,4 +812,44 @@
       {t("data.uploader.delete_confirm_button")}
     </Button>
   </div>
+</Modal>
+
+<!-- 文件预览模态框 -->
+<Modal bind:open={previewModalOpen} size="xl" autoclose={false} class="w-full max-w-5xl">
+  <h3 slot="header" class="text-xl font-semibold text-gray-900 dark:text-white">
+    {previewModalTitle}
+  </h3>
+
+  <div class="space-y-4">
+    {#if previewErrorMessage}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{previewErrorMessage}</div>
+    {/if}
+
+    {#if previewLoading}
+      <div class="flex justify-center items-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <span class="ml-3 text-gray-700">Loading...</span>
+      </div>
+    {:else if previewContentType === 'raw'}
+      <div class="bg-gray-50 rounded-lg p-4 h-[70vh] overflow-auto">
+        <pre class="whitespace-pre-wrap text-sm font-mono">{rawContent}</pre>
+      </div>
+    {:else}
+      <p class="text-center py-8 text-gray-500">No content available</p>
+    {/if}
+  </div>
+
+  <svelte:fragment slot="footer">
+    <div class="flex justify-between w-full">
+      <Button color="blue" on:click={downloadContent} disabled={!rawContent}>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Download
+      </Button>
+      <Button color="alternative" on:click={() => previewModalOpen = false}>
+        Close
+      </Button>
+    </div>
+  </svelte:fragment>
 </Modal>

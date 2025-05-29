@@ -52,7 +52,6 @@ class TexConversionRecord(MongoBaseModel):
 class QAGeneration(MongoBaseModel):
     """Q&A generation record"""
     input_file: str
-    save_path: str
     model_name: str
     domain: str
     status: str = "processing"  # processing, completed, failed

@@ -170,7 +170,7 @@ async def get_tex_history(
         raise HTTPException(status_code=500, detail=error_message)
 
 
-@router.post("/to_tex/progress")
+@router.post("/progress")
 async def get_tex_progress(
         request: FileNameRequest,
         db: AsyncIOMotorClient = Depends(get_database)

@@ -202,7 +202,6 @@ class QAGenerateService:
             self,
             content: str,
             filename: str,
-            save_path: str,
             SK: list,
             AK: list,
             parallel_num: int,
@@ -231,7 +230,6 @@ class QAGenerateService:
                 # Create new record
                 generation = QAGeneration(
                     input_file=filename,
-                    save_path=save_path,
                     model_name=model_name,
                     domain=domain,
                     status="processing",

@@ -8,7 +8,9 @@
   import ParamGroup from "./ParamGroup.svelte";
   import type { DeploymentRequestParams } from "../../../class/DeploymentRequestParams";
   import { Accordion, AccordionItem } from "flowbite-svelte";
-  import { t } from "../../../locales";
+  import { getContext } from "svelte";
+  
+  const t: any = getContext("t");
   export let deploymentParams: DeploymentRequestParams;
   export let hideParams: Array<string> = [];
 

@@ -26,7 +26,3 @@ export let MODEL_LIST: Writable<string> = persist(
 export const UPDATE_VIEW_INTERVAL = 5000;
 export const REALTIME_FINETUNE_DETAIL = writable(false);
 export const token = writable(null);
-export const language = persist(
-  "language",
-  import.meta.env.VITE_DEFAULT_LANGUAGE || "en",
-);
