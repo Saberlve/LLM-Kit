@@ -8,4 +8,5 @@ export default interface DatasetEntry {
   size: number;
   owner: string;
   public: boolean;
+  is_qa?: boolean;
 }

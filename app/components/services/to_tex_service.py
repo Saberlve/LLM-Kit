@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.models.mongodb import TexConversionRecord
 import os
@@ -29,12 +29,13 @@ class ToTexService:
         }
         await self.error_logs.insert_one(error_log)
 
-    def _process_chunk_with_api(self, chunk: str, ak: str, sk: str, model_name: str, max_tokens: int = 650) -> list:
+    def _process_chunk_with_api(self, chunk: str, ak: str, sk: str, model_name: str, max_tokens: int = 650) -> tuple:
         """Synchronously process a single text chunk"""
         try:
             logger.info(f"开始处理文本块，长度: {len(chunk)}, 模型: {model_name}")
             sub_chunks = split_chunk_by_tokens(chunk, max_tokens)
-            logger.info(f"文本块已拆分为 {len(sub_chunks)} 个子块")
+            total_sub_chunks = len(sub_chunks)
+            logger.info(f"文本块已拆分为 {total_sub_chunks} 个子块")
             results = []
 
             for idx, sub_chunk in enumerate(sub_chunks):
@@ -43,7 +44,7 @@ class ToTexService:
                 
                 for attempt in range(3):
                     try:
-                        logger.info(f"子块 {idx+1}/{len(sub_chunks)}, 尝试 {attempt+1}/3, 长度: {len(sub_chunk)}")
+                        logger.info(f"子块 {idx+1}/{total_sub_chunks}, 尝试 {attempt+1}/3, 长度: {len(sub_chunk)}")
                         # Directly call the synchronous generate function
                         tex_text = generate(sub_chunk, model_name, 'ToTex', ak, sk)
                         if tex_text:
@@ -67,7 +68,7 @@ class ToTexService:
                     logger.error(f"子块 {idx+1} 的所有尝试均失败: {'; '.join(error_messages)}")
             
             logger.info(f"块处理完成，共生成 {len(results)} 个结果")
-            return results
+            return results, total_sub_chunks  # 返回结果和子块总数
         except Exception as e:
             logger.error(f"处理文本块时发生异常: {str(e)}", exc_info=True)
             raise Exception(f"Failed to process text chunk: {str(e)}")
@@ -175,11 +176,11 @@ class ToTexService:
         # Use context manager to create thread pool
         with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
             try:
-                # 确保文件名和路径不包含非法字符
+                # 确保文件名不包含非法字符
                 safe_filename = os.path.basename(filename)
                 
                 # 打印调试信息
-                logger.info(f"开始转换文件: {safe_filename}, 并保存到路径: {save_path}")
+                logger.info(f"开始转换文件: {safe_filename}")
                 logger.info(f"传入的内容长度: {len(content) if content else 0}")
                 
                 # Initialize progress to 0
@@ -206,13 +207,6 @@ class ToTexService:
                     logger.warning(f"并行数 {parallel_num} 大于API密钥数 {len(AK)}，将使用可用的API密钥")
                     parallel_num = len(AK)
 
-                # Create save directory - 使用os.path.join确保路径正确拼接
-                if not os.path.isabs(save_path):
-                    save_path = os.path.abspath(save_path)
-                
-                os.makedirs(save_path, exist_ok=True)
-                logger.info(f"保存目录已创建: {save_path}")
-
                 # Get filename without extension
                 base_filename = safe_filename.rsplit('.', 1)[0] if '.' in safe_filename else safe_filename
 
@@ -222,7 +216,15 @@ class ToTexService:
                     logger.info(f"找到现有记录，重置状态: {existing_record['_id']}")
                     await self.tex_records.update_one(
                         {"_id": existing_record["_id"]},
-                        {"$set": {"status": "processing", "progress": 0}}
+                        {"$set": {
+                            "status": "processing", 
+                            "progress": 0,
+                            "start_time": datetime.now(timezone.utc),
+                            "chunk_info": {
+                                "total_chunks": 0,
+                                "processed_chunks": 0
+                            }
+                        }}
                     )
                     record_id = existing_record["_id"]
                 else:
@@ -231,8 +233,12 @@ class ToTexService:
                         input_file=safe_filename,
                         status="processing",
                         model_name=model_name,
-                        save_path=save_path,
-                        progress=0  # Initialize progress to 0
+                        progress=0,  # Initialize progress to 0
+                        start_time=datetime.now(timezone.utc),
+                        chunk_info={
+                            "total_chunks": 0,
+                            "processed_chunks": 0
+                        }
                     )
                     result = await self.tex_records.insert_one(record.dict(by_alias=True))
                     record_id = result.inserted_id
@@ -251,10 +257,20 @@ class ToTexService:
                     processed_chunks = 0
                     logger.info(f"文本已拆分为 {total_chunks} 块")
 
-                    # Create task list - 20%
+                    # 初始估算子块总数，先估计每个块有5个子块
+                    estimated_total_sub_chunks = total_chunks * 5
+                    processed_sub_chunks = 0
+                    
+                    # Create task list - 20% and update chunk info
                     await self.tex_records.update_one(
                         {"_id": record_id},
-                        {"$set": {"progress": 20}}
+                        {"$set": {
+                            "progress": 20,
+                            "chunk_info": {
+                                "total_chunks": estimated_total_sub_chunks,
+                                "processed_chunks": 0
+                            }
+                        }}
                     )
 
                     # Use thread pool to execute tasks asynchronously
@@ -281,9 +297,12 @@ class ToTexService:
                     logger.info(f"已创建 {len(futures)} 个处理任务")
 
                     # Text processing stage - 20% to 80%
+                    real_total_sub_chunks = 0
                     for i, future in enumerate(asyncio.as_completed(futures)):
                         try:
-                            chunk_result = await future
+                            chunk_result, sub_chunks_count = await future
+                            real_total_sub_chunks += sub_chunks_count
+                            
                             if chunk_result:
                                 results.extend(chunk_result)
                                 logger.info(f"成功处理第 {i+1} 块，获得 {len(chunk_result)} 个结果")
@@ -292,18 +311,61 @@ class ToTexService:
 
                             # Update progress - even with just one chunk there will be progressive progress
                             processed_chunks += 1
+                            processed_sub_chunks += sub_chunks_count
+                            
+                            # 更新真实的子块总数
+                            if i == 0 and total_chunks > 1:
+                                # 基于第一个块更新估计的总子块数
+                                estimated_total_sub_chunks = total_chunks * sub_chunks_count
+                            
                             if total_chunks == 1:
                                 # If there's only one chunk, show progress in multiple steps
                                 progress_steps = [30, 40, 50, 60, 70]
                                 progress = progress_steps[min(len(progress_steps)-1, i)]
                             else:
-                                # Normal progress calculation for multiple chunks
-                                progress = int(20 + (processed_chunks / total_chunks * 60))
+                                # Normal progress calculation for multiple chunks based on sub-chunks
+                                progress = int(20 + (processed_sub_chunks / estimated_total_sub_chunks * 60))
 
-                            await self.tex_records.update_one(
-                                {"_id": record_id},
-                                {"$set": {"progress": progress}}
-                            )
+                            # 获取记录以计算已用时间
+                            current_record = await self.tex_records.find_one({"_id": record_id})
+                            start_time = current_record.get("start_time", current_record.get("created_at", datetime.now(timezone.utc)))
+                            
+                            # 确保start_time有时区信息
+                            if start_time and start_time.tzinfo is None:
+                                start_time = start_time.replace(tzinfo=timezone.utc)
+                            
+                            # 计算预估完成时间
+                            current_time = datetime.now(timezone.utc)
+                            elapsed_time = (current_time - start_time).total_seconds()
+                            if processed_sub_chunks > 0 and progress > 20:
+                                # 基于已处理的子块和已用时间估计总时间
+                                avg_time_per_sub_chunk = elapsed_time / processed_sub_chunks
+                                remaining_sub_chunks = estimated_total_sub_chunks - processed_sub_chunks
+                                remaining_seconds = avg_time_per_sub_chunk * remaining_sub_chunks
+                                estimated_completion = datetime.now(timezone.utc) + timedelta(seconds=remaining_seconds)
+                                
+                                await self.tex_records.update_one(
+                                    {"_id": record_id},
+                                    {"$set": {
+                                        "progress": progress,
+                                        "estimated_completion_time": estimated_completion,
+                                        "chunk_info": {
+                                            "total_chunks": estimated_total_sub_chunks,
+                                            "processed_chunks": processed_sub_chunks
+                                        }
+                                    }}
+                                )
+                            else:
+                                await self.tex_records.update_one(
+                                    {"_id": record_id},
+                                    {"$set": {
+                                        "progress": progress,
+                                        "chunk_info": {
+                                            "total_chunks": estimated_total_sub_chunks,
+                                            "processed_chunks": processed_sub_chunks
+                                        }
+                                    }}
+                                )
                         except Exception as e:
                             logger.error(f"处理第 {i+1} 块失败: {str(e)}", exc_info=True)
                             # Continue processing other chunks
@@ -314,37 +376,25 @@ class ToTexService:
                         raise Exception("所有文本块处理失败，无法生成LaTeX内容")
                     
                     logger.info(f"所有块处理完成，总共获得 {len(results)} 个结果")
+                    logger.info(f"处理了 {processed_sub_chunks} 个子块，总共估计有 {estimated_total_sub_chunks} 个子块")
 
                     # Prepare to save - 90%
                     await self.tex_records.update_one(
                         {"_id": record_id},
-                        {"$set": {"progress": 90}}
+                        {"$set": {
+                            "progress": 90,
+                            "chunk_info": {
+                                "total_chunks": processed_sub_chunks,
+                                "processed_chunks": processed_sub_chunks
+                            }
+                        }}
                     )
-
-                    # Combine all LaTeX content
-                    combined_tex = '\n'.join(results)
-                    logger.info(f"合并后的LaTeX内容长度: {len(combined_tex)}")
 
                     # Prepare data format for saving
                     data_to_save = [
                         {"id": i + 1, "chunk": result}
                         for i, result in enumerate(results)
                     ]
-
-                    # Generate simplified save path - 使用os.path.join确保路径正确拼接
-                    tex_dir_path = os.path.join(save_path, 'tex_files')
-                    os.makedirs(tex_dir_path, exist_ok=True)
-                    tex_file_path = os.path.join(tex_dir_path, f'{base_filename}.json')
-                    logger.info(f"将保存结果到: {tex_file_path}")
-
-                    # Save as JSON format
-                    try:
-                        with open(tex_file_path, 'w', encoding='utf-8') as json_file:
-                            json.dump(data_to_save, json_file, ensure_ascii=False, indent=4)
-                        logger.info(f"文件保存成功: {tex_file_path}")
-                    except Exception as e:
-                        logger.error(f"保存文件失败: {str(e)}", exc_info=True)
-                        raise Exception(f"保存LaTeX结果文件失败: {str(e)}")
 
                     # Complete - 100%
                     await self.tex_records.update_one(
@@ -353,8 +403,11 @@ class ToTexService:
                             "$set": {
                                 "status": "completed",
                                 "content": data_to_save,
-                                "save_path": tex_file_path,
-                                "progress": 100
+                                "progress": 100,
+                                "chunk_info": {
+                                    "total_chunks": processed_sub_chunks,
+                                    "processed_chunks": processed_sub_chunks
+                                }
                             }
                         }
                     )
@@ -380,15 +433,14 @@ class ToTexService:
                     except Exception as e:
                         logger.error(f"更新uploaded_binary_files状态失败: {str(e)}", exc_info=True)
 
-                    # Add a new record using the simplified filename
+                    # 创建新记录以提高兼容性，但不使用本地文件系统
                     try:
                         saved_file_record = {
-                            "input_file": os.path.basename(tex_file_path),
+                            "input_file": f"{base_filename}.json",  # 兼容性目的保留格式
                             "original_file": safe_filename,
                             "status": "completed",
-                            "content": data_to_save,  # Use JSON format data
+                            "content": data_to_save,  # 直接存储数据
                             "created_at": datetime.now(timezone.utc),
-                            "save_path": tex_file_path,
                             "model_name": model_name
                         }
                         new_record_result = await self.tex_records.insert_one(saved_file_record)
@@ -398,8 +450,7 @@ class ToTexService:
 
                     # 返回结果
                     final_result = {
-                        "filename": os.path.basename(tex_file_path),
-                        "save_path": tex_file_path,
+                        "filename": f"{base_filename}.json",  # 保持格式一致性
                         "content": data_to_save
                     }
                     logger.info("LaTeX转换成功完成")
@@ -446,7 +497,9 @@ class ToTexService:
                 raise Exception(f"LaTeX转换失败: {str(e)}")
 
     async def get_tex_records(self):
-        """Get the most recent LaTeX conversion history record"""
+        """
+        获取最近的LaTeX转换历史记录，完全从数据库中获取，不依赖文件系统
+        """
         try:
             # Only get the latest record
             record = await self.tex_records.find_one(
@@ -460,7 +513,6 @@ class ToTexService:
                 "record_id": str(record["_id"]),
                 "input_file": record["input_file"],
                 "status": record["status"],
-                "save_path": record.get("save_path"),
                 "content": record.get("content", ""),
                 "created_at": record["created_at"]
             }]

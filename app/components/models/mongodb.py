@@ -47,6 +47,9 @@ class TexConversionRecord(MongoBaseModel):
     file_type: str = "tex"  # Fixed as tex
     model_name: str  # Model name used
     progress: int = 0  # Progress field
+    start_time: datetime = datetime.now(timezone.utc)  # 开始时间
+    estimated_completion_time: Optional[datetime] = None  # 预估完成时间
+    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  # 块处理信息
 
 # 3. Q&A Generation Module
 class QAGeneration(MongoBaseModel):
@@ -57,6 +60,9 @@ class QAGeneration(MongoBaseModel):
     status: str = "processing"  # processing, completed, failed
     source_text: str
     progress: int = 0  # Progress field
+    start_time: datetime = datetime.now(timezone.utc)  # 开始时间
+    estimated_completion_time: Optional[datetime] = None  # 预估完成时间
+    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  # 块处理信息
 
 class QAPairDB(MongoBaseModel):
     """Q&A pair database record"""

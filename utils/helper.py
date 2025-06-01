@@ -10,7 +10,7 @@ from model_api.Qwen.Qwen import generate_Qwen
 
 def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
 
-    enc = tiktoken.get_encoding("o200k_base")
+    enc = tiktoken.get_encoding("cl100k_base")
 
     lines = chunk.splitlines()
     sub_chunks = []

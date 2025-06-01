@@ -2,13 +2,13 @@
     import ActionPageTitle from '../components/ActionPageTitle.svelte';
     import { Accordion, AccordionItem } from 'flowbite-svelte';
     import { Table, TableHead, TableHeadCell, TableBody, TableBodyCell } from 'flowbite-svelte';
-    import { Button } from 'flowbite-svelte';
-    import { Modal } from 'flowbite-svelte';
+    import { Button, Modal,  Progressbar } from 'flowbite-svelte';
     import { getContext } from "svelte";
     import axios from "axios";
     import { onMount, onDestroy } from 'svelte';
     import { createEventDispatcher } from 'svelte';
     import { goto } from '$app/navigation';
+    import DatasetTable from "./DatasetTable.svelte";
     const dispatch = createEventDispatcher();
 
     const t: any = getContext("t");
@@ -17,6 +17,9 @@
             "construct.title": "Dataset Construction",
             "construct.main_settings": "Construction Settings",
             "construct.uploaded_files": "Parsed Files",
+            "construct.generated_datasets": "Generated Datasets",
+            "construct.no_datasets": "No datasets available",
+            "construct.loading_datasets": "Loading datasets...",
             "construct.filename": "Filename",
             "construct.upload_status": "Status",
             "construct.select_all": "Select All",
@@ -76,7 +79,20 @@
             "construct.cot_delete_network_error": "Network error deleting CoT file",
             "construct.cot_preview_failed": "Failed to preview CoT file",
             "construct.cot_preview_network_error": "Network error previewing CoT file",
-            "general.close": "Close"
+            "general.close": "Close",
+            "construct.view_qa": "View QA",
+            "construct.delete_qa_content": "Delete QA Content",
+            "construct.view_qa_content": "View QA Content",
+            "Progress": "Progress",
+            "Processed chunks": "Processed chunks",
+            "Chunks": "Chunks",
+            "Elapsed time": "Elapsed time",
+            "Remaining time": "Remaining time",
+            "Step": "Step",
+            "LaTeX conversion": "LaTeX conversion",
+            "QA generation": "QA generation",
+            "Completed": "Completed",
+            "Processing": "Processing"
         });
     }
     let errorMessage = null;
@@ -92,6 +108,11 @@
     let domain = '';
     let selectedModel = 'erine';
     let activeTab = 'qa'; // 添加activeTab变量，默认显示QA标签页
+    
+    // 添加数据集相关变量
+    let datasetEntries = [];
+    let datasetLoaded = false;
+    let datasetLoadError = null;
     
     // Add new variables for preview modal
     let previewModalOpen = false;
@@ -143,6 +164,162 @@
     let isGeneratingCOT = false;
 
     let progressIntervals: { [filename: string]: number } = {};
+    let fileProgress: { [filename: string]: { 
+        latex: {
+            progress: number, 
+            status: string,
+            elapsedTime: string,
+            remainingTime: string,
+            estimatedCompletionTime: string,
+            processedChunks: number,
+            totalChunks: number,
+            isComplete: boolean
+        },
+        qa: {
+            progress: number, 
+            status: string,
+            elapsedTime: string,
+            remainingTime: string,
+            estimatedCompletionTime: string,
+            processedChunks: number,
+            totalChunks: number,
+            isComplete: boolean
+        },
+        currentStep: string  // 'latex_conversion' 或 'qa_generation'
+    }} = {};
+    
+    // 添加定时获取进度的函数
+    const startProgressTracking = (filename: string) => {
+        if (progressIntervals[filename]) {
+            clearInterval(progressIntervals[filename]);
+        }
+        
+        // 初始化进度信息
+        if (!fileProgress[filename]) {
+            fileProgress[filename] = {
+                latex: {
+                    progress: 0,
+                    status: 'processing',
+                    elapsedTime: '0s',
+                    remainingTime: 'Calculating...',
+                    estimatedCompletionTime: 'Calculating...',
+                    processedChunks: 0,
+                    totalChunks: 0,
+                    isComplete: false
+                },
+                qa: {
+                    progress: 0,
+                    status: 'processing',
+                    elapsedTime: '0s',
+                    remainingTime: 'Calculating...',
+                    estimatedCompletionTime: 'Calculating...',
+                    processedChunks: 0,
+                    totalChunks: 0,
+                    isComplete: false
+                },
+                currentStep: 'latex_conversion'  // 默认从LaTeX转换开始
+            };
+        }
+        
+        // 立即获取一次进度
+        fetchProgress(filename);
+        
+        // 设置定时器，每1秒获取一次进度，提高实时性
+        progressIntervals[filename] = setInterval(() => {
+            fetchProgress(filename);
+        }, 1000);
+    };
+    
+    const fetchProgress = async (filename: string) => {
+        try {
+            // 根据当前步骤决定使用哪个API
+            const currentStep = fileProgress[filename] ? fileProgress[filename].currentStep : 'latex_conversion';
+            const apiEndpoint = currentStep === 'latex_conversion' 
+                ? 'http://127.0.0.1:8000/qa/tex_conversion/progress' 
+                : 'http://127.0.0.1:8000/qa/generate_qa/progress';
+            
+            const response = await axios.post(apiEndpoint, {
+                filename: filename
+            });
+            
+            if (response.status === 200 && response.data.status === 'success') {
+                const data = response.data.data;
+                
+                // 创建临时对象来保存当前状态
+                const currentProgress = {...fileProgress[filename]};
+                
+                // 更新对应步骤的进度信息
+                if (data.step === 'latex_conversion') {
+                    currentProgress.latex = {
+                        progress: data.progress,
+                        status: data.status,
+                        elapsedTime: data.formatted_elapsed_time || '0s',
+                        remainingTime: data.formatted_remaining_time || 'Calculating...',
+                        estimatedCompletionTime: data.formatted_completion_time || 'Calculating...',
+                        processedChunks: data.processed_chunks || 0,
+                        totalChunks: data.total_chunks || 0,
+                        isComplete: data.status === 'completed'
+                    };
+                } else if (data.step === 'qa_generation') {
+                    currentProgress.qa = {
+                        progress: data.progress,
+                        status: data.status,
+                        elapsedTime: data.formatted_elapsed_time || '0s',
+                        remainingTime: data.formatted_remaining_time || 'Calculating...',
+                        estimatedCompletionTime: data.formatted_completion_time || 'Calculating...',
+                        processedChunks: data.processed_chunks || 0,
+                        totalChunks: data.total_chunks || 0,
+                        isComplete: data.status === 'completed'
+                    };
+                }
+                
+                // 更新当前步骤
+                currentProgress.currentStep = data.step || currentStep;
+                
+                // 如果LaTeX转换完成，切换到QA生成步骤
+                if (data.step === 'latex_conversion' && data.status === 'completed') {
+                    currentProgress.currentStep = 'qa_generation';
+                    currentProgress.latex.isComplete = true;
+                }
+                
+                // 更新fileProgress对象
+                fileProgress[filename] = currentProgress;
+                
+                // 如果进度完成或失败，停止轮询
+                if (data.status === 'completed' || data.status === 'failed' || data.status === 'timeout') {
+                    // 如果是LaTeX转换完成，不要停止轮询，而是切换到QA生成API
+                    if (data.step === 'latex_conversion' && data.status === 'completed') {
+                        // 继续轮询，但切换到QA生成API
+                        fileProgress[filename].currentStep = 'qa_generation';
+                    } else if (data.step === 'qa_generation') {
+                        // 如果QA生成完成或失败，停止轮询
+                        clearInterval(progressIntervals[filename]);
+                        delete progressIntervals[filename];
+                        
+                        // 如果完成，刷新文件状态
+                        if (data.status === 'completed') {
+                            await fetchFiles();
+                            await fetchDatasets();
+                        }
+                    }
+                }
+                
+                // 更新UI，强制重新渲染
+                fileProgress = {...fileProgress};
+            }
+        } catch (error) {
+            console.error('Error fetching progress:', error);
+        }
+    };
+    
+    // 停止跟踪指定文件的进度
+    const stopProgressTracking = (filename: string) => {
+        if (progressIntervals[filename]) {
+            clearInterval(progressIntervals[filename]);
+            delete progressIntervals[filename];
+        }
+    };
+
     // Function to toggle selection of a single file
     const toggleSelection = (file) => {
         console.log("Toggling selection for", file.name);
@@ -206,6 +383,7 @@
 
     onMount(async () => {
         await fetchFiles();
+        await fetchDatasets();
         filesLoaded = true;
     });
 
@@ -255,6 +433,50 @@
         } catch (error) {
             errorMessage = 'Failed to load files';
             console.error("Error fetching files:", error);
+        }
+    };
+
+    // 获取生成的数据集列表
+    const fetchDatasets = async () => {
+        try {
+            datasetLoaded = false;
+            console.log("Fetching datasets for pool ID 2...");
+            const response = await axios.get('http://127.0.0.1:8000/api/dataset_entry/by_pool/2');
+            
+            if (response.status === 200) {
+                const entries = response.data || [];
+                console.log("Raw dataset entries:", entries);
+                
+                // 过滤出包含is_qa:true属性的数据集
+                datasetEntries = entries.filter(entry => entry.is_qa === true);
+                console.log("Filtered QA datasets:", datasetEntries);
+                
+                if (datasetEntries.length === 0) {
+                    console.log("No QA datasets found after filtering");
+                }
+                
+                datasetLoadError = null;
+            } else {
+                console.error("Failed to load datasets, status:", response.status);
+                datasetLoadError = "Failed to load datasets";
+                datasetEntries = [];
+            }
+        } catch (error) {
+            console.error("Error loading datasets:", error);
+            if (error.response) {
+                console.error("Response data:", error.response.data);
+                console.error("Response status:", error.response.status);
+                datasetLoadError = `Error loading datasets: ${error.response.status} - ${error.response.data?.detail || "Unknown error"}`;
+            } else if (error.request) {
+                console.error("Request was made but no response received");
+                datasetLoadError = "Error loading datasets: No response received from server";
+            } else {
+                console.error("Error message:", error.message);
+                datasetLoadError = `Error loading datasets: ${error.message}`;
+            }
+            datasetEntries = [];
+        } finally {
+            datasetLoaded = true;
         }
     };
 
@@ -308,7 +530,10 @@
             errorMessage = "An error occurred during the file deletion process";
         }
     };
-    const generateQAPairs = async () => {
+    const generateQAPairs = async (event) => {
+        // 阻止表单默认提交行为
+        if (event) event.preventDefault();
+        
         if (selectedFiles.length === 0) {
             errorMessage = t("construct.no_file_selected");
             return;
@@ -318,11 +543,16 @@
 
         let updatedFiles = uploadedFiles.map(file => {
             if (selectedFiles.includes(file)) {
-                return {...file, qa_status_message: t("construct.qa_generating")}; // 直接设置状态为QA生成中
+                return {...file, qa_status_message: t("construct.qa_generating")};
             }
             return file;
         });
         uploadedFiles = updatedFiles;
+        
+        // 为所有选中的文件启动进度跟踪
+        selectedFiles.forEach(file => {
+            startProgressTracking(file.name);
+        });
 
         try {
             const selectedFileNames = selectedFiles.map(f => f.name);
@@ -371,6 +601,9 @@
                         setTimeout(() => {
                             successMessage = null;
                         }, 2000);
+                        
+                        // 生成成功后刷新数据集列表
+                        await fetchDatasets();
                     } else {
                         const errorData = response.data;
                         const message = errorData.detail || t('construct.qa_generation_failed');
@@ -574,7 +807,10 @@
     };
 
     // COT Functions
-    const generateCOTs = async () => {
+    const generateCOTs = async (event) => {
+        // 阻止表单默认提交行为
+        if (event) event.preventDefault();
+        
         if (selectedFiles1.length === 0) {
             errorMessage = t("construct.no_file_selected");
             return;
@@ -777,6 +1013,34 @@
             "construct.go": "Go",
             "construct.page_of": "of",
             "general.close": "Close",
+            "construct.generated_datasets": "Generated Datasets",
+            "construct.no_datasets": "No datasets available",
+            "construct.loading_datasets": "Loading datasets...",
+            "data.table.col_name": "Name",
+            "data.table.col_time": "Creation Time",
+            "data.table.col_size": "Size",
+            "data.table.col_format": "Format",
+            "data.table.col_des": "Description",
+            "data.table.col_operation": "Operations",
+            "data.delete.data": "Delete",
+            "data.delete.title": "Delete Dataset",
+            "data.delete.p1": "Are you sure you want to delete this dataset?",
+            "data.delete.p2": "This action cannot be undone!",
+            "data.delete.yes": "Yes, Delete",
+            "data.delete.no": "Cancel",
+            "data.preview": "Preview",
+            "data.download": "Download",
+            "data.no_dataset": "No datasets available",
+            "Progress": "Progress",
+            "Processed chunks": "Processed chunks",
+            "Chunks": "Chunks",
+            "Elapsed time": "Elapsed time",
+            "Remaining time": "Remaining time",
+            "Step": "Step",
+            "LaTeX conversion": "LaTeX conversion",
+            "QA generation": "QA generation",
+            "Completed": "Completed",
+            "Processing": "Processing"
         });
     }
 
@@ -949,14 +1213,14 @@
                                         <div class="flex flex-wrap gap-2">
                                             {#if file.status && file.status[1] === 1}
                                                 <div class="flex">
-                                                    <Button color="green" size="xs" class="mr-1" on:click={() => previewQaFile(file.name)}>
+                                                    <Button color="green" size="xs" class="mr-1" on:click={() => previewQaFile(file.name)} title={t("construct.view_qa_content")}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                                             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                                                             <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
                                                         </svg>
-                                                        QA
+                                                        {t("construct.view_qa")}
                                                     </Button>
-                                                    <Button color="red" size="xs" on:click={() => deleteQaFile(file.name)}>
+                                                    <Button color="red" size="xs" on:click={() => deleteQaFile(file.name)} title={t("construct.delete_qa_content")}>
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                                                         </svg>
@@ -998,18 +1262,66 @@
                                 {#if file.qa_status_message}
                                     <tr class="bg-gray-50">
                                         <td colspan="6" class="px-4 py-2">
-                                            <div class="flex items-center text-sm">
-                                                <span class="status-message"
-                                                    class:text-blue-600={file.qa_status_message === t("construct.latex_converting") || file.qa_status_message === t("construct.qa_generating")}
-                                                    class:text-green-600={file.qa_status_message === t("construct.qa_generated_success")}
-                                                    class:text-red-600={
-                                                        file.qa_status_message === t('construct.qa_generation_failed') ||
-                                                        file.qa_status_message === t('construct.qa_generation_network_error') ||
-                                                        file.qa_status_message === t('construct.latex_conversion_failed') ||
-                                                        file.qa_status_message === t('construct.latex_conversion_network_error')
-                                                    }>
-                                                    {file.qa_status_message}
-                                                </span>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="flex items-center text-sm">
+                                                    <span class="status-message"
+                                                        class:text-blue-600={file.qa_status_message === t("construct.latex_converting") || file.qa_status_message === t("construct.qa_generating")}
+                                                        class:text-green-600={file.qa_status_message === t("construct.qa_generated_success")}
+                                                        class:text-red-600={
+                                                            file.qa_status_message === t('construct.qa_generation_failed') ||
+                                                            file.qa_status_message === t('construct.qa_generation_network_error') ||
+                                                            file.qa_status_message === t('construct.latex_conversion_failed') ||
+                                                            file.qa_status_message === t('construct.latex_conversion_network_error')
+                                                        }>
+                                                        {file.qa_status_message}
+                                                    </span>
+                                                </div>
+                                                
+                                                {#if file.qa_status_message === t("construct.qa_generating") && fileProgress[file.name]}
+                                                    <div class="w-full space-y-4">
+                                                        <!-- LaTeX转换进度条 -->
+                                                        <div class="space-y-2">
+                                                            <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                                                <div class="font-medium">{t("LaTeX conversion")}</div>
+                                                                <div class={fileProgress[file.name].latex.isComplete ? "text-green-600" : ""}>{fileProgress[file.name].latex.isComplete ? t("Completed") : t("Processing")}</div>
+                                                            </div>
+                                                            <Progressbar 
+                                                                progress={fileProgress[file.name].latex.progress} 
+                                                                size="h-2" 
+                                                                color={fileProgress[file.name].latex.isComplete ? "green" : fileProgress[file.name].latex.progress < 30 ? "yellow" : "blue"} 
+                                                            />
+                                                            {#if !fileProgress[file.name].latex.isComplete}
+                                                                <div class="flex justify-between text-xs text-gray-600">
+                                                                    <div>{t("Progress")}: {fileProgress[file.name].latex.progress}%</div>
+                                                                    <div>{t("Processed chunks")}: {fileProgress[file.name].latex.processedChunks}/{fileProgress[file.name].latex.totalChunks > 0 ? fileProgress[file.name].latex.totalChunks : '?'}</div>
+                                                                    <div>{t("Elapsed time")}: {fileProgress[file.name].latex.elapsedTime}</div>
+                                                                    <div>{t("Remaining time")}: {fileProgress[file.name].latex.remainingTime}</div>
+                                                                </div>
+                                                            {/if}
+                                                        </div>
+                                                        
+                                                        <!-- QA生成进度条 -->
+                                                        {#if fileProgress[file.name].latex.isComplete || fileProgress[file.name].currentStep === 'qa_generation'}
+                                                            <div class="space-y-2">
+                                                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                                                    <div class="font-medium">{t("QA generation")}</div>
+                                                                    <div class={fileProgress[file.name].qa.isComplete ? "text-green-600" : ""}>{fileProgress[file.name].qa.isComplete ? t("Completed") : t("Processing")}</div>
+                                                                </div>
+                                                                <Progressbar 
+                                                                    progress={fileProgress[file.name].qa.progress} 
+                                                                    size="h-2" 
+                                                                    color={fileProgress[file.name].qa.isComplete ? "green" : fileProgress[file.name].qa.progress < 30 ? "yellow" : "blue"} 
+                                                                />
+                                                                <div class="flex justify-between text-xs text-gray-600">
+                                                                    <div>{t("Progress")}: {fileProgress[file.name].qa.progress}%</div>
+                                                                    <div>{t("Processed chunks")}: {fileProgress[file.name].qa.processedChunks}/{fileProgress[file.name].qa.totalChunks > 0 ? fileProgress[file.name].qa.totalChunks : '?'}</div>
+                                                                    <div>{t("Elapsed time")}: {fileProgress[file.name].qa.elapsedTime}</div>
+                                                                    <div>{t("Remaining time")}: {fileProgress[file.name].qa.remainingTime}</div>
+                                                                </div>
+                                                            </div>
+                                                        {/if}
+                                                    </div>
+                                                {/if}
                                             </div>
                                         </td>
                                     </tr>
@@ -1122,6 +1434,7 @@
 
                         <div class="flex justify-center pt-4">
                             <Button 
+                                type="button"
                                 color="green" 
                                 class="px-6 py-2 flex items-center w-full"
                                 disabled={isGeneratingQA || selectedFiles.length === 0} 
@@ -1212,6 +1525,7 @@
 
                         <div class="flex justify-center pt-4">
                             <Button 
+                                type="button"
                                 color="purple" 
                                 class="px-6 py-2 flex items-center w-full"
                                 disabled={isGeneratingCOT || selectedFiles.length === 0} 
@@ -1290,8 +1604,16 @@
 
     <!-- Add Preview Modal -->
     <Modal bind:open={previewModalOpen} size="xl" autoclose={false} class="w-full max-w-5xl">
-        <h3 slot="header" class="text-xl font-semibold text-gray-900 dark:text-white">
-            {previewModalTitle}
+        <h3 slot="header" class="flex justify-between items-center text-xl font-semibold text-gray-900 dark:text-white">
+            <span>{previewModalTitle}</span>
+            {#if !previewLoading && (previewContentType === 'qa' || previewContentType === 'cot' || previewContentType === 'raw')}
+                <Button color="blue" size="sm" on:click={downloadContent} class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    {t("construct.download")}
+                </Button>
+            {/if}
         </h3>
 
         <div class="space-y-4">
@@ -1319,26 +1641,46 @@
                         <TableBody class="divide-y">
                             {#each previewContent as item}
                                 <tr>
-                                    <TableBodyCell class="whitespace-normal break-words max-w-xs">{item.question}</TableBodyCell>
-                                    <TableBodyCell class="whitespace-normal break-words max-w-xs">{item.answer}</TableBodyCell>
-                                    <TableBodyCell class="whitespace-normal break-words max-w-xs">{item.context}</TableBodyCell>
+                                    <TableBodyCell class="whitespace-normal break-words max-w-xs">
+                                        <div class="font-medium text-blue-700">{item.question}</div>
+                                    </TableBodyCell>
+                                    <TableBodyCell class="whitespace-normal break-words max-w-xs">
+                                        <div class="prose prose-sm">{item.answer}</div>
+                                    </TableBodyCell>
+                                    <TableBodyCell class="whitespace-normal break-words max-w-xs text-gray-600 text-sm">
+                                        {#if item.text}
+                                            {item.text}
+                                        {:else if item.context}
+                                            {item.context}
+                                        {/if}
+                                    </TableBodyCell>
                                 </tr>
                             {/each}
                         </TableBody>
                     </Table>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <Button color="blue" disabled={previewCurrentPage === 1} on:click={() => goToPage(previewCurrentPage - 1)}>
-                        {t("construct.previous")}
-                    </Button>
-                    <span class="text-gray-700">
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                    <div class="flex items-center gap-2">
+                        <Button color="blue" disabled={previewCurrentPage === 1} on:click={() => goToPage(previewCurrentPage - 1)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            {t("construct.previous")}
+                        </Button>
+                        <Button color="blue" disabled={previewCurrentPage === previewTotalPages} on:click={() => goToPage(previewCurrentPage + 1)}>
+                            {t("construct.next")}
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </Button>
+                    </div>
+                    
+                    <span class="text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
                         {t("construct.page")} {previewCurrentPage} / {previewTotalPages}
                     </span>
-                    <Button color="blue" disabled={previewCurrentPage === previewTotalPages} on:click={() => goToPage(previewCurrentPage + 1)}>
-                        {t("construct.next")}
-                    </Button>
-                    <div class="flex items-center ml-4">
+                    
+                    <div class="flex items-center">
                         <label for="pageInput" class="mr-2">{t("construct.go_to")}</label>
                         <input
                             id="pageInput"
@@ -1347,8 +1689,10 @@
                             min="1"
                             max={previewTotalPages}
                             bind:value={previewPageInput}
-                            on:change={handlePageInputChange}
                         />
+                        <Button color="light" size="sm" class="ml-2" on:click={handlePageInputChange}>
+                            {t("construct.go")}
+                        </Button>
                     </div>
                 </div>
             {:else if previewContentType === 'cot' && previewContent && previewContent.length > 0}
@@ -1376,17 +1720,27 @@
                     </Table>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <Button color="blue" disabled={previewCurrentPage === 1} on:click={() => goToPage(previewCurrentPage - 1)}>
-                        {t("construct.previous")}
-                    </Button>
-                    <span class="text-gray-700">
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                    <div class="flex items-center gap-2">
+                        <Button color="blue" disabled={previewCurrentPage === 1} on:click={() => goToPage(previewCurrentPage - 1)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            {t("construct.previous")}
+                        </Button>
+                        <Button color="blue" disabled={previewCurrentPage === previewTotalPages} on:click={() => goToPage(previewCurrentPage + 1)}>
+                            {t("construct.next")}
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </Button>
+                    </div>
+                    
+                    <span class="text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
                         {t("construct.page")} {previewCurrentPage} / {previewTotalPages}
                     </span>
-                    <Button color="blue" disabled={previewCurrentPage === previewTotalPages} on:click={() => goToPage(previewCurrentPage + 1)}>
-                        {t("construct.next")}
-                    </Button>
-                    <div class="flex items-center ml-4">
+                    
+                    <div class="flex items-center">
                         <label for="pageInput" class="mr-2">{t("construct.go_to")}</label>
                         <input
                             id="pageInput"
@@ -1395,29 +1749,65 @@
                             min="1"
                             max={previewTotalPages}
                             bind:value={previewPageInput}
-                            on:change={handlePageInputChange}
                         />
+                        <Button color="light" size="sm" class="ml-2" on:click={handlePageInputChange}>
+                            {t("construct.go")}
+                        </Button>
                     </div>
                 </div>
             {:else}
-                <p class="text-center py-8 text-gray-500">{t("construct.no_content")}</p>
+                <div class="bg-gray-50 rounded-lg p-8 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p class="text-gray-600">{t("construct.no_content")}</p>
+                </div>
             {/if}
         </div>
-
+        
         <svelte:fragment slot="footer">
-            <div class="flex justify-between w-full">
-                <Button color="blue" on:click={downloadContent} disabled={(previewContentType === 'qa' || previewContentType === 'cot') ? (!previewContent || previewContent.length === 0) : (previewContentType === 'raw' ? !rawContent : true)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    {t("Download")}
-                </Button>
-                <Button color="alternative" on:click={() => previewModalOpen = false}>
-                    {t("Close")}
-                </Button>
-            </div>
+            <Button color="light" on:click={() => previewModalOpen = false}>{t("general.close")}</Button>
         </svelte:fragment>
     </Modal>
+
+    <!-- 添加生成的数据集列表 -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden mt-6">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-700">Generated QA Datasets</h2>
+            <div class="text-sm text-gray-500">
+                {datasetEntries.length} datasets available
+            </div>
+        </div>
+        
+        <div class="p-4">
+            {#if datasetLoaded}
+                {#if datasetEntries.length > 0}
+                    <DatasetTable 
+                        datasetEntries={datasetEntries} 
+                        on:modified={fetchDatasets}
+                    />
+                {:else}
+                    <div class="py-6 text-center text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p>No QA datasets available. Generate QA pairs first.</p>
+                    </div>
+                {/if}
+            {:else}
+                <div class="py-6 text-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <p class="mt-2 text-gray-500">Loading datasets...</p>
+                </div>
+            {/if}
+            
+            {#if datasetLoadError}
+                <div class="mt-2 p-2 bg-red-100 text-red-700 rounded-md">
+                    {datasetLoadError}
+                </div>
+            {/if}
+        </div>
+    </div>
 </div>
 
 <style>

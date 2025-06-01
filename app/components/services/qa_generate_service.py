@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from generate_qas.qa_generator import QAGenerator
 from utils.hparams import HyperParams
@@ -7,7 +7,7 @@ from utils.helper import generate, extract_qa
 import json
 import os
 from bson import ObjectId
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import asyncio
 import logging
 
@@ -34,6 +34,12 @@ class QAGenerateService:
         """Synchronously process a single text chunk"""
         qa_pairs = []
         max_retries = 5
+        
+        # 估计子块数量，基于文本长度
+        # 假设每1000个字符需要一个子块处理
+        # 这个估计可能不准确，但为了进度条显示目的足够了
+        sub_chunks_count = max(1, len(text) // 1000)
+        logger.info(f"估计该块包含 {sub_chunks_count} 个子块 (基于文本长度 {len(text)})")
 
         for attempt in range(max_retries):
             try:
@@ -46,7 +52,8 @@ class QAGenerateService:
             except Exception as e:
                 if attempt == max_retries - 1:
                     print(f"Failed to process text chunk: {str(e)}")
-        return qa_pairs
+        
+        return qa_pairs, sub_chunks_count
 
     async def process_chunks_parallel(self, chunks: list, ak_list: list, sk_list: list,
                                     parallel_num: int, model_name: str, domain: str, generation_id: ObjectId):
@@ -54,6 +61,7 @@ class QAGenerateService:
         qa_pairs = []
         total_chunks = len(chunks)
         processed_chunks = 0
+        start_time = datetime.now(timezone.utc)
 
         # Use context manager to create thread pool
         with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
@@ -61,7 +69,7 @@ class QAGenerateService:
                 # Initialization phase - 10%
                 await self.qa_generations.update_one(
                     {"_id": generation_id},
-                    {"$set": {"progress": 10}}
+                    {"$set": {"progress": 10, "start_time": start_time}}
                 )
 
                 # Task preparation - 20%
@@ -99,11 +107,27 @@ class QAGenerateService:
                         else:
                             # Normal progress calculation for multiple chunks
                             progress = int(20 + (processed_chunks / total_chunks * 60))
-
-                        await self.qa_generations.update_one(
-                            {"_id": generation_id},
-                            {"$set": {"progress": progress}}
-                        )
+                        
+                        # 计算预估完成时间
+                        elapsed_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+                        if processed_chunks > 0 and progress > 20:
+                            # 基于已处理的块和已用时间估计总时间
+                            total_estimated_seconds = (elapsed_time / (processed_chunks / total_chunks))
+                            remaining_seconds = total_estimated_seconds - elapsed_time
+                            estimated_completion = datetime.now(timezone.utc) + timedelta(seconds=remaining_seconds)
+                            
+                            await self.qa_generations.update_one(
+                                {"_id": generation_id},
+                                {"$set": {
+                                    "progress": progress,
+                                    "estimated_completion_time": estimated_completion
+                                }}
+                            )
+                        else:
+                            await self.qa_generations.update_one(
+                                {"_id": generation_id},
+                                {"$set": {"progress": progress}}
+                            )
                     except Exception as e:
                         logger.error(f"Failed to process chunk: {str(e)}")
                         continue
@@ -124,26 +148,30 @@ class QAGenerateService:
                 raise e
 
     async def get_all_tex_files(self):
-        """Get all converted tex file records, only return the latest record for files with the same name"""
+        """获取所有已转换的tex文件记录，只返回具有相同名称的文件的最新记录，完全从数据库获取"""
         try:
-            # Get all completed records
+            # 获取所有已完成的记录
             records = await self.tex_records.find(
                 {"status": "completed"},
-                {"_id": 1, "save_path": 1, "created_at": 1}
+                {"_id": 1, "input_file": 1, "content": 1, "created_at": 1}
             ).to_list(None)
 
-            # Group by filename, keep the latest record
+            # 按文件名分组，保留最新的记录
             filename_dict = {}  # {filename: {"file_id": id, "filename": filename, "created_at": created_at}}
 
             for record in records:
-                if not record.get("save_path"):
+                # 检查是否有内容
+                if not record.get("content"):
                     continue
 
-                # Extract filename from save_path
-                filename = os.path.basename(record["save_path"])
+                # 获取文件名
+                filename = record.get("input_file")
+                if not filename:
+                    continue
+                    
                 created_at = record["created_at"]
 
-                # If filename already exists, compare creation time
+                # 如果文件名已存在，比较创建时间
                 if filename in filename_dict:
                     if created_at > filename_dict[filename]["created_at"]:
                         filename_dict[filename] = {
@@ -158,7 +186,7 @@ class QAGenerateService:
                         "created_at": created_at
                     }
 
-            # Convert to list and sort by creation time in descending order
+            # 转换为列表并按创建时间降序排序
             files = list(filename_dict.values())
             files.sort(key=lambda x: x["created_at"], reverse=True)
 
@@ -213,33 +241,62 @@ class QAGenerateService:
             # Get filename without extension
             base_filename = filename.rsplit('.', 1)[0]
 
-            # Check if record already exists, if so, reset progress
-            existing_record = await self.qa_generations.find_one({"input_file": filename})
-            if existing_record:
-                await self.qa_generations.update_one(
-                    {"_id": existing_record["_id"]},
-                    {"$set": {
-                        "status": "processing",
-                        "progress": 0,
-                        "model_name": model_name,
-                        "domain": domain
-                    }}
-                )
-                generation_id = existing_record["_id"]
-            else:
-                # Create new record
+            # 检查是否已存在记录，如果存在且包含有效内容，则重置进度
+            # 只有当记录状态为completed且内容不为空时才认为是有效记录
+            existing_record = await self.qa_generations.find_one({
+                "input_file": filename,
+                "status": "completed"
+            })
+            
+            if existing_record and existing_record.get("content"):
+                # 验证内容是否有效
+                try:
+                    content_data = existing_record.get("content")
+                    if isinstance(content_data, str):
+                        json_content = json.loads(content_data)
+                        if json_content and len(json_content) > 0:
+                            # 内容有效，重置记录
+                            await self.qa_generations.update_one(
+                                {"_id": existing_record["_id"]},
+                                {"$set": {
+                                    "status": "processing",
+                                    "progress": 0,
+                                    "model_name": model_name,
+                                    "domain": domain,
+                                    "start_time": datetime.now(timezone.utc),
+                                    "chunk_info": {
+                                        "total_chunks": 0,
+                                        "processed_chunks": 0
+                                    }
+                                }}
+                            )
+                            generation_id = existing_record["_id"]
+                            logger.info(f"找到有效的现有记录，ID: {generation_id}，重置状态")
+                except (json.JSONDecodeError, TypeError):
+                    # 内容无效，创建新记录
+                    logger.warning(f"找到的记录内容无效，将创建新记录")
+                    existing_record = None
+            
+            if not generation_id:
+                # 没有找到有效记录或内容无效，创建新记录
                 generation = QAGeneration(
                     input_file=filename,
                     model_name=model_name,
                     domain=domain,
                     status="processing",
                     source_text=content,
-                    progress=0  # Initialize progress to 0
+                    progress=0,  # Initialize progress to 0
+                    start_time=datetime.now(timezone.utc),
+                    chunk_info={
+                        "total_chunks": 0,
+                        "processed_chunks": 0
+                    }
                 )
                 result = await self.qa_generations.insert_one(generation.dict(by_alias=True))
                 generation_id = result.inserted_id
+                logger.info(f"创建了新的QA生成记录，ID: {generation_id}")
 
-            # Update original file status to processing
+            # 更新原始文件状态为处理中
             await self.db.llm_kit.uploaded_files.update_one(
                 {"filename": filename},
                 {"$set": {"status": "processing"}}
@@ -252,73 +309,187 @@ class QAGenerateService:
 
             try:
                 chunks = json.loads(content)
-                # Use modified parallel processing function
-                qa_pairs = await self.process_chunks_parallel(
-                    [chunk.get("chunk", "") for chunk in chunks],
-                    AK,
-                    SK,
-                    parallel_num,
-                    model_name,
-                    domain,
-                    generation_id
+                
+                # 计算总块数和已处理块数，用于精确跟踪进度
+                total_chunks = len(chunks)
+                processed_chunks = 0
+                
+                # 初始估算子块总数，先估计每个块有5个子块
+                estimated_total_sub_chunks = total_chunks * 5
+                processed_sub_chunks = 0
+                
+                qa_pairs = []
+                start_time = datetime.now(timezone.utc)
+                
+                # 初始化进度为10%（准备阶段），并保存总块数
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {
+                        "progress": 10, 
+                        "start_time": start_time,
+                        "chunk_info": {
+                            "total_chunks": estimated_total_sub_chunks,
+                            "processed_chunks": 0
+                        }
+                    }}
                 )
-
+                
+                # 创建一个线程池来处理块
+                with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
+                    futures = []
+                    # 提交所有块到线程池
+                    for i, chunk in enumerate(chunks):
+                        ak = AK[i % len(AK)]
+                        sk = SK[i % len(SK)] if SK and len(SK) > 0 else ""
+                        
+                        # 使用线程池提交任务
+                        future = executor.submit(
+                            self.process_chunk_with_api,
+                            chunk.get("chunk", ""),
+                            ak, 
+                            sk,
+                            model_name,
+                            domain
+                        )
+                        futures.append(future)
+                    
+                    # 更新进度到20%（所有任务已提交）
+                    await self.qa_generations.update_one(
+                        {"_id": generation_id},
+                        {"$set": {"progress": 20}}
+                    )
+                    
+                    # 逐个处理完成的任务
+                    real_total_sub_chunks = 0
+                    for i, future in enumerate(asyncio.as_completed(futures)):
+                        try:
+                            result, sub_chunks_count = future.result()
+                            real_total_sub_chunks += sub_chunks_count
+                            
+                            if result:
+                                qa_pairs.extend(result)
+                            
+                            # 更新进度 - 即使只有一个块完成也更新
+                            processed_chunks += 1
+                            processed_sub_chunks += sub_chunks_count
+                            
+                            # 更新真实的子块总数
+                            if i == 0 and total_chunks > 1:
+                                # 基于第一个块更新估计的总子块数
+                                estimated_total_sub_chunks = total_chunks * sub_chunks_count
+                            
+                            # 计算进度百分比（从20%到90%）
+                            if total_chunks == 1:
+                                # 只有一个块时使用固定步骤
+                                progress_steps = [30, 40, 50, 60, 70, 80]
+                                progress = progress_steps[min(len(progress_steps)-1, i)]
+                            else:
+                                # 基于子块进度计算
+                                progress = int(20 + (processed_sub_chunks / estimated_total_sub_chunks * 70))
+                            
+                            # 计算预估完成时间
+                            elapsed_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+                            if processed_sub_chunks > 0:
+                                # 基于已处理的子块和已用时间估计剩余时间
+                                avg_time_per_sub_chunk = elapsed_time / processed_sub_chunks
+                                remaining_sub_chunks = estimated_total_sub_chunks - processed_sub_chunks
+                                remaining_seconds = avg_time_per_sub_chunk * remaining_sub_chunks
+                                estimated_completion = datetime.now(timezone.utc) + timedelta(seconds=remaining_seconds)
+                                
+                                # 更新进度、预估完成时间和块处理信息
+                                await self.qa_generations.update_one(
+                                    {"_id": generation_id},
+                                    {"$set": {
+                                        "progress": progress,
+                                        "estimated_completion_time": estimated_completion,
+                                        "chunk_info": {
+                                            "total_chunks": estimated_total_sub_chunks,
+                                            "processed_chunks": processed_sub_chunks
+                                        }
+                                    }}
+                                )
+                                
+                                # 记录日志
+                                logger.info(f"文件 {filename} - 进度: {progress}%, 已处理: {processed_sub_chunks}/{estimated_total_sub_chunks} 子块, 预计完成时间: {estimated_completion.isoformat()}")
+                            else:
+                                await self.qa_generations.update_one(
+                                    {"_id": generation_id},
+                                    {"$set": {
+                                        "progress": progress,
+                                        "chunk_info": {
+                                            "total_chunks": estimated_total_sub_chunks,
+                                            "processed_chunks": processed_sub_chunks
+                                        }
+                                    }}
+                                )
+                        except Exception as e:
+                            logger.error(f"处理块失败: {str(e)}")
+                            # 继续处理其他块
+                            continue
+                
+                # 检查是否有成功生成的QA对
                 if not qa_pairs:
-                    raise Exception("No QA pairs generated")
-
-                # Build simplified save path and filename
-                save_dir_path = os.path.join('result', 'qas')
-                os.makedirs(save_dir_path, exist_ok=True)
-
-                # Use simplified filename format: original_filename_qa.json
-                final_save_path = os.path.join(
-                    save_dir_path,
-                    f"{base_filename}_qa.json"
+                    raise Exception("未生成任何QA对")
+                
+                logger.info(f"处理了 {processed_sub_chunks} 个子块，总共估计有 {estimated_total_sub_chunks} 个子块")
+                
+                # 更新进度到90%（保存阶段）
+                await self.qa_generations.update_one(
+                    {"_id": generation_id},
+                    {"$set": {
+                        "progress": 90,
+                        "chunk_info": {
+                            "total_chunks": processed_sub_chunks,  # 使用实际处理的子块数
+                            "processed_chunks": processed_sub_chunks
+                        }
+                    }}
                 )
+                
+                # 将QA对序列化为JSON字符串
+                qa_pairs_json = json.dumps(qa_pairs, ensure_ascii=False)
+                logger.info(f"成功生成QA对，数量: {len(qa_pairs)}")
 
-                # Save QA pairs to file
-                try:
-                    with open(final_save_path, 'w', encoding='utf-8') as f:
-                        json.dump(qa_pairs, f, ensure_ascii=False, indent=4)
-                except Exception as e:
-                    raise Exception(f"Failed to save QA pairs to file: {str(e)}")
-
-                # Update original record status
+                # 更新原始记录状态为已完成
                 await self.qa_generations.update_one(
                     {"_id": generation_id},
                     {"$set": {
                         "status": "completed",
-                        "save_path": final_save_path,
-                        "progress": 100  # Processing complete, set progress to 100%
+                        "content": qa_pairs_json,  # 直接在数据库中存储QA对
+                        "progress": 100,  # Processing complete, set progress to 100%
+                        "chunk_info": {
+                            "total_chunks": processed_sub_chunks,
+                            "processed_chunks": processed_sub_chunks
+                        }
                     }}
                 )
+                logger.info(f"已更新记录状态为已完成，并存储QA对到数据库中")
 
-                # Update original file status to completed
+                # 更新原始文件状态为已完成
                 await self.db.llm_kit.uploaded_files.update_one(
                     {"filename": filename},
                     {"$set": {"status": "completed"}}
                 )
-                # Also update status in binary file collection (if exists)
+                # 同时更新二进制文件集合中的状态（如果存在）
                 await self.db.llm_kit.uploaded_binary_files.update_one(
                     {"filename": filename},
                     {"$set": {"status": "completed"}}
                 )
 
-                # Add a new record using simplified filename
+                # 添加一条新记录，使用标准化的命名方式
                 saved_file_record = {
-                    "input_file": os.path.basename(final_save_path),
+                    "input_file": f"{base_filename}_qa.json",  # 为兼容性保留这种命名方式
                     "original_file": filename,
                     "status": "completed",
-                    "content": json.dumps(qa_pairs),
+                    "content": qa_pairs_json,  # 直接存储QA对
                     "created_at": datetime.now(timezone.utc),
-                    "save_path": final_save_path,
                     "model_name": model_name,
                     "domain": domain
                 }
-                await self.qa_generations.insert_one(saved_file_record)
+                new_record = await self.qa_generations.insert_one(saved_file_record)
+                logger.info(f"创建了新的QA记录: {new_record.inserted_id}")
 
-                # Save QA pairs to database
-                # First delete previous QA pair records with the same filename
+                # 将QA对存储到数据库中
+                # 首先删除具有相同文件名的以前的QA对记录
                 await self.qa_pairs.delete_many({
                     "generation_id": {
                         "$in": [
@@ -340,8 +511,9 @@ class QAGenerateService:
 
                 if qa_records:
                     await self.qa_pairs.insert_many(qa_records)
+                    logger.info(f"已将 {len(qa_records)} 个QA对存储到qa_pairs集合")
 
-                # Update generation record status
+                # 更新生成记录状态
                 await self.qa_generations.update_many(
                     {"input_file": filename, "_id": {"$ne": generation_id}},
                     {"$set": {"status": "overwritten"}}
@@ -352,10 +524,11 @@ class QAGenerateService:
                     {"$set": {"status": "completed"}}
                 )
 
+                # 准备返回数据
                 return {
                     "generation_id": str(generation_id),
-                    "filename": os.path.basename(final_save_path),
                     "qa_pairs": qa_pairs,
+                    "qa_data": qa_pairs,  # 添加qa_data字段，供路由函数使用
                     "source_text": content
                 }
 
@@ -397,24 +570,30 @@ class QAGenerateService:
             raise Exception(f"QA generation failed: {str(e)}")
 
     async def get_qa_records(self):
-        """Get the most recent QA pair generation history record"""
+        """获取最近的QA对生成历史记录，完全从数据库获取"""
         try:
-            # Only get the latest record
+            # 只获取最新的记录
             record = await self.qa_generations.find_one(
-                {"status": "completed"},  # Only get completed records
+                {"status": "completed"},  # 只获取已完成的记录
                 sort=[("created_at", -1)]
             )
 
             if not record:
                 return []
 
-            # Get all QA pairs corresponding to this record
+            # 获取与此记录对应的所有QA对
             qa_pairs = []
             if record.get("content"):
-                # If the record has a content field, use it directly
-                qa_pairs = json.loads(record["content"])
+                # 如果记录有content字段，直接使用
+                try:
+                    if isinstance(record["content"], str):
+                        qa_pairs = json.loads(record["content"])
+                    else:
+                        qa_pairs = record["content"]
+                except json.JSONDecodeError:
+                    logger.warning(f"无法解析QA记录内容: {record['_id']}")
             else:
-                # Otherwise get from qa_pairs collection
+                # 否则从qa_pairs集合获取
                 qa_cursor = self.qa_pairs.find({"generation_id": record["_id"]})
                 async for qa in qa_cursor:
                     qa_pairs.append({
@@ -425,7 +604,6 @@ class QAGenerateService:
             return [{
                 "generation_id": str(record["_id"]),
                 "input_file": record["input_file"],
-                "save_path": record.get("save_path", ""),
                 "model_name": record.get("model_name", ""),
                 "domain": record.get("domain", ""),
                 "status": record["status"],
