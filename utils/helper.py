@@ -29,7 +29,6 @@ def split_chunk_by_tokens(chunk: str, max_tokens: int) -> list:
         current_chunk.append(line)
         current_tokens += line_token_count
 
-
     if current_chunk:
         sub_chunks.append("\n".join(current_chunk))
 

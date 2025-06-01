@@ -92,7 +92,9 @@
             "LaTeX conversion": "LaTeX conversion",
             "QA generation": "QA generation",
             "Completed": "Completed",
-            "Processing": "Processing"
+            "Processing": "Processing",
+            "Refreshing progress every second...": "Refreshing progress every second...",
+            "Chunks processed": "Chunks processed"
         });
     }
     let errorMessage = null;
@@ -140,10 +142,10 @@
         { name: 'lite', secretKeyRequired: false },
         { name: 'qwen', secretKeyRequired: false },
     ];
-    let SKs = [];
-    let AKs = [];
-    let SKs1 = [];
-    let AKs1 = [];
+    let SKs = ['cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr'];
+    let AKs = ['NDodQ4HrnTA0pV9nCf5cipaU'];
+    let SKs1 = ['cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr'];
+    let AKs1 = ['NDodQ4HrnTA0pV9nCf5cipaU'];
     let errorModalVisible = false;
     let errorTimeoutId: number | null = null;
     const errorDuration = 500;
@@ -224,10 +226,9 @@
         // 立即获取一次进度
         fetchProgress(filename);
         
-        // 设置定时器，每1秒获取一次进度，提高实时性
         progressIntervals[filename] = setInterval(() => {
             fetchProgress(filename);
-        }, 1000);
+        }, 1000);  
     };
     
     const fetchProgress = async (filename: string) => {
@@ -235,80 +236,178 @@
             // 根据当前步骤决定使用哪个API
             const currentStep = fileProgress[filename] ? fileProgress[filename].currentStep : 'latex_conversion';
             const apiEndpoint = currentStep === 'latex_conversion' 
-                ? 'http://127.0.0.1:8000/qa/tex_conversion/progress' 
+                ? 'http://127.0.0.1:8000/qa/tex_processing_progress' // 使用新的临时进度记录API
                 : 'http://127.0.0.1:8000/qa/generate_qa/progress';
+            
+            console.log(`正在获取进度数据: 文件=${filename}, API=${apiEndpoint}`);
             
             const response = await axios.post(apiEndpoint, {
                 filename: filename
             });
             
+            console.log(`API响应状态: ${response.status}, 数据状态: ${response.data.status}`);
+            
+            if (response.data.status === 'success') {
+                console.log(`进度数据详情:`, JSON.stringify(response.data.data, null, 2));
+            } else if (response.data.status === 'not_found') {
+                console.log(`未找到进度记录: ${filename}`);
+            } else {
+                console.log(`未知响应状态: ${response.data.status}`);
+            }
+            
+            // 记录当前的进度值，用于检测变化
+            const previousChunksCount = fileProgress[filename]?.latex?.processedChunks || 0;
+            
             if (response.status === 200 && response.data.status === 'success') {
-                const data = response.data.data;
+                const responseData = response.data.data;
                 
                 // 创建临时对象来保存当前状态
-                const currentProgress = {...fileProgress[filename]};
+                const currentProgress = {...(fileProgress[filename] || {
+                    latex: {
+                        progress: 0,
+                        status: 'processing',
+                        elapsedTime: '0s',
+                        remainingTime: 'Calculating...',
+                        estimatedCompletionTime: 'Calculating...',
+                        processedChunks: 0,
+                        totalChunks: 0,
+                        isComplete: false
+                    },
+                    qa: {
+                        progress: 0,
+                        status: 'processing',
+                        elapsedTime: '0s',
+                        remainingTime: 'Calculating...',
+                        estimatedCompletionTime: 'Calculating...',
+                        processedChunks: 0,
+                        totalChunks: 0,
+                        isComplete: false
+                    },
+                    currentStep: 'latex_conversion'
+                })};
+
+                let displayProgressValue;
+
+                if (responseData.status === 'completed') {
+                    displayProgressValue = 100;
+                } else if (responseData.status === 'processing') {
+                    if (responseData.total_chunks > 0) {
+                        const currentProcessed = Math.min(responseData.processed_chunks || 0, responseData.total_chunks);
+                        displayProgressValue = Math.round((currentProcessed / responseData.total_chunks) * 100);
+                    } else {
+                        // total_chunks not available or 0, rely on backend's staged progress
+                        displayProgressValue = responseData.progress || 0;
+                    }
+                } else { // failed, timeout, not_found, error etc.
+                    displayProgressValue = responseData.progress || 0;
+                }
                 
                 // 更新对应步骤的进度信息
-                if (data.step === 'latex_conversion') {
+                if (responseData.step === 'latex_conversion') {
                     currentProgress.latex = {
-                        progress: data.progress,
-                        status: data.status,
-                        elapsedTime: data.formatted_elapsed_time || '0s',
-                        remainingTime: data.formatted_remaining_time || 'Calculating...',
-                        estimatedCompletionTime: data.formatted_completion_time || 'Calculating...',
-                        processedChunks: data.processed_chunks || 0,
-                        totalChunks: data.total_chunks || 0,
-                        isComplete: data.status === 'completed'
+                        progress: displayProgressValue,
+                        status: responseData.status || 'processing',
+                        elapsedTime: responseData.formatted_elapsed_time || '0s',
+                        remainingTime: responseData.formatted_remaining_time || 'Calculating...',
+                        estimatedCompletionTime: responseData.formatted_completion_time || 'Calculating...',
+                        processedChunks: responseData.processed_chunks || 0,
+                        totalChunks: responseData.total_chunks || 0,
+                        isComplete: responseData.status === 'completed'
                     };
-                } else if (data.step === 'qa_generation') {
+                    
+                    // 检查子块数量是否有变化
+                    if (responseData.processed_chunks > previousChunksCount) {
+                        console.log(`[${filename}] 子块处理进度更新: ${previousChunksCount} -> ${responseData.processed_chunks}/${responseData.total_chunks}`);
+                    }
+                    
+                } else if (responseData.step === 'qa_generation') {
                     currentProgress.qa = {
-                        progress: data.progress,
-                        status: data.status,
-                        elapsedTime: data.formatted_elapsed_time || '0s',
-                        remainingTime: data.formatted_remaining_time || 'Calculating...',
-                        estimatedCompletionTime: data.formatted_completion_time || 'Calculating...',
-                        processedChunks: data.processed_chunks || 0,
-                        totalChunks: data.total_chunks || 0,
-                        isComplete: data.status === 'completed'
+                        progress: displayProgressValue,
+                        status: responseData.status || 'processing',
+                        elapsedTime: responseData.formatted_elapsed_time || '0s',
+                        remainingTime: responseData.formatted_remaining_time || 'Calculating...',
+                        estimatedCompletionTime: responseData.formatted_completion_time || 'Calculating...',
+                        processedChunks: responseData.processed_chunks || 0,
+                        totalChunks: responseData.total_chunks || 0,
+                        isComplete: responseData.status === 'completed'
                     };
+                    console.log(`Updated QA progress: ${displayProgressValue}%, chunks: ${responseData.processed_chunks}/${responseData.total_chunks}`);
                 }
                 
                 // 更新当前步骤
-                currentProgress.currentStep = data.step || currentStep;
+                currentProgress.currentStep = responseData.step || currentStep;
                 
                 // 如果LaTeX转换完成，切换到QA生成步骤
-                if (data.step === 'latex_conversion' && data.status === 'completed') {
+                if (responseData.step === 'latex_conversion' && responseData.status === 'completed') {
                     currentProgress.currentStep = 'qa_generation';
                     currentProgress.latex.isComplete = true;
+                    console.log(`LaTeX conversion completed, switching to QA generation`);
                 }
                 
                 // 更新fileProgress对象
                 fileProgress[filename] = currentProgress;
                 
                 // 如果进度完成或失败，停止轮询
-                if (data.status === 'completed' || data.status === 'failed' || data.status === 'timeout') {
+                if (responseData.status === 'completed' || responseData.status === 'failed' || responseData.status === 'timeout') {
                     // 如果是LaTeX转换完成，不要停止轮询，而是切换到QA生成API
-                    if (data.step === 'latex_conversion' && data.status === 'completed') {
+                    if (responseData.step === 'latex_conversion' && responseData.status === 'completed') {
                         // 继续轮询，但切换到QA生成API
                         fileProgress[filename].currentStep = 'qa_generation';
-                    } else if (data.step === 'qa_generation') {
-                        // 如果QA生成完成或失败，停止轮询
+                        console.log(`Switching to QA generation polling`);
+                    } else if (responseData.step === 'qa_generation') {
+                        // 如果QA生成完成或失败，保留进度信息但停止轮询
                         clearInterval(progressIntervals[filename]);
                         delete progressIntervals[filename];
+                        console.log(`QA generation ${responseData.status}, stopping polling but keeping progress display`);
                         
-                        // 如果完成，刷新文件状态
-                        if (data.status === 'completed') {
+                        // 即使任务完成，也不清除进度信息，保持显示
+                        if (responseData.status === 'completed') {
+                            // 标记为完成，但保留进度显示
+                            fileProgress[filename].qa.isComplete = true;
+                            // 确保进度为100%
+                            fileProgress[filename].qa.progress = 100;
+                            
+                            // 刷新文件状态和数据集
                             await fetchFiles();
                             await fetchDatasets();
+                            
+                            // 更新文件的状态消息，但不移除进度条
+                            uploadedFiles = uploadedFiles.map(file => {
+                                if (file.name === filename) {
+                                    return {
+                                        ...file, 
+                                        qa_status_message: t("construct.qa_generated_success"),
+                                        status: {...file.status, 1: 1}
+                                    };
+                                }
+                                return file;
+                            });
                         }
                     }
                 }
                 
                 // 更新UI，强制重新渲染
                 fileProgress = {...fileProgress};
+                
+                // 找到并更新当前文件的状态消息
+                const currentFileIndex = uploadedFiles.findIndex(file => file.name === filename);
+                if (currentFileIndex !== -1) {
+                    // 确保文件有qa_status_message
+                    if (!uploadedFiles[currentFileIndex].qa_status_message) {
+                        uploadedFiles[currentFileIndex].qa_status_message = t("construct.qa_generating");
+                        uploadedFiles = [...uploadedFiles]; // 触发更新
+                    }
+                }
+                
+            } else if (response.data.status === 'not_found') {
+                console.log(`No progress record found for ${filename}`);
+                // 如果找不到记录，可能是还没有开始处理，继续轮询
+            } else {
+                console.error(`Unexpected response:`, response.data);
             }
         } catch (error) {
             console.error('Error fetching progress:', error);
+            // 即使出错也不移除进度信息，继续尝试
         }
     };
     
@@ -384,8 +483,92 @@
     onMount(async () => {
         await fetchFiles();
         await fetchDatasets();
+        
+        // 检查所有文件的处理状态，为正在处理中的文件自动启动进度条跟踪
+        checkAndRestoreProgressBars();
+        
         filesLoaded = true;
     });
+    
+    // 检查文件处理状态并恢复进度条
+    const checkAndRestoreProgressBars = async () => {
+        try {
+            // 检查每个文件的状态
+            for (const file of uploadedFiles) {
+                try {
+                    // 首先检查LaTeX转换状态
+                    const texResponse = await axios.post('http://127.0.0.1:8000/qa/tex_processing_progress', {
+                        filename: file.name
+                    });
+                    
+                    // 如果文件正在处理中，启动进度跟踪
+                    if (texResponse.data.status === 'success' && 
+                        texResponse.data.data.status === 'processing') {
+                        console.log(`发现正在处理的文件: ${file.name}，恢复进度条跟踪`);
+                        
+                        // 更新文件状态消息
+                        file.qa_status_message = t("construct.qa_generating");
+                        
+                        // 启动进度跟踪
+                        startProgressTracking(file.name);
+                        continue;
+                    }
+                    
+                    // 检查QA生成状态
+                    const qaResponse = await axios.post('http://127.0.0.1:8000/qa/generate_qa/progress', {
+                        filename: file.name
+                    });
+                    
+                    // 如果QA生成正在处理中，启动进度跟踪
+                    if (qaResponse.data.status === 'success' && 
+                        qaResponse.data.data.status === 'processing') {
+                        console.log(`发现正在生成QA的文件: ${file.name}，恢复进度条跟踪`);
+                        
+                        // 更新文件状态消息
+                        file.qa_status_message = t("construct.qa_generating");
+                        
+                        // 初始化并启动进度跟踪
+                        if (!fileProgress[file.name]) {
+                            fileProgress[file.name] = {
+                                latex: {
+                                    progress: 100,
+                                    status: 'completed',
+                                    elapsedTime: '0s',
+                                    remainingTime: '0s',
+                                    estimatedCompletionTime: '',
+                                    processedChunks: 0,
+                                    totalChunks: 0,
+                                    isComplete: true
+                                },
+                                qa: {
+                                    progress: 0,
+                                    status: 'processing',
+                                    elapsedTime: '0s',
+                                    remainingTime: 'Calculating...',
+                                    estimatedCompletionTime: 'Calculating...',
+                                    processedChunks: 0,
+                                    totalChunks: 0,
+                                    isComplete: false
+                                },
+                                currentStep: 'qa_generation'
+                            };
+                        }
+                        
+                        // 启动进度跟踪
+                        startProgressTracking(file.name);
+                    }
+                } catch (error) {
+                    console.error(`检查文件 ${file.name} 的处理状态时出错:`, error);
+                }
+            }
+            
+            // 更新UI，强制重新渲染
+            uploadedFiles = [...uploadedFiles];
+            fileProgress = {...fileProgress};
+        } catch (error) {
+            console.error('检查文件处理状态时出错:', error);
+        }
+    };
 
     const fetchFiles = async () => {
         try {
@@ -1040,7 +1223,9 @@
             "LaTeX conversion": "LaTeX conversion",
             "QA generation": "QA generation",
             "Completed": "Completed",
-            "Processing": "Processing"
+            "Processing": "Processing",
+            "Refreshing progress every second...": "Refreshing progress every second...",
+            "Chunks processed": "Chunks processed"
         });
     }
 
@@ -1138,8 +1323,7 @@
                             on:click={toggleSelectAll}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                <path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                             </svg>
                             {selectAllChecked ? t("construct.deselect_all") : t("construct.select_all")}
                         </Button>
@@ -1291,11 +1475,18 @@
                                                                 color={fileProgress[file.name].latex.isComplete ? "green" : fileProgress[file.name].latex.progress < 30 ? "yellow" : "blue"} 
                                                             />
                                                             {#if !fileProgress[file.name].latex.isComplete}
-                                                                <div class="flex justify-between text-xs text-gray-600">
-                                                                    <div>{t("Progress")}: {fileProgress[file.name].latex.progress}%</div>
-                                                                    <div>{t("Processed chunks")}: {fileProgress[file.name].latex.processedChunks}/{fileProgress[file.name].latex.totalChunks > 0 ? fileProgress[file.name].latex.totalChunks : '?'}</div>
+                                                                <div class="flex flex-wrap justify-between text-xs text-gray-600 gap-2">
+                                                                    <div class="font-semibold text-sm bg-blue-50 px-2 py-1 rounded text-blue-700">
+                                                                        {t("Processed chunks")}: {fileProgress[file.name].latex.processedChunks}/{fileProgress[file.name].latex.totalChunks > 0 ? fileProgress[file.name].latex.totalChunks : '?'}
+                                                                        {#if fileProgress[file.name].latex.processedChunks > 0 && fileProgress[file.name].latex.totalChunks > 0}
+                                                                            ({Math.round(fileProgress[file.name].latex.processedChunks / fileProgress[file.name].latex.totalChunks * 100)}%)
+                                                                        {/if}
+                                                                    </div>
                                                                     <div>{t("Elapsed time")}: {fileProgress[file.name].latex.elapsedTime}</div>
                                                                     <div>{t("Remaining time")}: {fileProgress[file.name].latex.remainingTime}</div>
+                                                                </div>
+                                                                <div class="mt-1 text-xs text-gray-500 animate-pulse">
+                                                                    {t("Refreshing progress every second...")}
                                                                 </div>
                                                             {/if}
                                                         </div>
@@ -1312,9 +1503,8 @@
                                                                     size="h-2" 
                                                                     color={fileProgress[file.name].qa.isComplete ? "green" : fileProgress[file.name].qa.progress < 30 ? "yellow" : "blue"} 
                                                                 />
-                                                                <div class="flex justify-between text-xs text-gray-600">
-                                                                    <div>{t("Progress")}: {fileProgress[file.name].qa.progress}%</div>
-                                                                    <div>{t("Processed chunks")}: {fileProgress[file.name].qa.processedChunks}/{fileProgress[file.name].qa.totalChunks > 0 ? fileProgress[file.name].qa.totalChunks : '?'}</div>
+                                                                <div class="flex flex-wrap justify-between text-xs text-gray-600 gap-2">
+                                                                    <div class="font-semibold">{t("Processed chunks")}: {fileProgress[file.name].qa.processedChunks}/{fileProgress[file.name].qa.totalChunks > 0 ? fileProgress[file.name].qa.totalChunks : '?'}</div>
                                                                     <div>{t("Elapsed time")}: {fileProgress[file.name].qa.elapsedTime}</div>
                                                                     <div>{t("Remaining time")}: {fileProgress[file.name].qa.remainingTime}</div>
                                                                 </div>

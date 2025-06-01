@@ -51,6 +51,16 @@ class TexConversionRecord(MongoBaseModel):
     estimated_completion_time: Optional[datetime] = None  # 预估完成时间
     chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  # 块处理信息
 
+class TexProcessingProgress(MongoBaseModel):
+    """LaTeX处理实时进度记录"""
+    task_id: str  # 关联的任务ID
+    input_file: str  # 输入文件名
+    total_chunks: int = 0  # 总子块数
+    processed_chunks: int = 0  # 已处理子块数
+    created_at: datetime = datetime.now(timezone.utc)  # 创建时间
+    updated_at: datetime = datetime.now(timezone.utc)  # 最后更新时间
+    status: str = "processing"  # processing, completed, failed, timeout
+
 # 3. Q&A Generation Module
 class QAGeneration(MongoBaseModel):
     """Q&A generation record"""

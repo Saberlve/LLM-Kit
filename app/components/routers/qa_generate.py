@@ -283,6 +283,8 @@ async def get_qa_progress(
 ):
     """获取QA生成进度信息，包括进度百分比、预估完成时间和已用时间"""
     try:
+        logger.info(f"获取QA生成进度: filename={request.filename}")
+        
         # 查找最新的记录
         record = await db.llm_kit.qa_generations.find_one(
             {
@@ -293,6 +295,7 @@ async def get_qa_progress(
         )
 
         if not record:
+            logger.warning(f"未找到文件 {request.filename} 的QA生成进度记录")
             return APIResponse(
                 status="not_found",
                 message=f"Progress record for file {request.filename} not found",
@@ -316,6 +319,8 @@ async def get_qa_progress(
         chunk_info = record.get("chunk_info", {"total_chunks": 0, "processed_chunks": 0})
         total_chunks = chunk_info.get("total_chunks", 0)
         processed_chunks = chunk_info.get("processed_chunks", 0)
+        
+        logger.info(f"QA生成进度: status={status}, progress={progress}%, processed_chunks={processed_chunks}/{total_chunks}")
         
         # 计算已经花费的时间（秒）
         # 确保时间对象都是带时区的
@@ -377,27 +382,30 @@ async def get_qa_progress(
         formatted_remaining_time = format_time_duration(estimated_remaining_seconds)
         formatted_completion_time = estimated_completion_time.strftime("%H:%M:%S") if estimated_completion_time else None
 
+        response_data = {
+            "progress": progress,
+            "status": status,
+            "error_message": record.get("error_message", ""),
+            "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat(),
+            "elapsed_time": elapsed_seconds,
+            "formatted_elapsed_time": formatted_elapsed_time,
+            "estimated_remaining_time": estimated_remaining_seconds,
+            "formatted_remaining_time": formatted_remaining_time,
+            "estimated_completion_time": estimated_completion_time.isoformat() if estimated_completion_time else None,
+            "formatted_completion_time": formatted_completion_time,
+            "processed_chunks": processed_chunks,
+            "total_chunks": total_chunks,
+            "step": "qa_generation"
+        }
+        
+        logger.info(f"返回QA生成进度数据: progress={progress}%, status={status}")
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
-            data={
-                "progress": progress,
-                "status": status,
-                "error_message": record.get("error_message", ""),
-                "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat(),
-                "elapsed_time": elapsed_seconds,
-                "formatted_elapsed_time": formatted_elapsed_time,
-                "estimated_remaining_time": estimated_remaining_seconds,
-                "formatted_remaining_time": formatted_remaining_time,
-                "estimated_completion_time": estimated_completion_time.isoformat() if estimated_completion_time else None,
-                "formatted_completion_time": formatted_completion_time,
-                "processed_chunks": processed_chunks,
-                "total_chunks": total_chunks,
-                "step": "qa_generation"
-            }
+            data=response_data
         )
     except Exception as e:
-        logger.error(f"Failed to get progress: {str(e)}", exc_info=True)
+        logger.error(f"获取QA生成进度失败: {str(e)}", exc_info=True)
         return APIResponse(
             status="error",
             message=f"Failed to get progress: {str(e)}",
@@ -745,128 +753,33 @@ async def download_qa_dataset(
         logger.error(f"Failed to download QA dataset: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
-@router.post("/tex_conversion/progress")
-async def get_tex_conversion_progress(
+
+@router.post("/tex_processing_progress")
+async def get_tex_processing_progress(
         request: FilenameRequest,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """获取LaTeX转换进度信息，包括进度百分比、预估完成时间和已用时间"""
+    """获取LaTeX处理的实时进度信息，从临时进度记录表中读取"""
     try:
-        # 查找最新的记录
-        record = await db.llm_kit.tex_records.find_one(
-            {
-                "input_file": request.filename,
-                "status": {"$in": ["processing", "completed", "failed", "timeout"]}
-            },
-            sort=[("created_at", -1)]  # 按创建时间降序排序
-        )
-
-        if not record:
-            return APIResponse(
-                status="not_found",
-                message=f"Progress record for file {request.filename} not found",
-                data={
-                    "progress": 0,
-                    "status": "not_found",
-                    "elapsed_time": 0,
-                    "estimated_remaining_time": 0,
-                    "estimated_completion_time": None,
-                    "processed_chunks": 0,
-                    "total_chunks": 0,
-                    "step": "latex_conversion"
-                }
-            )
-
-        # 获取状态和进度
-        status = record.get("status", "processing")
-        progress = record.get("progress", 0)
+        from app.components.services.to_tex_service import ToTexService
         
-        # 获取块处理信息
-        chunk_info = record.get("chunk_info", {"total_chunks": 0, "processed_chunks": 0})
-        total_chunks = chunk_info.get("total_chunks", 0)
-        processed_chunks = chunk_info.get("processed_chunks", 0)
+        logger.info(f"获取LaTeX处理进度: filename={request.filename}")
         
-        # 计算已经花费的时间（秒）
-        # 确保时间对象都是带时区的
-        current_time = datetime.now(timezone.utc)
+        # 创建服务实例
+        service = ToTexService(db)
         
-        # 如果start_time存在，使用它，否则使用created_at
-        start_time = record.get("start_time")
-        if start_time and not isinstance(start_time, datetime):
-            # 如果start_time不是datetime对象，尝试转换
-            try:
-                start_time = datetime.fromisoformat(str(start_time))
-            except:
-                start_time = None
-                
-        # 如果start_time为空或转换失败，使用created_at
-        if not start_time:
-            start_time = record.get("created_at")
-            
-        # 确保start_time有时区信息
-        if start_time and start_time.tzinfo is None:
-            # 如果start_time没有时区信息，添加UTC时区
-            start_time = start_time.replace(tzinfo=timezone.utc)
-            
-        if not start_time:
-            # 如果仍然没有有效的start_time，使用当前时间
-            start_time = current_time
+        # 调用服务函数获取进度信息
+        progress_data = await service.get_tex_processing_progress(request.filename)
         
-        # 现在两个时间都有时区信息，可以安全计算差值
-        elapsed_seconds = int((current_time - start_time).total_seconds())
+        logger.info(f"返回LaTeX处理进度数据: progress={progress_data['progress']}%, status={progress_data['status']}")
         
-        # 计算预估剩余时间
-        estimated_remaining_seconds = 0
-        estimated_completion_time = None
-        
-        if status == "processing" and progress > 0:
-            # 如果记录中已有预估完成时间，直接使用
-            if "estimated_completion_time" in record and record["estimated_completion_time"]:
-                estimated_completion_time = record["estimated_completion_time"]
-                # 确保estimated_completion_time有时区信息
-                if estimated_completion_time and estimated_completion_time.tzinfo is None:
-                    estimated_completion_time = estimated_completion_time.replace(tzinfo=timezone.utc)
-                if estimated_completion_time:
-                    estimated_remaining_seconds = max(0, int((estimated_completion_time - current_time).total_seconds()))
-            # 否则基于当前进度估算
-            elif progress < 100 and progress > 10 and elapsed_seconds > 0:
-                # 基于已完成的百分比和已用时间来估计
-                total_estimated_seconds = (elapsed_seconds / progress) * 100
-                estimated_remaining_seconds = max(0, int(total_estimated_seconds - elapsed_seconds))
-                estimated_completion_time = current_time + timedelta(seconds=estimated_remaining_seconds)
-        
-        # 如果状态是已完成，设置进度为100%
-        if status == "completed":
-            progress = 100
-            estimated_remaining_seconds = 0
-            processed_chunks = total_chunks
-        
-        # 格式化时间显示
-        formatted_elapsed_time = format_time_duration(elapsed_seconds)
-        formatted_remaining_time = format_time_duration(estimated_remaining_seconds)
-        formatted_completion_time = estimated_completion_time.strftime("%H:%M:%S") if estimated_completion_time else None
-
         return APIResponse(
             status="success",
             message="Progress retrieved successfully",
-            data={
-                "progress": progress,
-                "status": status,
-                "error_message": record.get("error_message", ""),
-                "last_update": record.get("created_at", datetime.now(timezone.utc)).isoformat(),
-                "elapsed_time": elapsed_seconds,
-                "formatted_elapsed_time": formatted_elapsed_time,
-                "estimated_remaining_time": estimated_remaining_seconds,
-                "formatted_remaining_time": formatted_remaining_time,
-                "estimated_completion_time": estimated_completion_time.isoformat() if estimated_completion_time else None,
-                "formatted_completion_time": formatted_completion_time,
-                "processed_chunks": processed_chunks,
-                "total_chunks": total_chunks,
-                "step": "latex_conversion"
-            }
+            data=progress_data
         )
     except Exception as e:
-        logger.error(f"Failed to get progress: {str(e)}", exc_info=True)
+        logger.error(f"获取LaTeX处理进度失败: {str(e)}", exc_info=True)
         return APIResponse(
             status="error",
             message=f"Failed to get progress: {str(e)}",
