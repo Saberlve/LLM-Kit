@@ -75,10 +75,10 @@
             "construct.download": "Download",
             "construct.download_error": "Download failed",
             "construct.cot_delete_success": "CoT file deleted successfully",
-            "construct.cot_delete_failed": "Failed to delete CoT file",
-            "construct.cot_delete_network_error": "Network error deleting CoT file",
-            "construct.cot_preview_failed": "Failed to preview CoT file",
-            "construct.cot_preview_network_error": "Network error previewing CoT file",
+            "construct.cot_delete_failed": "Failed to delete COT file",
+            "construct.cot_delete_network_error": "Network error deleting COT file",
+            "construct.cot_preview_failed": "Failed to preview COT file",
+            "construct.cot_preview_network_error": "Network error previewing COT file",
             "general.close": "Close",
             "construct.view_qa": "View QA",
             "construct.delete_qa_content": "Delete QA Content",
@@ -94,7 +94,12 @@
             "Completed": "Completed",
             "Processing": "Processing",
             "Refreshing progress every second...": "Refreshing progress every second...",
-            "Chunks processed": "Chunks processed"
+            "Chunks processed": "Chunks processed",
+            "Abort task": "Abort Task",
+            "Task aborted": "Task aborted",
+            "Task aborted successfully": "Task aborted successfully",
+            "Failed to abort task": "Failed to abort task",
+            "Error aborting task": "Error aborting task"
         });
     }
     let errorMessage = null;
@@ -355,23 +360,16 @@
                         fileProgress[filename].currentStep = 'qa_generation';
                         console.log(`Switching to QA generation polling`);
                     } else if (responseData.step === 'qa_generation') {
-                        // 如果QA生成完成或失败，保留进度信息但停止轮询
+                        // 如果QA生成完成或失败，停止轮询但保留进度条显示一段时间
                         clearInterval(progressIntervals[filename]);
-                        delete progressIntervals[filename];
-                        console.log(`QA generation ${responseData.status}, stopping polling but keeping progress display`);
+                        console.log(`QA generation ${responseData.status}, stopping polling but keeping progress display for a few seconds`);
                         
-                        // 即使任务完成，也不清除进度信息，保持显示
                         if (responseData.status === 'completed') {
-                            // 标记为完成，但保留进度显示
-                            fileProgress[filename].qa.isComplete = true;
-                            // 确保进度为100%
-                            fileProgress[filename].qa.progress = 100;
-                            
                             // 刷新文件状态和数据集
                             await fetchFiles();
                             await fetchDatasets();
                             
-                            // 更新文件的状态消息，但不移除进度条
+                            // 先显示成功消息，同时保持进度条显示
                             uploadedFiles = uploadedFiles.map(file => {
                                 if (file.name === filename) {
                                     return {
@@ -382,6 +380,70 @@
                                 }
                                 return file;
                             });
+                            
+                            // 设置进度条显示为100%并标记为已完成
+                            if (fileProgress[filename]) {
+                                fileProgress[filename].qa.progress = 100;
+                                fileProgress[filename].qa.status = 'completed';
+                                fileProgress[filename].qa.isComplete = true;
+                                // 更新UI，强制重新渲染
+                                fileProgress = {...fileProgress};
+                            }
+                            
+                            // 5秒后移除成功消息和进度条
+                            setTimeout(() => {
+                                uploadedFiles = uploadedFiles.map(file => {
+                                    if (file.name === filename) {
+                                        return {
+                                            ...file, 
+                                            qa_status_message: null
+                                        };
+                                    }
+                                    return file;
+                                });
+                                // 从fileProgress中移除该文件的数据
+                                delete progressIntervals[filename];
+                                delete fileProgress[filename];
+                                fileProgress = {...fileProgress};
+                            }, 5000);
+                        } else {
+                            // 任务失败或超时
+                            // 更新文件状态消息为错误信息，但保留进度条几秒
+                            uploadedFiles = uploadedFiles.map(file => {
+                                if (file.name === filename) {
+                                    return {
+                                        ...file, 
+                                        qa_status_message: responseData.status === 'failed' 
+                                            ? t('construct.qa_generation_failed') 
+                                            : t('construct.qa_generation_timeout')
+                                    };
+                                }
+                                return file;
+                            });
+                            
+                            // 设置进度条显示失败状态
+                            if (fileProgress[filename]) {
+                                fileProgress[filename].qa.status = responseData.status;
+                                // 更新UI，强制重新渲染
+                                fileProgress = {...fileProgress};
+                            }
+                            
+                            // 5秒后移除错误消息和进度条
+                            setTimeout(() => {
+                                uploadedFiles = uploadedFiles.map(file => {
+                                    if (file.name === filename) {
+                                        return {
+                                            ...file, 
+                                            qa_status_message: null
+                                        };
+                                    }
+                                    return file;
+                                });
+                                // 从fileProgress中移除该文件的数据
+                                delete progressIntervals[filename];
+                                delete fileProgress[filename];
+                                fileProgress = {...fileProgress};
+                            }, 5000);
                         }
                     }
                 }
@@ -414,8 +476,8 @@
     // 停止跟踪指定文件的进度
     const stopProgressTracking = (filename: string) => {
         if (progressIntervals[filename]) {
-            clearInterval(progressIntervals[filename]);
-            delete progressIntervals[filename];
+                        clearInterval(progressIntervals[filename]);
+                        delete progressIntervals[filename];
         }
     };
 
@@ -481,9 +543,9 @@
     }
 
     onMount(async () => {
-        await fetchFiles();
-        await fetchDatasets();
-        
+                            await fetchFiles();
+                            await fetchDatasets();
+                            
         // 检查所有文件的处理状态，为正在处理中的文件自动启动进度条跟踪
         checkAndRestoreProgressBars();
         
@@ -501,7 +563,7 @@
                         filename: file.name
                     });
                     
-                    // 如果文件正在处理中，启动进度跟踪
+                    // 只有当文件真正处于处理中状态时才显示进度条
                     if (texResponse.data.status === 'success' && 
                         texResponse.data.data.status === 'processing') {
                         console.log(`发现正在处理的文件: ${file.name}，恢复进度条跟踪`);
@@ -512,50 +574,62 @@
                         // 启动进度跟踪
                         startProgressTracking(file.name);
                         continue;
-                    }
-                    
-                    // 检查QA生成状态
-                    const qaResponse = await axios.post('http://127.0.0.1:8000/qa/generate_qa/progress', {
-                        filename: file.name
-                    });
-                    
-                    // 如果QA生成正在处理中，启动进度跟踪
-                    if (qaResponse.data.status === 'success' && 
-                        qaResponse.data.data.status === 'processing') {
-                        console.log(`发现正在生成QA的文件: ${file.name}，恢复进度条跟踪`);
+                    } else if (texResponse.data.status === 'success' && 
+                               texResponse.data.data.status === 'completed') {
+                        // LaTeX转换已完成，检查QA生成状态
+                        const qaResponse = await axios.post('http://127.0.0.1:8000/qa/generate_qa/progress', {
+                            filename: file.name
+                        });
                         
-                        // 更新文件状态消息
-                        file.qa_status_message = t("construct.qa_generating");
-                        
-                        // 初始化并启动进度跟踪
-                        if (!fileProgress[file.name]) {
-                            fileProgress[file.name] = {
-                                latex: {
-                                    progress: 100,
-                                    status: 'completed',
-                                    elapsedTime: '0s',
-                                    remainingTime: '0s',
-                                    estimatedCompletionTime: '',
-                                    processedChunks: 0,
-                                    totalChunks: 0,
-                                    isComplete: true
-                                },
-                                qa: {
-                                    progress: 0,
-                                    status: 'processing',
-                                    elapsedTime: '0s',
-                                    remainingTime: 'Calculating...',
-                                    estimatedCompletionTime: 'Calculating...',
-                                    processedChunks: 0,
-                                    totalChunks: 0,
-                                    isComplete: false
-                                },
-                                currentStep: 'qa_generation'
-                            };
+                        // 只有当QA生成真正处于处理中状态时才显示进度条
+                        if (qaResponse.data.status === 'success' && 
+                            qaResponse.data.data.status === 'processing') {
+                            console.log(`发现正在生成QA的文件: ${file.name}，恢复进度条跟踪`);
+                            
+                            // 更新文件状态消息
+                            file.qa_status_message = t("construct.qa_generating");
+                            
+                            // 初始化并启动进度跟踪
+                            if (!fileProgress[file.name]) {
+                                fileProgress[file.name] = {
+                                    latex: {
+                                        progress: 100,
+                                        status: 'completed',
+                                        elapsedTime: '0s',
+                                        remainingTime: '0s',
+                                        estimatedCompletionTime: '',
+                                        processedChunks: 0,
+                                        totalChunks: 0,
+                                        isComplete: true
+                                    },
+                                    qa: {
+                                        progress: 0,
+                                        status: 'processing',
+                                        elapsedTime: '0s',
+                                        remainingTime: 'Calculating...',
+                                        estimatedCompletionTime: 'Calculating...',
+                                        processedChunks: 0,
+                                        totalChunks: 0,
+                                        isComplete: false
+                                    },
+                                    currentStep: 'qa_generation'
+                                };
+                            }
+                            
+                            // 启动进度跟踪
+                            startProgressTracking(file.name);
+                        } else if (qaResponse.data.status === 'success' && 
+                                  (qaResponse.data.data.status === 'completed' || 
+                                   qaResponse.data.data.status === 'failed' ||
+                                   qaResponse.data.data.status === 'timeout' ||
+                                   qaResponse.data.data.status === 'aborted')) {
+                            // 任务已完成、失败、超时或被中止，不显示进度条
+                            file.qa_status_message = null;
+                            // 确保文件状态正确
+                            if (qaResponse.data.data.status === 'completed') {
+                                file.status = {...file.status, 1: 1};
+                            }
                         }
-                        
-                        // 启动进度跟踪
-                        startProgressTracking(file.name);
                     }
                 } catch (error) {
                     console.error(`检查文件 ${file.name} 的处理状态时出错:`, error);
@@ -1195,10 +1269,20 @@
             "construct.prev": "Prev",
             "construct.go": "Go",
             "construct.page_of": "of",
+            "construct.task_aborted": "Task aborted",
+            "construct.task_aborted_success": "Task aborted successfully",
+            "construct.task_abort_failed": "Failed to abort task",
+            "construct.task_abort_error": "Error aborting task",
+            "Abort task": "Abort Task",
+            "Processed chunks": "Processed chunks",
+            "Elapsed time": "Elapsed time",
+            "Remaining time": "Remaining time",
+            "LaTeX conversion": "LaTeX conversion",
+            "QA generation": "QA generation",
+            "Completed": "Completed",
+            "Processing": "Processing",
+            "Refreshing progress every second...": "Refreshing progress every second...",
             "general.close": "Close",
-            "construct.generated_datasets": "Generated Datasets",
-            "construct.no_datasets": "No datasets available",
-            "construct.loading_datasets": "Loading datasets...",
             "data.table.col_name": "Name",
             "data.table.col_time": "Creation Time",
             "data.table.col_size": "Size",
@@ -1215,17 +1299,8 @@
             "data.download": "Download",
             "data.no_dataset": "No datasets available",
             "Progress": "Progress",
-            "Processed chunks": "Processed chunks",
             "Chunks": "Chunks",
-            "Elapsed time": "Elapsed time",
-            "Remaining time": "Remaining time",
-            "Step": "Step",
-            "LaTeX conversion": "LaTeX conversion",
-            "QA generation": "QA generation",
-            "Completed": "Completed",
-            "Processing": "Processing",
-            "Refreshing progress every second...": "Refreshing progress every second...",
-            "Chunks processed": "Chunks processed"
+            "Step": "Step"
         });
     }
 
@@ -1235,6 +1310,64 @@
             clearInterval(progressIntervals[filename]);
         }
     });
+
+    // 中止正在进行的任务
+    const abortTask = async (filename) => {
+        try {
+            console.log(`尝试中止文件 ${filename} 的任务`);
+            
+            const response = await axios.post('http://127.0.0.1:8000/qa/abort_task', {
+                filename: filename
+            });
+            
+            if (response.data.status === 'success') {
+                console.log(`成功中止任务: ${response.data.message}`);
+                
+                // 停止进度跟踪
+                stopProgressTracking(filename);
+                
+                // 移除进度条
+                delete fileProgress[filename];
+                fileProgress = {...fileProgress};
+                
+                // 更新文件状态消息
+                uploadedFiles = uploadedFiles.map(file => {
+                    if (file.name === filename) {
+                        return {
+                            ...file, 
+                            qa_status_message: t("construct.task_aborted")
+                        };
+                    }
+                    return file;
+                });
+                
+                // 3秒后清除消息
+                setTimeout(() => {
+                    uploadedFiles = uploadedFiles.map(file => {
+                        if (file.name === filename) {
+                            return {
+                                ...file, 
+                                qa_status_message: null
+                            };
+                        }
+                        return file;
+                    });
+                }, 3000);
+                
+                // 显示成功消息
+                successMessage = t("construct.task_aborted_success");
+                setTimeout(() => {
+                    successMessage = null;
+                }, 2000);
+            } else {
+                console.error(`中止任务失败: ${response.data.message}`);
+                errorMessage = t("construct.task_abort_failed");
+            }
+        } catch (error) {
+            console.error('中止任务时出错:', error);
+            errorMessage = t("construct.task_abort_error");
+        }
+    };
 </script>
 
 <ActionPageTitle returnTo="/construct/" title={t("construct.title")} />
@@ -1488,6 +1621,17 @@
                                                                 <div class="mt-1 text-xs text-gray-500 animate-pulse">
                                                                     {t("Refreshing progress every second...")}
                                                                 </div>
+                                                                <div class="mt-2">
+                                                                    <button 
+                                                                        class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded flex items-center"
+                                                                        on:click={() => abortTask(file.name)}
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                        </svg>
+                                                                        {t("Abort task")}
+                                                                    </button>
+                                                                </div>
                                                             {/if}
                                                         </div>
                                                         
@@ -1507,6 +1651,17 @@
                                                                     <div class="font-semibold">{t("Processed chunks")}: {fileProgress[file.name].qa.processedChunks}/{fileProgress[file.name].qa.totalChunks > 0 ? fileProgress[file.name].qa.totalChunks : '?'}</div>
                                                                     <div>{t("Elapsed time")}: {fileProgress[file.name].qa.elapsedTime}</div>
                                                                     <div>{t("Remaining time")}: {fileProgress[file.name].qa.remainingTime}</div>
+                                                                </div>
+                                                                <div class="mt-2">
+                                                                    <button 
+                                                                        class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded flex items-center"
+                                                                        on:click={() => abortTask(file.name)}
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                        </svg>
+                                                                        {t("Abort task")}
+                                                                    </button>
                                                                 </div>
                                                             </div>
                                                         {/if}

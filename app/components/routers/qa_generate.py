@@ -510,34 +510,49 @@ async def delete_files(
     request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    '''Delete construction file from database'''
+    '''Delete construction file from database and all related records'''
     try:
         # URL解码文件名
         decoded_filename = urllib.parse.unquote(request.filename)
         logger.info(f"删除QA文件: 原始文件名={request.filename}, 解码后文件名={decoded_filename}")
         
-        # 尝试按文件名删除
+        # 尝试按文件名删除dataset_entries
         result = await db.llm_kit.dataset_entries.delete_one({"name": decoded_filename})
-        if result.deleted_count > 0:
-            logger.info(f"成功从数据库删除QA文件: {decoded_filename}")
-            return {"status": "success"}
+        dataset_deleted = result.deleted_count > 0
         
-        # 尝试使用ID删除
+        # 尝试使用ID删除dataset_entries
         try:
             if len(decoded_filename) == 24:
-                try:
-                    obj_id = ObjectId(decoded_filename)
-                    result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
-                    if result.deleted_count > 0:
-                        logger.info(f"成功通过ID从数据库删除QA文件: {decoded_filename}")
-                        return {"status": "success"}
-                except:
-                    pass
+                obj_id = ObjectId(decoded_filename)
+                result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
+                dataset_deleted = dataset_deleted or result.deleted_count > 0
         except Exception as e:
             logger.warning(f"尝试通过ID删除QA文件时出错: {str(e)}")
         
-        logger.warning(f"QA文件在数据库中不存在: {decoded_filename}")
-        return {"status": "failed", "message": "File not found in database"}
+        # 删除相关联的记录，确保数据一致性
+        # 1. 删除tex_records中相关记录
+        await db.llm_kit.tex_records.delete_many({"input_file": decoded_filename})
+        
+        # 2. 删除qa_generations中相关记录
+        await db.llm_kit.qa_generations.delete_many({"input_file": decoded_filename})
+        
+        # 3. 删除qa_generations关联的qa_pairs
+        qa_generations = await db.llm_kit.qa_generations.find(
+            {"input_file": decoded_filename}
+        ).to_list(None)
+        
+        for record in qa_generations:
+            await db.llm_kit.qa_pairs.delete_many({"generation_id": record["_id"]})
+        
+        # 4. 删除parse_records中相关记录
+        await db.llm_kit.parse_records.delete_many({"input_file": decoded_filename})
+        
+        if dataset_deleted:
+            logger.info(f"成功从数据库删除QA文件及相关记录: {decoded_filename}")
+            return {"status": "success"}
+        else:
+            logger.warning(f"QA文件在数据库中不存在: {decoded_filename}")
+            return {"status": "failed", "message": "File not found in database"}
     except Exception as e:
         logger.error(f"删除QA文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -642,7 +657,7 @@ async def preview_qa_dataset(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
     """
-    预览QA数据集内容，已修改为仅从数据库读取数据，不再使用文件系统
+    预览QA数据集内容，同时支持dataset_entries和qa_generations中的数据
     """
     try:
         # 尝试从数据库获取内容
@@ -657,7 +672,44 @@ async def preview_qa_dataset(
             dataset = await db.llm_kit.dataset_entries.find_one({"name": dataset_id})
         
         if not dataset:
-            raise HTTPException(status_code=404, detail="QA数据集未找到")
+            # 尝试在qa_generations集合中查找
+            qa_record = await db.llm_kit.qa_generations.find_one(
+                {"input_file": dataset_id, "status": "completed"},
+                sort=[("created_at", -1)]
+            )
+            
+            if qa_record and "content" in qa_record:
+                # 获取QA内容
+                try:
+                    qa_data = []
+                    if isinstance(qa_record["content"], str):
+                        qa_data = json.loads(qa_record["content"])
+                    else:
+                        qa_data = qa_record["content"]
+                        
+                    # 分页处理
+                    total_items = len(qa_data)
+                    total_pages = (total_items + page_size - 1) // page_size
+                    
+                    start_idx = (page - 1) * page_size
+                    end_idx = min(start_idx + page_size, total_items)
+                    
+                    items = qa_data[start_idx:end_idx]
+                    
+                    logger.info(f"从qa_generations找到QA数据，文件名: {dataset_id}")
+                    return {
+                        "items": items,
+                        "page": page,
+                        "page_size": page_size,
+                        "total_items": total_items,
+                        "total_pages": total_pages
+                    }
+                except json.JSONDecodeError:
+                    raise HTTPException(status_code=500, detail="无效的QA数据格式")
+            
+            # 如果都找不到，返回404
+            logger.warning(f"未找到QA数据集: {dataset_id}")
+            raise HTTPException(status_code=404, detail=f"QA数据集未找到: {dataset_id}")
         
         # 获取QA内容
         try:
@@ -679,6 +731,7 @@ async def preview_qa_dataset(
         
         items = qa_data[start_idx:end_idx]
         
+        logger.info(f"从dataset_entries找到QA数据，ID/名称: {dataset_id}")
         return {
             "items": items,
             "page": page,
@@ -793,4 +846,86 @@ async def get_tex_processing_progress(
                 "total_chunks": 0,
                 "step": "latex_conversion"
             }
+        )
+
+@router.post("/abort_task")
+async def abort_task(
+    request: FilenameRequest,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """中止正在进行的任务（LaTeX转换或QA生成）"""
+    try:
+        logger.info(f"尝试中止文件 {request.filename} 的任务")
+        
+        # 检查LaTeX转换任务
+        tex_record = await db.llm_kit.tex_records.find_one(
+            {
+                "input_file": request.filename,
+                "status": "processing"
+            },
+            sort=[("created_at", -1)]
+        )
+        
+        if tex_record:
+            # 更新LaTeX转换任务状态为中止
+            await db.llm_kit.tex_records.update_one(
+                {"_id": tex_record["_id"]},
+                {"$set": {
+                    "status": "aborted",
+                    "error_message": "Task was manually aborted by user"
+                }}
+            )
+            
+            # 删除临时进度记录
+            await db.llm_kit.tex_processing_progress.delete_one(
+                {"task_id": str(tex_record["_id"])}
+            )
+            
+            logger.info(f"成功中止文件 {request.filename} 的LaTeX转换任务")
+            return APIResponse(
+                status="success",
+                message="LaTeX conversion task aborted successfully",
+                data={"aborted": True, "task_type": "latex_conversion"}
+            )
+        
+        # 检查QA生成任务
+        qa_record = await db.llm_kit.qa_generations.find_one(
+            {
+                "input_file": request.filename,
+                "status": "processing"
+            },
+            sort=[("created_at", -1)]
+        )
+        
+        if qa_record:
+            # 更新QA生成任务状态为中止
+            await db.llm_kit.qa_generations.update_one(
+                {"_id": qa_record["_id"]},
+                {"$set": {
+                    "status": "aborted",
+                    "error_message": "Task was manually aborted by user"
+                }}
+            )
+            
+            logger.info(f"成功中止文件 {request.filename} 的QA生成任务")
+            return APIResponse(
+                status="success",
+                message="QA generation task aborted successfully",
+                data={"aborted": True, "task_type": "qa_generation"}
+            )
+        
+        # 没有找到正在进行的任务
+        logger.warning(f"未找到文件 {request.filename} 的活动任务")
+        return APIResponse(
+            status="not_found",
+            message=f"No active task found for file {request.filename}",
+            data={"aborted": False}
+        )
+    
+    except Exception as e:
+        logger.error(f"中止任务失败: {str(e)}", exc_info=True)
+        return APIResponse(
+            status="error",
+            message=f"Failed to abort task: {str(e)}",
+            data={"aborted": False}
         )

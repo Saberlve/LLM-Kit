@@ -8,7 +8,7 @@ from app.components.services.parse_service import ParseService
 from text_parse.parse import single_ocr
 from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status,Request
+from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status,Request, Query
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime

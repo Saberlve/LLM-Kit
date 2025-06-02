@@ -252,3 +252,57 @@ async def delete_tex_record(
     except Exception as e:
         logger.error(f"Failed to delete LaTeX record record_id: {request.record_id}, error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/abort_task")
+async def abort_task(
+    request: FileNameRequest,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """Abort a running LaTeX conversion task"""
+    try:
+        # Find the latest processing record for this file
+        record = await db.llm_kit.tex_records.find_one(
+            {
+                "input_file": request.filename,
+                "status": "processing"
+            },
+            sort=[("created_at", -1)]
+        )
+
+        if not record:
+            return APIResponse(
+                status="not_found",
+                message=f"No active task found for file {request.filename}",
+                data={"aborted": False}
+            )
+
+        # Update the status to aborted
+        result = await db.llm_kit.tex_records.update_one(
+            {"_id": record["_id"]},
+            {"$set": {
+                "status": "aborted",
+                "error_message": "Task was manually aborted by user"
+            }}
+        )
+
+        if result.modified_count == 0:
+            return APIResponse(
+                status="error",
+                message="Failed to abort task",
+                data={"aborted": False}
+            )
+
+        # Delete progress tracking record if exists
+        await db.llm_kit.tex_processing_progress.delete_one(
+            {"task_id": str(record["_id"])}
+        )
+
+        return APIResponse(
+            status="success",
+            message="Task aborted successfully",
+            data={"aborted": True, "record_id": str(record["_id"])}
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to abort task: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -94,9 +94,9 @@ class QAGenerateService:
                 # Processing phase - 20% to 80%
                 for i, future in enumerate(asyncio.as_completed(futures)):
                     try:
-                        result = await future
-                        if result:
-                            qa_pairs.extend(result)
+                        chunk_result, sub_chunks_count = await future
+                        if chunk_result:
+                            qa_pairs.extend(chunk_result)
 
                         # Update progress - special handling for small text
                         processed_chunks += 1
@@ -334,16 +334,20 @@ class QAGenerateService:
                     }}
                 )
                 
-                # 创建一个线程池来处理块
+                # 获取事件循环
+                loop = asyncio.get_event_loop()
+                
+                # 创建线程池
                 with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
                     futures = []
-                    # 提交所有块到线程池
+                    # 提交所有块到线程池，使用loop.run_in_executor创建asyncio.Future
                     for i, chunk in enumerate(chunks):
                         ak = AK[i % len(AK)]
                         sk = SK[i % len(SK)] if SK and len(SK) > 0 else ""
                         
-                        # 使用线程池提交任务
-                        future = executor.submit(
+                        # 使用loop.run_in_executor创建asyncio.Future
+                        future = loop.run_in_executor(
+                            executor,
                             self.process_chunk_with_api,
                             chunk.get("chunk", ""),
                             ak, 
@@ -363,11 +367,12 @@ class QAGenerateService:
                     real_total_sub_chunks = 0
                     for i, future in enumerate(asyncio.as_completed(futures)):
                         try:
-                            result, sub_chunks_count = future.result()
+                            # 正确获取并解构元组结果
+                            chunk_result, sub_chunks_count = await future
                             real_total_sub_chunks += sub_chunks_count
                             
-                            if result:
-                                qa_pairs.extend(result)
+                            if chunk_result:
+                                qa_pairs.extend(chunk_result)
                             
                             # 更新进度 - 即使只有一个块完成也更新
                             processed_chunks += 1
