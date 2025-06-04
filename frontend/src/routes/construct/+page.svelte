@@ -1392,7 +1392,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
-                <span><strong class="font-bold">{t("general.success")}!</strong> {successMessage}</span>
+                <span><strong class="font-bold">{t("Success")}!</strong> {successMessage}</span>
             </div>
         </div>
     {/if}
@@ -2105,13 +2105,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
-                    <p class="text-gray-600">{t("construct.no_content")}</p>
+                    <p class="text-gray-600">{t("No content")}</p>
                 </div>
             {/if}
         </div>
         
         <svelte:fragment slot="footer">
-            <Button color="light" on:click={() => previewModalOpen = false}>{t("general.close")}</Button>
+            <Button color="light" on:click={() => previewModalOpen = false}>{t("Close")}</Button>
         </svelte:fragment>
     </Modal>
 

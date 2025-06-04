@@ -219,7 +219,7 @@
       const fileType = file.name.split(".").pop()?.toLowerCase();
       if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
         // 暂时不支持二进制文件
-        throw new Error(t("data.uploader.ocr_not_supported"));
+        throw new Error(t("OCR processing not supported yet"));
       } else {
         const reader = new FileReader();
         reader.readAsText(file);
@@ -378,11 +378,11 @@
         uploadedFiles = filesWithStatus as UnifiedFile[];
       } else {
         console.error("Error fetching uploaded files:", response);
-        errorMessage = t("data.uploader.fetch_fail");
+        errorMessage = t("Failed to fetch uploaded files");
       }
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
-      errorMessage = t("data.uploader.fetch_fail");
+      errorMessage = t("Failed to fetch uploaded files");
     }
   }
 
@@ -477,11 +477,11 @@
         // 从列表中移除删除的文件
         uploadedFiles = uploadedFiles.filter(file => file.file_id !== fileId);
       } else {
-        errorMessage = t("data.uploader.delete_fail") + ": " + response.data.message;
+        errorMessage = t("Failed to delete file") + ": " + response.data.message;
         console.error("Error deleting file:", response);
       }
     } catch (error) {
-      errorMessage = t("data.uploader.delete_fail_all");
+      errorMessage = t("Failed to delete file");
       console.error("Error deleting file:", error);
     } finally {
       loading = false;
@@ -496,7 +496,7 @@
     // 检查文件类型
     const fileType = file.name.split(".").pop()?.toLowerCase();
     if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
-      errorMessage = t("data.uploader.ocr_not_supported");
+      errorMessage = t("OCR processing not supported yet");
       loading = false;
       return;
     }
@@ -506,7 +506,7 @@
       const response = await uploadFile(file);
 
       if (response.status !== "success") {
-        errorMessage = t("data.uploader.upload_fail") + ": " + file.name;
+        errorMessage = t("Failed to upload file") + ": " + file.name;
         console.error(`Error uploading file ${file.name}:`, response);
         loading = false;
         return;
@@ -529,7 +529,7 @@
       }
 
     } catch (error) {
-      errorMessage = t("data.uploader.upload_fail_all");
+      errorMessage = t("Failed to upload file");
       console.error("Upload failed:", error);
     } finally {
       loading = false;
@@ -748,7 +748,7 @@
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                           </svg>
-                          {t("data.uploader.completed")}
+                          {t("Completed")}
                         </span>
                       {:else if file.parseStatus === 'failed'}
                         <span class="text-sm font-medium text-red-600">
@@ -780,14 +780,14 @@
 <!-- Delete Confirmation Modal -->
 <Modal bind:open={showDeleteConfirmation} size="sm" autoclose={false} class="rounded-lg">
   <h3 slot="header" class="text-xl font-bold text-gray-900">
-    {t("data.uploader.delete_confirmation_title")}
+    {t("Confirm the deletion")}
   </h3>
   <div class="my-6 text-gray-600">
     <div class="flex items-center mb-4">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
       </svg>
-      <p>{t("data.uploader.delete_confirmation_message")}</p>
+      <p>{t("Are you sure you want to delete this file?")}</p>
     </div>
     {#if fileToDelete}
       <div class="bg-gray-100 p-3 rounded-lg mb-4">
@@ -804,12 +804,12 @@
     {/if}
   </div>
   <div slot="footer" class="flex justify-end gap-2">
-    <Button color="light" on:click={cancelDelete}>{t("data.uploader.delete_cancel_button")}</Button>
+    <Button color="light" on:click={cancelDelete}>{t("Cancel")}</Button>
     <Button color="red" on:click={confirmDelete}>
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
       </svg>
-      {t("data.uploader.delete_confirm_button")}
+      {t("Confirm")}
     </Button>
   </div>
 </Modal>

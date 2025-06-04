@@ -227,7 +227,7 @@ export default {
     },
     uploader: {
       fetch_fail:'file_fetch_fail',
-      title:'dataset_manage',
+      title:'File Management',
       col_filename: "Filename",
       upload_status:'status' ,
       parsed:'parsed',
