@@ -47,18 +47,17 @@ class TexConversionRecord(MongoBaseModel):
     file_type: str = "tex"  # Fixed as tex
     model_name: str  # Model name used
     progress: int = 0  # Progress field
-    start_time: datetime = datetime.now(timezone.utc)  # 开始时间
-    estimated_completion_time: Optional[datetime] = None  # 预估完成时间
-    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  # 块处理信息
+    start_time: datetime = datetime.now(timezone.utc)  
+    estimated_completion_time: Optional[datetime] = None  
+    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  
 
 class TexProcessingProgress(MongoBaseModel):
-    """LaTeX处理实时进度记录"""
-    task_id: str  # 关联的任务ID
-    input_file: str  # 输入文件名
-    total_chunks: int = 0  # 总子块数
-    processed_chunks: int = 0  # 已处理子块数
-    created_at: datetime = datetime.now(timezone.utc)  # 创建时间
-    updated_at: datetime = datetime.now(timezone.utc)  # 最后更新时间
+    task_id: str  
+    input_file: str  
+    total_chunks: int = 0  
+    processed_chunks: int = 0  #
+    created_at: datetime = datetime.now(timezone.utc)  
+    updated_at: datetime = datetime.now(timezone.utc)  
     status: str = "processing"  # processing, completed, failed, timeout
 
 # 3. Q&A Generation Module
@@ -70,9 +69,9 @@ class QAGeneration(MongoBaseModel):
     status: str = "processing"  # processing, completed, failed
     source_text: str
     progress: int = 0  # Progress field
-    start_time: datetime = datetime.now(timezone.utc)  # 开始时间
-    estimated_completion_time: Optional[datetime] = None  # 预估完成时间
-    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  # 块处理信息
+    start_time: datetime = datetime.now(timezone.utc)  
+    estimated_completion_time: Optional[datetime] = None  
+    chunk_info: dict = {"total_chunks": 0, "processed_chunks": 0}  
 
 class QAPairDB(MongoBaseModel):
     """Q&A pair database record"""

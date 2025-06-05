@@ -73,10 +73,7 @@ async def generate_qa_pairs(
         raw_request: Request,
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """
-    生成QA对，已修改为完全使用数据库存储和获取数据，不再使用文件系统
-    """
-    print("Raw request body:",request_body)
+    
 
     try:
         # Verify that AK and SK counts match
@@ -95,49 +92,48 @@ async def generate_qa_pairs(
         
         filename = request_body.filename
         content = None
-        # 首先尝试从数据库中获取文件内容
+        
         
         file_record = await db.llm_kit.uploaded_files.find_one({"filename": filename})
         
         if file_record and "content" in file_record:
            
-            # 检查文件是否已经进行过LaTeX转换并且有有效内容
+            # check if the file has been converted to latex
             tex_record = await db.llm_kit.tex_records.find_one(
                 {"input_file": filename, "status": "completed"},
                 sort=[("created_at", -1)]
             )
             
-            # 验证tex_record是否包含有效内容
+            # check if the tex_record contains valid content
             has_valid_content = False
             if tex_record and "content" in tex_record:
                 try:
-                    # 检查内容是否有效
+                    # check if the content is valid
                     content_data = tex_record["content"]
                     if isinstance(content_data, list) and len(content_data) > 0:
-                        # 列表类型的内容直接判断
+                        # the content is a list directly
                         has_valid_content = True
-                        logger.info(f"文件 {filename} 已有有效的LaTeX转换内容")
+                        logger.info(f"file {filename} has valid latex conversion content")
                     elif isinstance(content_data, str):
-                        # 字符串类型需要解析
+                        # the string type needs to be parsed
                         json_content = json.loads(content_data)
                         if json_content and len(json_content) > 0:
                             has_valid_content = True
-                            logger.info(f"文件 {filename} 已有有效的LaTeX转换内容(字符串格式)")
+                            logger.info(f"file {filename} has valid latex conversion content(string format)")
                 except (json.JSONDecodeError, TypeError) as e:
-                    logger.warning(f"LaTeX记录内容解析失败: {str(e)}")
+                    logger.warning(f"LaTeX record content parsing failed: {str(e)}")
                     has_valid_content = False
             
             if not has_valid_content:
-                # 如果未进行LaTeX转换或内容无效，先执行转换
+                # if the file has not been converted to latex or the content is invalid, execute the conversion
                 from app.components.services.to_tex_service import ToTexService
                 tex_service = ToTexService(db)
                 
                 try:
-                    logger.info(f"开始对文件 {filename} 进行LaTeX转换")
+                    logger.info(f"start to convert file {filename} to latex")
                     result = await tex_service.convert_to_latex(
                         content=file_record["content"],
                         filename=filename,
-                        save_path="result/",  # 此参数将被忽略，但为了向后兼容保留
                         SK=request_body.SK,
                         AK=request_body.AK,
                         parallel_num=request_body.parallel_num,

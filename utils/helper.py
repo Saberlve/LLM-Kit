@@ -87,3 +87,4 @@ def generate(text, Model_Name, prompt_choice, API_KEY, SECRET_KEY=None):
         return generate_Qwen(text, API_KEY, prompt_choice)
     else:
         raise ValueError(f"Unsupported model name: {Model_Name}, supported models include: erine, flash, lite, qwen")
+    

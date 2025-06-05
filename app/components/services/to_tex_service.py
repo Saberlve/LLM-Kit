@@ -81,7 +81,7 @@ class ToTexService:
                                 self._update_processing_progress(task_id, processed_sub_chunks, total_sub_chunks),
                                 loop
                             )
-                            logger.info(f"CNMD更新处理进度: {processed_sub_chunks}/{total_sub_chunks}")
+                            logger.info(f"更新处理进度: {processed_sub_chunks}/{total_sub_chunks}")
                         except Exception as e:
                             logger.error(f"更新处理进度失败: {str(e)}")
             
@@ -185,7 +185,6 @@ class ToTexService:
             self,
             content: str,
             filename: str,
-            save_path: str,
             SK: List[str],
             AK: List[str],
             parallel_num: int,
@@ -194,12 +193,12 @@ class ToTexService:
         # Use context manager to create thread pool
         with ThreadPoolExecutor(max_workers=min(10, parallel_num)) as executor:
             try:
-                # 确保文件名不包含非法字符
+                # ensure the filename does not contain illegal characters
                 safe_filename = os.path.basename(filename)
                 
-                # 打印调试信息
-                logger.info(f"开始转换文件: {safe_filename}")
-                logger.info(f"传入的内容长度: {len(content) if content else 0}")
+                # print debug information
+                logger.info(f"start to convert file: {safe_filename}")
+                logger.info(f"the length of the content: {len(content) if content else 0}")
                 
                 # Initialize progress to 0
                 await self.tex_records.update_one(
@@ -216,14 +215,11 @@ class ToTexService:
                     raise ValueError("输入内容为空")
                 
                 if len(AK) < 1:
-                    raise ValueError("至少需要提供一个API密钥")
+                    raise ValueError("at least one API key is required")
                 
                 if parallel_num < 1:
                     parallel_num = 1
                 
-                if parallel_num > len(AK):
-                    logger.warning(f"并行数 {parallel_num} 大于API密钥数 {len(AK)}，将使用可用的API密钥")
-                    parallel_num = len(AK)
 
                 # Get filename without extension
                 base_filename = safe_filename.rsplit('.', 1)[0] if '.' in safe_filename else safe_filename
@@ -231,7 +227,7 @@ class ToTexService:
                 # Check if record already exists, if so, reset progress
                 existing_record = await self.tex_records.find_one({"input_file": safe_filename})
                 if existing_record:
-                    logger.info(f"找到现有记录，重置状态: {existing_record['_id']}")
+                    logger.info(f"found existing record, reset status: {existing_record['_id']}")
                     await self.tex_records.update_one(
                         {"_id": existing_record["_id"]},
                         {"$set": {
@@ -260,22 +256,16 @@ class ToTexService:
                     )
                     result = await self.tex_records.insert_one(record.dict(by_alias=True))
                     record_id = result.inserted_id
-                    logger.info(f"创建新记录: {record_id}")
+                    logger.info(f"created new record: {record_id}")
 
                 try:
-                    # Text preprocessing stage - 10%
-                    await self.tex_records.update_one(
-                        {"_id": record_id},
-                        {"$set": {"progress": 10}}
-                    )
-
+       
                     # Split text
                     text_chunks = split_text_into_chunks(parallel_num, content)
                     total_chunks = len(text_chunks)
                     processed_chunks = 0
-                    logger.info(f"文本已拆分为 {total_chunks} 块")
+                    logger.info(f"the text has been split into {total_chunks} chunks")
 
-                    # 使用split_chunk_by_tokens计算准确的子块总数，而不是估算
                     total_sub_chunks = 0
                     for chunk in text_chunks:
                         sub_chunks = split_chunk_by_tokens(chunk, max_tokens=650)
@@ -287,7 +277,7 @@ class ToTexService:
                     await self.tex_records.update_one(
                         {"_id": record_id},
                         {"$set": {
-                            "progress": 20,
+                            "progress": 0,
                             "chunk_info": {
                                 "total_chunks": total_sub_chunks,
                                 "processed_chunks": 0
@@ -302,11 +292,11 @@ class ToTexService:
                     # Create task list
                     futures = []
                     for i, chunk in enumerate(text_chunks):
-                        # 确保索引不会越界
+                        # ensure the index does not exceed the range
                         ak_index = i % len(AK)
                         sk_index = i % len(SK) if SK and len(SK) > 0 else 0
                         
-                        # 创建处理任务，传递进度队列参数和事件循环
+                        # create processing tasks, pass progress queue parameters and event loop
                         future = loop.run_in_executor(
                             executor,
                             lambda ch=chunk, a=AK[ak_index], s=SK[sk_index] if SK and len(SK) > 0 else "", m=model_name, l=loop: 
@@ -316,7 +306,7 @@ class ToTexService:
                     
                     logger.info(f"已创建 {len(futures)} 个处理任务")
 
-                    # Text processing stage - 20% to 80%
+                    # Text processing stage 
                     total_processed_sub_chunks = 0
                     for i, future in enumerate(asyncio.as_completed(futures)):
                         try:
@@ -324,15 +314,15 @@ class ToTexService:
                             
                             if chunk_result:
                                 results.extend(chunk_result)
-                                logger.info(f"成功处理第 {i+1} 块，获得 {len(chunk_result)} 个结果")
+                                logger.info(f"successfully processed the {i+1} block, got {len(chunk_result)} results")
                             else:
-                                logger.warning(f"第 {i+1} 块返回空结果")
+                                logger.warning(f"the {i+1} block returned empty results")
 
-                            # 更新已处理子块数
+                            # update the number of processed sub-chunks
                             processed_chunks += 1
                             total_processed_sub_chunks += sub_chunks_count
                             
-                            # 计算当前进度百分比
+                            # calculate the current progress percentage
                             if total_chunks == 1:
                                 # If there's only one chunk, show progress in multiple steps
                                 progress_steps = [30, 40, 50, 60, 70]
@@ -341,7 +331,6 @@ class ToTexService:
                                 # Normal progress calculation for multiple chunks based on sub-chunks
                                 progress = int(20 + (total_processed_sub_chunks / total_sub_chunks * 60))
                             
-                            # 每个子块处理完成就更新主记录的进度，不再等待2个子块
                                 await self.tex_records.update_one(
                                     {"_id": record_id},
                                     {"$set": {
@@ -490,9 +479,7 @@ class ToTexService:
                 raise Exception(f"LaTeX转换失败: {str(e)}")
 
     async def get_tex_records(self):
-        """
-        获取最近的LaTeX转换历史记录，完全从数据库中获取，不依赖文件系统
-        """
+
         try:
             # Only get the latest record
             record = await self.tex_records.find_one(
@@ -513,7 +500,6 @@ class ToTexService:
             raise Exception(f"Failed to get records: {str(e)}")
 
     async def get_tex_processing_progress(self, filename: str):
-        """获取LaTeX处理的实时进度，包括子块处理信息和预估完成时间"""
         try:
             # 首先查找主记录获取基础信息
             main_record = await self.tex_records.find_one(
@@ -556,22 +542,13 @@ class ToTexService:
                 )
                 
                 if progress_record:
-                    # 使用更实时的处理块信息
                     temp_processed = progress_record.get("processed_chunks", 0)
                     temp_total = progress_record.get("total_chunks", 0)
                     
-                    # 只有当临时记录中的信息更新时才使用它
+
                     if temp_total > 0 and temp_processed <= temp_total:
                         processed_chunks = temp_processed
                         total_chunks = temp_total
-                        
-                        # 如果记录中total_chunks不为0，则更新进度百分比
-                        if total_chunks > 0:
-                            # 基于子块处理情况重新计算进度 (20-80% 区间)
-                            new_progress = 20 + int((processed_chunks / total_chunks) * 60)
-                            # 避免进度回退
-                            if new_progress > progress:
-                                progress = new_progress
             
             # 计算已经花费的时间（秒）
             current_time = datetime.now(timezone.utc)
