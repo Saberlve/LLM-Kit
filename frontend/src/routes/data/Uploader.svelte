@@ -92,16 +92,39 @@
           form.append("file", entry.file);
           console.log(`正在上传文件: ${entry.name}, pool_id: ${poolId}, kind: ${data_type}`);
           
-          const response = await axios.post(`/api/dataset`, form, {
-            params: {
-              name: entry.name,
-              description: entry.description,
-              pool_id: poolId,
-              kind: data_type,
-            },
-          });
+          let response;
+          const fileType = entry.file.name.split('.').pop().toLowerCase();
+          
+          // 根据文件类型选择不同的上传接口
+          if (['pdf', 'png', 'jpg', 'jpeg'].includes(fileType)) {
+            // 二进制文件上传接口
+            response = await axios.post(`/api/parse/upload_binary`, form);
+          } else {
+            // 文本文件上传接口
+            response = await axios.post(`/api/dataset`, form, {
+              params: {
+                name: entry.name,
+                description: entry.description,
+                pool_id: poolId,
+                kind: data_type,
+              },
+            });
+          }
           
           console.log("上传成功:", response.data);
+          
+          // 如果是二进制文件，调用解析接口
+          if (['pdf', 'png', 'jpg', 'jpeg'].includes(fileType) && response.data.status === "success") {
+            const fileId = response.data.data.file_id;
+            console.log(`开始解析二进制文件: ${fileId}`);
+            
+            const parseResponse = await axios.post(`/api/parse/parse_binary`, {
+              file_id: fileId
+            });
+            
+            console.log("解析结果:", parseResponse.data);
+          }
+          
           loadingProgress += 1;
         } catch (err) {
           console.error(`上传文件 ${submissions[i].name} 失败:`, err);
@@ -280,7 +303,7 @@
               >{t("data.uploader.p1")}</span
             >{t("data.uploader.p2")}
           </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">JSON</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">JSON, PDF, PNG, JPG, JPEG</p>
         </Dropzone>
       </div>
     </div>

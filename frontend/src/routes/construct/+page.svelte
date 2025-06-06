@@ -646,24 +646,34 @@
 
     const fetchFiles = async () => {
         try {
-            const response = await fetch('http://127.0.0.1:8000/parse/parse_files');
-            if (!response.ok) {
-                const errorData = await response.json();
-                errorMessage = errorData.detail || "Failed to load files.";
+            // 使用to_tex/parsed_files接口获取所有已解析的文件（包括OCR解析的二进制文件）
+            const response = await axios.get('http://127.0.0.1:8000/to_tex/parsed_files');
+            
+            if (response.status !== 200 || response.data.status !== "success") {
+                errorMessage = (response.data && response.data.detail) || "Failed to load files.";
                 return;
             }
-            const data = await response.json();
-
-            const filesWithStatus = await Promise.all(data.map(async (file) => {
+            
+            const files = response.data.data.files || [];
+            
+            const filesWithStatus = await Promise.all(files.map(async (file) => {
                 try {
                     const statusResponse = await axios.post('http://127.0.0.1:8000/qa/qashistory', {
-                        filename: file.name
+                        filename: file.filename
                     });
                     const statusResponse1 = await axios.post('http://127.0.0.1:8000/cot/cothistory', {
-                        filename: file.name
+                        filename: file.filename
                     });
+                    
+                    // 为文件添加额外属性
                     return {
-                        ...file,
+                        name: file.filename, 
+                        size: 0, // 数据库中不存储文件大小
+                        type: file.file_type || "unknown",
+                        modification_time: file.created_at,
+                        is_binary: file.is_binary || false,
+                        ocr_processed: file.ocr_processed || false,
+                        file_id: file.file_id,
                         status: {
                             1: statusResponse.data.exists, // QA状态
                             2: statusResponse1.data.exists // COT状态
@@ -672,9 +682,15 @@
                         cot_status_message: null
                     };
                 } catch (error) {
-                    console.error('Error fetching status for file', file.name, error);
+                    console.error('Error fetching status for file', file.filename, error);
                     return { 
-                        ...file, 
+                        name: file.filename,
+                        size: 0,
+                        type: file.file_type || "unknown",
+                        modification_time: file.created_at,
+                        is_binary: file.is_binary || false,
+                        ocr_processed: file.ocr_processed || false,
+                        file_id: file.file_id,
                         status: {
                             1: 0, // 初始化QA状态为未生成
                             2: 0  // 初始化COT状态为未生成
@@ -1500,17 +1516,30 @@
                                         <div class="flex items-center">
                                             <!-- File type icon -->
                                             <span class="mr-2">
-                                                {#if file.type === 'txt'}
+                                                {#if file.is_binary && file.ocr_processed}
+                                                    <!-- OCR处理过的PDF或图像文件 -->
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                                    </svg>
+                                                {:else if file.type === 'txt' || file.type === 'text/plain'}
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                                                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
                                                     </svg>
-                                                {:else if file.type === 'json'}
+                                                {:else if file.type === 'json' || file.type === 'application/json'}
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
                                                         <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
                                                     </svg>
-                                                {:else if file.type === 'tex'}
+                                                {:else if file.type === 'tex' || file.type === 'application/x-tex'}
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                                    </svg>
+                                                {:else if file.type.startsWith('image/')}
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pink-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                                                    </svg>
+                                                {:else if file.type === 'application/pdf'}
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                                                     </svg>
                                                 {:else}
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -1523,7 +1552,13 @@
                                             </button>
                                         </div>
                                     </TableBodyCell>
-                                    <TableBodyCell>{file.type}</TableBodyCell>
+                                    <TableBodyCell>
+                                        {#if file.is_binary && file.ocr_processed}
+                                            <span class="text-green-600 font-medium">OCR已处理</span>
+                                        {:else}
+                                            {file.type}
+                                        {/if}
+                                    </TableBodyCell>
                                     <TableBodyCell>{formatFileSize(file.size)}</TableBodyCell>
                                     <TableBodyCell>{new Date(file.modification_time).toLocaleString()}</TableBodyCell>
                                     <TableBodyCell>

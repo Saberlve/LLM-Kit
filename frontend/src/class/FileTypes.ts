@@ -12,6 +12,12 @@ export interface UploadedFile {
     parseStatus?: string;
     parseProgress?: number;
     recordId?: string | null;
+    ocr_info?: {
+        total_pages: number;
+        processed_pages: number;
+        elapsed_seconds: number;
+        estimated_remaining_seconds: number;
+    };
 }
 
 // Define the structure of uploaded binary files
@@ -27,6 +33,12 @@ export interface UploadedBinaryFile {
     parseStatus?: string;
     parseProgress?: number;
     recordId?: string | null;
+    ocr_info?: {
+        total_pages: number;
+        processed_pages: number;
+        elapsed_seconds: number;
+        estimated_remaining_seconds: number;
+    };
 }
 
 // Define unified file type

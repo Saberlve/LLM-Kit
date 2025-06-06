@@ -23,7 +23,17 @@ export interface ParseResponse extends APIResponse {
 
 // Define task progress response type
 export interface TaskProgressResponse extends APIResponse {
-    data: { progress: number; status: string; task_type: string };
+    data: { 
+        progress: number; 
+        status: string; 
+        task_type: string;
+        ocr_info?: {
+            total_pages: number;
+            processed_pages: number;
+            elapsed_seconds: number;
+            estimated_remaining_seconds: number;
+        };
+    };
 }
 
 // Define parse history response type

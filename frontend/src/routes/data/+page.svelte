@@ -26,9 +26,9 @@
   import type { APIResponse, UploadResponse, ParseResponse, TaskProgressResponse, FileIDRequest, FilenameRequest } from "../../class/APIResponse";
 
   // 添加额外的翻译文本
-  if (!t("data.uploader.ocr_not_supported")) {
+  if (!t("data.uploader.ocr_processing")) {
     t.add({
-      "data.uploader.ocr_not_supported": "OCR functionality is not currently supported. Please upload text files only (e.g. .txt, .tex, .json).",
+      "data.uploader.ocr_processing": "OCR processing is in progress. This might take a few moments.",
       "data.uploader.title": "File Manager",
       "data.uploader.uploaded_files": "Uploaded Files",
       "data.uploader.filename": "Filename",
@@ -171,18 +171,68 @@
     
     await fetchRawContent(file.filename);
   };
+  
+  // 添加查看解析后内容的方法
+  const previewParsedContent = async (file: UnifiedFile) => {
+    if (!file.recordId) {
+      console.error('No record ID available for parsed content');
+      return;
+    }
+    
+    previewModalTitle = `${file.filename} (解析结果)`;
+    previewContentType = 'parsed';
+    previewLoading = true;
+    previewErrorMessage = null;
+    previewModalOpen = true;
+    
+    await fetchParsedContent(file.recordId);
+  };
 
   const fetchRawContent = async (filename: string) => {
     try {
       const response = await axios.get(`http://127.0.0.1:8000/parse/preview_raw/${filename}`);
       if (response.status === 200 && response.data.status === "success") {
         rawContent = response.data.data.content || '';
+        
+        // 检查是否是OCR结果
+        if (response.data.data.is_ocr_result) {
+          previewContentType = 'ocr';
+        }
       } else {
         previewErrorMessage = "Failed to preview file" + (response.data?.detail ? `: ${response.data.detail}` : '');
       }
     } catch (error) {
       console.error('Error fetching raw content:', error);
       previewErrorMessage = "Network error previewing file";
+    } finally {
+      previewLoading = false;
+    }
+  };
+  
+  const fetchParsedContent = async (recordId: string) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/parse/preview_parsed/${recordId}`);
+      if (response.status === 200) {
+        if (response.data.status === "success") {
+          rawContent = response.data.data.content || '';
+          
+          // 检查是否是OCR结果
+          if (response.data.data.is_ocr_result) {
+            previewContentType = 'ocr';
+          } else {
+            previewContentType = 'parsed';
+          }
+        } else if (response.data.status === "pending") {
+          previewErrorMessage = "解析尚未完成，请稍后再试";
+        } else {
+          previewErrorMessage = "Failed to preview parsed content" + (response.data?.message ? `: ${response.data.message}` : '');
+        }
+      } else {
+        previewErrorMessage = "Failed to preview parsed content" + (response.data?.detail ? `: ${response.data.detail}` : '');
+      }
+    } catch (error) {
+      console.error('Error fetching parsed content:', error);
+      previewErrorMessage = "Network error previewing parsed content";
     } finally {
       previewLoading = false;
     }
@@ -217,10 +267,29 @@
   async function uploadFile(file: File): Promise<UploadResponse> {
     try {
       const fileType = file.name.split(".").pop()?.toLowerCase();
+      
       if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
-        // 暂时不支持二进制文件
-        throw new Error(t("OCR processing not supported yet"));
+        // 使用FormData上传二进制文件
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        try {
+          const response = await axios.post<UploadResponse>(
+            `http://127.0.0.1:8000/parse/upload_binary`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+          );
+          return response.data;
+        } catch (error) {
+          console.error(`Error uploading binary file ${file.name}:`, error);
+          throw error;
+        }
       } else {
+        // 处理文本文件
         const reader = new FileReader();
         reader.readAsText(file);
 
@@ -266,25 +335,31 @@
     );
 
     try {
-      // 如果是二进制文件，显示暂时不支持的提示
+      // 处理文件，包括文本文件和二进制文件
+      const fileRequest: FileIDRequest = { file_id: file.file_id };
+      
+      // 根据文件类型选择不同的解析API
+      let parseResponse;
       if (file.type === 'binary') {
-        // 设置错误状态
-        uploadedFiles = uploadedFiles.map(f =>
-          f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        // 对于二进制文件，使用专门的API
+        parseResponse = await axios.post<ParseResponse>(
+          `http://127.0.0.1:8000/parse/parse_binary`, 
+          fileRequest
         );
         
-        // 显示错误信息
-        errorMessage = t("data.uploader.ocr_not_supported");
-        console.error("OCR processing not supported yet");
-        return;
+        // 对于二进制文件处理，设置任务类型为OCR
+        if (parseResponse.data.status === "success" && parseResponse.data.data.record_id) {
+          await axios.patch(`http://127.0.0.1:8000/parse/records/${parseResponse.data.data.record_id}`, {
+            task_type: "ocr"
+          }).catch(err => console.warn("Failed to update task type:", err));
+        }
+      } else {
+        // 对于文本文件，使用原有API
+        parseResponse = await axios.post<ParseResponse>(
+          `http://127.0.0.1:8000/parse/parse/file`, 
+          fileRequest
+        );
       }
-      
-      // 处理文本文件
-      const fileRequest: FileIDRequest = { file_id: file.file_id };
-      const parseResponse = await axios.post<ParseResponse>(
-        `http://127.0.0.1:8000/parse/parse/file`, 
-        fileRequest
-      );
 
       if (parseResponse.data.status === "success") {
         const recordId = parseResponse.data.data.record_id;
@@ -294,14 +369,15 @@
         );
         
         // 如果直接成功，不需要轮询进度
-        if (parseResponse.data.data.parsed_file_path) {
+        if (parseResponse.data.data.content) {
           // 直接更新状态为已完成
           uploadedFiles = uploadedFiles.map(f =>
             f.file_id === file.file_id ? { 
               ...f, 
               status: "parsed", 
               parseStatus: "completed", 
-              parseProgress: 100 
+              parseProgress: 100,
+              recordId: recordId
             } : f
           );
         } else {
@@ -388,13 +464,14 @@
 
   async function fetchTaskProgress(recordId: string): Promise<TaskProgressResponse> {
     try {
+      // 先尝试通过标准API获取任务进度
       const response = await axios.get<TaskProgressResponse>(
         `http://127.0.0.1:8000/parse/task/progress`, 
         { params: { record_id: recordId } }
       );
       
       // 转换响应格式以符合TaskProgressResponse类型
-      const taskResponse: TaskProgressResponse = {
+      let taskResponse: TaskProgressResponse = {
         status: response.data.status,
         message: response.data.message,
         data: {
@@ -403,6 +480,42 @@
           task_type: response.data.data.task_type || "parse"
         }
       };
+      
+      // 如果是OCR任务(二进制文件处理)，尝试获取更详细的OCR进度
+      if (response.data.data.task_type === "ocr" || 
+          (response.data.data.status === "processing" && response.data.data.progress < 100)) {
+        try {
+          // 尝试调用OCR专用的进度API
+          const ocrResponse = await axios.get(
+            `http://127.0.0.1:8000/parse/ocr/progress/${recordId}`
+          );
+          
+          if (ocrResponse.data.status === "success") {
+            // 使用OCR专用API返回的更详细进度信息
+            const ocrProgress = ocrResponse.data.data;
+            
+            // 构建增强的响应
+            taskResponse = {
+              status: response.data.status,
+              message: response.data.message,
+              data: {
+                progress: ocrProgress.progress,
+                status: ocrProgress.status,
+                task_type: "ocr",
+                ocr_info: {
+                  total_pages: ocrProgress.total_pages,
+                  processed_pages: ocrProgress.processed_pages,
+                  elapsed_seconds: ocrProgress.elapsed_seconds,
+                  estimated_remaining_seconds: ocrProgress.estimated_remaining_seconds
+                }
+              }
+            };
+          }
+        } catch (error) {
+          // 如果OCR专用API调用失败，继续使用标准API的结果
+          console.warn("Failed to get detailed OCR progress, using standard progress:", error);
+        }
+      }
       
       return taskResponse;
     } catch (error) {
@@ -423,20 +536,39 @@
           const progress = progressResponse.data.progress;
           const status = progressResponse.data.status;
           
-          // Update file processing status
-          uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === fileId ? { ...f, parseProgress: progress, parseStatus: status } : f
-          );
+          // 更新文件处理状态
+          uploadedFiles = uploadedFiles.map(f => {
+            if (f.file_id === fileId) {
+              // 基本状态更新
+              const updatedFile = { 
+                ...f, 
+                parseProgress: progress, 
+                parseStatus: status 
+              };
+              
+              // 如果有OCR详细信息，添加到文件对象
+              if (progressResponse.data.ocr_info) {
+                updatedFile.ocr_info = progressResponse.data.ocr_info;
+              }
+              
+              return updatedFile;
+            }
+            return f;
+          });
           
-          // Check if processing is complete or failed
+          // 检查处理是否完成或失败
           if (status === "completed" || status === "failed") {
             clearInterval(parsingProgressIntervals[fileId]);
             delete parsingProgressIntervals[fileId];
             
-            // If completed, update the file status to "parsed"
+            // 如果完成，更新文件状态为"已解析"
             if (status === "completed") {
               uploadedFiles = uploadedFiles.map(f =>
-                f.file_id === fileId ? { ...f, status: "parsed" } : f
+                f.file_id === fileId ? { 
+                  ...f, 
+                  status: "parsed",
+                  recordId: recordId  // 确保记录ID被保存
+                } : f
               );
             }
           }
@@ -456,7 +588,7 @@
           f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
         );
       }
-    }, 2000); // Poll every 2 seconds
+    }, 2000); // 每2秒轮询一次
   }
 
   // --- API Functions ---
@@ -492,14 +624,6 @@
   async function uploadAndProcessFile(file: File) {
     loading = true;
     errorMessage = null;
-    
-    // 检查文件类型
-    const fileType = file.name.split(".").pop()?.toLowerCase();
-    if (["pdf", "jpg", "jpeg", "png"].includes(fileType)) {
-      errorMessage = t("OCR processing not supported yet");
-      loading = false;
-      return;
-    }
     
     try {
       // 上传文件
@@ -645,7 +769,7 @@
             <span class="font-semibold">{t("data.uploader.p1")}</span>
             {t("data.uploader.p2")}
           </p>
-          <p class="text-xs text-gray-500">Supported formats: TXT, TEX, JSON</p>
+          <p class="text-xs text-gray-500">Supported formats: TXT, TEX, JSON, PDF, PNG, JPG, JPEG</p>
         </div>
       </Dropzone>
     </div>
@@ -681,6 +805,14 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                           <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                         </svg>
+                      {:else if file.file_type === 'pdf'}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                        </svg>
+                      {:else if ['jpg', 'jpeg', 'png'].includes(file.file_type)}
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                        </svg>
                       {:else}
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                           <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
@@ -714,7 +846,7 @@
                       </Button>
                     {/if}
                     
-                    <!-- 添加预览按钮 -->
+                    <!-- 原始内容预览按钮 -->
                     <Button size="xs" color="green" on:click={() => previewRawFile(file)}>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -722,6 +854,17 @@
                       </svg>
                       Preview
                     </Button>
+                    
+                    <!-- 解析后内容预览按钮 - 只在完成解析后显示 -->
+                    {#if file.parseStatus === "completed" && file.recordId}
+                      <Button size="xs" color="purple" on:click={() => previewParsedContent(file)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                          <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                        </svg>
+                        解析结果
+                      </Button>
+                    {/if}
                   </div>
                 </TableBodyCell>
                 <TableBodyCell>
@@ -736,27 +879,60 @@
               {#if file.parseStatus}
                 <tr class="bg-gray-50">
                   <td colspan="7">
-                    <div class="flex items-center p-2">
-                      <span class="text-sm text-gray-600 mr-2">{t("data.uploader.parse_status")}: </span>
-                      {#if file.parseStatus === 'processing'}
-                        <div class="flex-1 max-w-md">
-                          <Progressbar progress={file.parseProgress} size="sm" color="blue" />
+                    <div class="flex flex-col space-y-2 p-2">
+                      <div class="flex items-center">
+                        <span class="text-sm text-gray-600 mr-2">{t("data.uploader.parse_status")}: </span>
+                        {#if file.parseStatus === 'processing'}
+                          <div class="flex-1 max-w-md">
+                            <Progressbar progress={file.parseProgress} size="sm" color="blue" />
+                          </div>
+                          <span class="ml-2 text-sm text-blue-600">{file.parseProgress}%</span>
+                        {:else if file.parseStatus === 'completed'}
+                          <span class="text-sm font-medium text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                            {t("Completed")}
+                          </span>
+                        {:else if file.parseStatus === 'failed'}
+                          <span class="text-sm font-medium text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                            {t("data.uploader.failed")}
+                          </span>
+                        {/if}
+                      </div>
+                      
+                      <!-- 显示OCR详细信息 -->
+                      {#if file.ocr_info && file.parseStatus === 'processing'}
+                        <div class="flex items-center text-sm text-gray-600">
+                          <span class="mr-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+                              <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                            </svg>
+                            页面进度: {file.ocr_info.processed_pages}/{file.ocr_info.total_pages}
+                          </span>
+                          
+                          {#if file.ocr_info.elapsed_seconds > 0}
+                            <span class="mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                              </svg>
+                              已用时间: {Math.floor(file.ocr_info.elapsed_seconds / 60)}分{file.ocr_info.elapsed_seconds % 60}秒
+                            </span>
+                          {/if}
+                          
+                          {#if file.ocr_info.estimated_remaining_seconds > 0}
+                            <span>
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                              </svg>
+                              预计剩余: {Math.floor(file.ocr_info.estimated_remaining_seconds / 60)}分{file.ocr_info.estimated_remaining_seconds % 60}秒
+                            </span>
+                          {/if}
                         </div>
-                        <span class="ml-2 text-sm text-blue-600">{file.parseProgress}%</span>
-                      {:else if file.parseStatus === 'completed'}
-                        <span class="text-sm font-medium text-green-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                          </svg>
-                          {t("Completed")}
-                        </span>
-                      {:else if file.parseStatus === 'failed'}
-                        <span class="text-sm font-medium text-red-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                          </svg>
-                          {t("data.uploader.failed")}
-                        </span>
                       {/if}
                     </div>
                   </td>
@@ -816,8 +992,13 @@
 
 <!-- 文件预览模态框 -->
 <Modal bind:open={previewModalOpen} size="xl" autoclose={false} class="w-full max-w-5xl">
-  <h3 slot="header" class="text-xl font-semibold text-gray-900 dark:text-white">
+  <h3 slot="header" class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
     {previewModalTitle}
+    {#if previewContentType === 'ocr'}
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">OCR解析结果</span>
+    {:else if previewContentType === 'parsed'}
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">解析结果</span>
+    {/if}
   </h3>
 
   <div class="space-y-4">
@@ -830,7 +1011,7 @@
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         <span class="ml-3 text-gray-700">Loading...</span>
       </div>
-    {:else if previewContentType === 'raw'}
+    {:else if previewContentType === 'raw' || previewContentType === 'parsed' || previewContentType === 'ocr'}
       <div class="bg-gray-50 rounded-lg p-4 h-[70vh] overflow-auto">
         <pre class="whitespace-pre-wrap text-sm font-mono">{rawContent}</pre>
       </div>

@@ -29,3 +29,5 @@ jieba
 datasketch
 levenshtein
 python-multipart
+pdf2image
+poppler-utils

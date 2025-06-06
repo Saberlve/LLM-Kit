@@ -135,7 +135,9 @@ class ToTexService:
                     "file_id": "$latest_doc._id",
                     "filename": "$_id",
                     "created_at": 1,
-                    "file_type": 1
+                    "file_type": 1,
+                    "is_binary": {"$ifNull": ["$latest_doc.is_binary", False]},
+                    "ocr_processed": {"$ifNull": ["$latest_doc.ocr_processed", False]}
                 }}
             ]
 
@@ -146,7 +148,9 @@ class ToTexService:
                     "file_id": str(record["file_id"]),
                     "filename": record["filename"],
                     "created_at": record["created_at"],
-                    "file_type": record.get("file_type", "")
+                    "file_type": record.get("file_type", ""),
+                    "is_binary": record.get("is_binary", False),
+                    "ocr_processed": record.get("ocr_processed", False)
                 })
 
             return files
