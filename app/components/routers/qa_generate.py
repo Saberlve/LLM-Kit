@@ -164,7 +164,7 @@ async def generate_qa_pairs(
                     content = tex_record["content"]
                 logger.info(f"使用已有的LaTeX转换内容，长度: {len(content) if content else 0}")
         else:
-            # 如果在uploaded_files中找不到，尝试从tex_records直接获取
+            # 如果在uploaded_files中找不到，先尝试从tex_records直接获取
             tex_record = await db.llm_kit.tex_records.find_one(
                 {"input_file": filename, "status": "completed"},
                 sort=[("created_at", -1)]
@@ -190,6 +190,97 @@ async def generate_qa_pairs(
                     logger.warning(f"从tex_records获取的内容解析失败: {str(e)}")
                     has_valid_content = False
             
+            # 如果tex_records中没有有效内容，检查是否是OCR处理过的PDF或图像文件
+            if not has_valid_content:
+                logger.info(f"在tex_records中未找到有效内容，检查是否为OCR处理过的文件: {filename}")
+                
+                # 查询二进制文件记录
+                binary_file = None
+                try:
+                    # 按文件名查找
+                    binary_file = await db.llm_kit.uploaded_binary_files.find_one({"filename": filename})
+                except Exception as e:
+                    logger.warning(f"查询二进制文件记录时出错: {str(e)}")
+                
+                # 如果找到了对应的二进制文件，查找其OCR处理结果
+                if binary_file:
+                    logger.info(f"找到二进制文件记录: {filename}")
+                    binary_file_id = str(binary_file["_id"])
+                    
+                    # 查询与此二进制文件关联的最新解析记录
+                    parse_record = await db.llm_kit.parse_records.find_one(
+                        {
+                            "input_file": filename,
+                            "status": "completed",
+                            "task_type": {"$in": ["ocr", "pdf_text"]}
+                        },
+                        sort=[("created_at", -1)]
+                    )
+                    
+                    # 如果没有找到基于文件名的记录，尝试查找通过original_file_id关联的记录
+                    if not parse_record:
+                        parse_record = await db.llm_kit.parse_records.find_one(
+                            {
+                                "original_file_id": binary_file_id,
+                                "status": "completed",
+                                "task_type": {"$in": ["ocr", "pdf_text"]}
+                            },
+                            sort=[("created_at", -1)]
+                        )
+                    
+                    if parse_record and "content" in parse_record:
+                        # 找到了OCR处理结果
+                        ocr_content = parse_record["content"]
+                        logger.info(f"找到OCR处理结果，长度: {len(ocr_content) if ocr_content else 0}")
+                        
+                        # 将OCR文本转换为适合LLM处理的格式
+                        try:
+                            from app.components.services.to_tex_service import ToTexService
+                            tex_service = ToTexService(db)
+                            
+                            logger.info(f"将OCR文本转换为LaTeX格式: {filename}")
+                            # 先保存OCR文本到uploaded_files集合，以便ToTexService可以处理
+                            # 注意：这一步是为了兼容现有逻辑，也可以修改ToTexService以直接接受文本内容
+                            uploaded_file_record = {
+                                "filename": filename,
+                                "content": ocr_content,
+                                "file_type": "txt",
+                                "size": len(ocr_content),
+                                "status": "pending",
+                                "created_at": datetime.now(timezone.utc)
+                            }
+                            
+                            await db.llm_kit.uploaded_files.insert_one(uploaded_file_record)
+                            logger.info(f"OCR文本已保存到uploaded_files集合: {filename}")
+                            
+                            # 调用LaTeX转换服务
+                            result = await tex_service.convert_to_latex(
+                                content=ocr_content,
+                                filename=filename,
+                                SK=request_body.SK,
+                                AK=request_body.AK,
+                                parallel_num=request_body.parallel_num,
+                                model_name=request_body.model_name
+                            )
+                            logger.info(f"OCR文本 {filename} LaTeX转换完成，结果：{result}")
+                            
+                            # 获取转换后的内容
+                            if "content" in result and result["content"]:
+                                content = json.dumps(result["content"])
+                                logger.info(f"获取到OCR文本的LaTeX转换内容，长度: {len(content)}")
+                                has_valid_content = True
+                            else:
+                                raise HTTPException(
+                                    status_code=500,
+                                    detail=f"OCR文本的LaTeX转换完成但无法获取结果内容"
+                                )
+                        except Exception as e:
+                            logger.error(f"OCR文本的LaTeX转换失败: {str(e)}", exc_info=True)
+                            raise HTTPException(
+                                status_code=500,
+                                detail=f"OCR文本的LaTeX转换失败: {str(e)}"
+                            )
+                
             if not has_valid_content:
                 # 找不到有效内容，无法继续
                 raise HTTPException(

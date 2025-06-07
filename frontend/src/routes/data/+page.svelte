@@ -216,9 +216,11 @@
         if (response.data.status === "success") {
           rawContent = response.data.data.content || '';
           
-          // 检查是否是OCR结果
+          // 根据任务类型设置预览内容类型
           if (response.data.data.is_ocr_result) {
             previewContentType = 'ocr';
+          } else if (response.data.data.task_type === 'pdf_text') {
+            previewContentType = 'pdf_text';
           } else {
             previewContentType = 'parsed';
           }
@@ -338,23 +340,37 @@
       // 处理文件，包括文本文件和二进制文件
       const fileRequest: FileIDRequest = { file_id: file.file_id };
       
+      console.log(`开始解析文件: ${file.filename}, 类型: ${file.type}`);
+      
       // 根据文件类型选择不同的解析API
       let parseResponse;
       if (file.type === 'binary') {
         // 对于二进制文件，使用专门的API
+        console.log(`使用二进制文件解析API: /parse/parse_binary, file_id: ${file.file_id}`);
         parseResponse = await axios.post<ParseResponse>(
           `http://127.0.0.1:8000/parse/parse_binary`, 
           fileRequest
         );
         
+        console.log(`二进制文件解析API响应:`, parseResponse.data);
+        
         // 对于二进制文件处理，设置任务类型为OCR
         if (parseResponse.data.status === "success" && parseResponse.data.data.record_id) {
-          await axios.patch(`http://127.0.0.1:8000/parse/records/${parseResponse.data.data.record_id}`, {
-            task_type: "ocr"
-          }).catch(err => console.warn("Failed to update task type:", err));
+          const recordId = parseResponse.data.data.record_id;
+          console.log(`设置任务类型为OCR, record_id: ${recordId}`);
+          
+          try {
+            await axios.patch(`http://127.0.0.1:8000/parse/records/${recordId}`, {
+              task_type: "ocr"
+            });
+            console.log(`成功更新任务类型为OCR`);
+          } catch (err) {
+            console.warn("Failed to update task type:", err);
+          }
         }
       } else {
         // 对于文本文件，使用原有API
+        console.log(`使用文本文件解析API: /parse/parse/file, file_id: ${file.file_id}`);
         parseResponse = await axios.post<ParseResponse>(
           `http://127.0.0.1:8000/parse/parse/file`, 
           fileRequest
@@ -363,6 +379,7 @@
 
       if (parseResponse.data.status === "success") {
         const recordId = parseResponse.data.data.record_id;
+        console.log(`解析任务创建成功, record_id: ${recordId}`);
         
         uploadedFiles = uploadedFiles.map(f =>
           f.file_id === file.file_id ? { ...f, recordId: recordId, parseStatus: "processing" } : f
@@ -371,6 +388,7 @@
         // 如果直接成功，不需要轮询进度
         if (parseResponse.data.data.content) {
           // 直接更新状态为已完成
+          console.log(`解析直接完成，更新状态`);
           uploadedFiles = uploadedFiles.map(f =>
             f.file_id === file.file_id ? { 
               ...f, 
@@ -382,19 +400,20 @@
           );
         } else {
           // 否则开始轮询进度
+          console.log(`开始轮询解析进度, record_id: ${recordId}`);
           startPollingParsingProgress(file.file_id, recordId);
         }
       } else {
+        console.error(`解析失败:`, parseResponse);
         uploadedFiles = uploadedFiles.map(f =>
           f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
         );
-        console.error("Parsing failed:", parseResponse);
       }
     } catch (error) {
+      console.error("Error starting parsing:", error);
       uploadedFiles = uploadedFiles.map(f =>
         f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
       );
-      console.error("Error starting parsing:", error);
     }
   }
 
@@ -464,11 +483,14 @@
 
   async function fetchTaskProgress(recordId: string): Promise<TaskProgressResponse> {
     try {
+      console.log(`获取任务进度, record_id: ${recordId}`);
       // 先尝试通过标准API获取任务进度
       const response = await axios.get<TaskProgressResponse>(
         `http://127.0.0.1:8000/parse/task/progress`, 
         { params: { record_id: recordId } }
       );
+      
+      console.log(`标准进度API响应:`, response.data);
       
       // 转换响应格式以符合TaskProgressResponse类型
       let taskResponse: TaskProgressResponse = {
@@ -481,14 +503,19 @@
         }
       };
       
-      // 如果是OCR任务(二进制文件处理)，尝试获取更详细的OCR进度
+      // 对于PDF或OCR任务，尝试获取更详细的OCR进度信息
+      // 注意：即使是pdf_text任务类型(直接提取文本)也需要获取进度信息
       if (response.data.data.task_type === "ocr" || 
+          response.data.data.task_type === "pdf_text" || 
           (response.data.data.status === "processing" && response.data.data.progress < 100)) {
         try {
+          console.log(`检测到PDF处理任务，获取详细进度`);
           // 尝试调用OCR专用的进度API
           const ocrResponse = await axios.get(
             `http://127.0.0.1:8000/parse/ocr/progress/${recordId}`
           );
+          
+          console.log(`OCR详细进度API响应:`, ocrResponse.data);
           
           if (ocrResponse.data.status === "success") {
             // 使用OCR专用API返回的更详细进度信息
@@ -501,15 +528,16 @@
               data: {
                 progress: ocrProgress.progress,
                 status: ocrProgress.status,
-                task_type: "ocr",
+                task_type: response.data.data.task_type,
                 ocr_info: {
                   total_pages: ocrProgress.total_pages,
                   processed_pages: ocrProgress.processed_pages,
-                  elapsed_seconds: ocrProgress.elapsed_seconds,
-                  estimated_remaining_seconds: ocrProgress.estimated_remaining_seconds
+                  elapsed_seconds: ocrProgress.elapsed_seconds || 0,
+                  estimated_remaining_seconds: ocrProgress.estimated_remaining_seconds || 0
                 }
               }
             };
+            console.log(`合并OCR详细信息到响应`, taskResponse);
           }
         } catch (error) {
           // 如果OCR专用API调用失败，继续使用标准API的结果
@@ -529,57 +557,22 @@
       clearInterval(parsingProgressIntervals[fileId]);
     }
 
+    console.log(`开始轮询任务进度, file_id: ${fileId}, record_id: ${recordId}`);
+    
+    // 立即获取一次进度，而不是等待第一个间隔
+    setTimeout(async () => {
+      try {
+        const progressResponse = await fetchTaskProgress(recordId);
+        updateFileProgress(fileId, recordId, progressResponse);
+      } catch (error) {
+        console.error("Error on initial progress check:", error);
+      }
+    }, 100);
+    
     parsingProgressIntervals[fileId] = setInterval(async () => {
       try {
         const progressResponse = await fetchTaskProgress(recordId);
-        if (progressResponse.status === "success") {
-          const progress = progressResponse.data.progress;
-          const status = progressResponse.data.status;
-          
-          // 更新文件处理状态
-          uploadedFiles = uploadedFiles.map(f => {
-            if (f.file_id === fileId) {
-              // 基本状态更新
-              const updatedFile = { 
-                ...f, 
-                parseProgress: progress, 
-                parseStatus: status 
-              };
-              
-              // 如果有OCR详细信息，添加到文件对象
-              if (progressResponse.data.ocr_info) {
-                updatedFile.ocr_info = progressResponse.data.ocr_info;
-              }
-              
-              return updatedFile;
-            }
-            return f;
-          });
-          
-          // 检查处理是否完成或失败
-          if (status === "completed" || status === "failed") {
-            clearInterval(parsingProgressIntervals[fileId]);
-            delete parsingProgressIntervals[fileId];
-            
-            // 如果完成，更新文件状态为"已解析"
-            if (status === "completed") {
-              uploadedFiles = uploadedFiles.map(f =>
-                f.file_id === fileId ? { 
-                  ...f, 
-                  status: "parsed",
-                  recordId: recordId  // 确保记录ID被保存
-                } : f
-              );
-            }
-          }
-        } else {
-          console.error("Error fetching task progress:", progressResponse);
-          clearInterval(parsingProgressIntervals[fileId]);
-          delete parsingProgressIntervals[fileId];
-          uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
-          );
-        }
+        updateFileProgress(fileId, recordId, progressResponse);
       } catch (error) {
         console.error("Error fetching task progress:", error);
         clearInterval(parsingProgressIntervals[fileId]);
@@ -589,6 +582,64 @@
         );
       }
     }, 2000); // 每2秒轮询一次
+  }
+  
+  function updateFileProgress(fileId: string, recordId: string, progressResponse: TaskProgressResponse) {
+    if (progressResponse.status === "success") {
+      const progress = progressResponse.data.progress;
+      const status = progressResponse.data.status;
+      const taskType = progressResponse.data.task_type || "parse";
+      
+      console.log(`进度更新: ${progress}%, 状态: ${status}, 任务类型: ${taskType}`);
+      
+      // 更新文件处理状态
+      uploadedFiles = uploadedFiles.map(f => {
+        if (f.file_id === fileId) {
+          // 基本状态更新
+          const updatedFile = { 
+            ...f, 
+            parseProgress: progress, 
+            parseStatus: status,
+            taskType: taskType // 保存任务类型
+          };
+          
+          // 如果有OCR详细信息，添加到文件对象
+          if (progressResponse.data.ocr_info) {
+            console.log(`添加OCR详细信息到文件对象:`, progressResponse.data.ocr_info);
+            updatedFile.ocr_info = progressResponse.data.ocr_info;
+          }
+          
+          return updatedFile;
+        }
+        return f;
+      });
+      
+      // 检查处理是否完成或失败
+      if (status === "completed" || status === "failed") {
+        console.log(`任务状态: ${status}，停止轮询`);
+        clearInterval(parsingProgressIntervals[fileId]);
+        delete parsingProgressIntervals[fileId];
+        
+        // 如果完成，更新文件状态为"已解析"
+        if (status === "completed") {
+          console.log(`任务完成，更新文件状态为"已解析"`);
+          uploadedFiles = uploadedFiles.map(f =>
+            f.file_id === fileId ? { 
+              ...f, 
+              status: "parsed",
+              recordId: recordId  // 确保记录ID被保存
+            } : f
+          );
+        }
+      }
+    } else {
+      console.error("Error fetching task progress:", progressResponse);
+      clearInterval(parsingProgressIntervals[fileId]);
+      delete parsingProgressIntervals[fileId];
+      uploadedFiles = uploadedFiles.map(f =>
+        f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+      );
+    }
   }
 
   // --- API Functions ---
@@ -905,7 +956,7 @@
                       </div>
                       
                       <!-- 显示OCR详细信息 -->
-                      {#if file.ocr_info && file.parseStatus === 'processing'}
+                      {#if file.ocr_info}
                         <div class="flex items-center text-sm text-gray-600">
                           <span class="mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -932,6 +983,16 @@
                               预计剩余: {Math.floor(file.ocr_info.estimated_remaining_seconds / 60)}分{file.ocr_info.estimated_remaining_seconds % 60}秒
                             </span>
                           {/if}
+                        </div>
+                      {:else if file.parseStatus === 'processing' && file.type === 'binary' && file.file_type === 'pdf'}
+                        <div class="flex items-center text-sm text-gray-600">
+                          <span class="mr-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+                              <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                            </svg>
+                            Processing: extracting text ....
+                          </span>
                         </div>
                       {/if}
                     </div>
@@ -996,6 +1057,8 @@
     {previewModalTitle}
     {#if previewContentType === 'ocr'}
       <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">OCR解析结果</span>
+    {:else if previewContentType === 'pdf_text'}
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">PDF直接提取结果</span>
     {:else if previewContentType === 'parsed'}
       <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">解析结果</span>
     {/if}
@@ -1011,7 +1074,23 @@
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         <span class="ml-3 text-gray-700">Loading...</span>
       </div>
-    {:else if previewContentType === 'raw' || previewContentType === 'parsed' || previewContentType === 'ocr'}
+    {:else if previewContentType === 'raw' || previewContentType === 'parsed' || previewContentType === 'ocr' || previewContentType === 'pdf_text'}
+      {#if previewContentType === 'pdf_text'}
+        <div class="bg-blue-50 rounded-lg p-2 mb-3 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
+            <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          <span class="text-blue-700 font-medium">直接从PDF提取的文本内容</span>
+        </div>
+      {:else if previewContentType === 'ocr'}
+        <div class="bg-purple-50 rounded-lg p-2 mb-3 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
+          </svg>
+          <span class="text-purple-700 font-medium">OCR识别结果</span>
+        </div>
+      {/if}
       <div class="bg-gray-50 rounded-lg p-4 h-[70vh] overflow-auto">
         <pre class="whitespace-pre-wrap text-sm font-mono">{rawContent}</pre>
       </div>

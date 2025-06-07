@@ -784,7 +784,8 @@ async def preview_parsed_content(
                     "file_type": parse_record.get("file_type", ""),
                     "task_type": task_type,
                     "created_at": parse_record.get("created_at", datetime.utcnow()).isoformat(),
-                    "is_ocr_result": task_type == "ocr"
+                    "is_ocr_result": task_type == "ocr",
+                    "is_pdf_text": task_type == "pdf_text"
                 }
             )
         else:
