@@ -22,7 +22,29 @@
   import { goto } from "$app/navigation";
   const t: any = getContext("t");
   import ActionPageTitle from "../components/ActionPageTitle.svelte";
-  import type { UploadedFile, UploadedBinaryFile, UnifiedFile, UnifiedFileListResponse } from "../../class/FileTypes";
+  import type { UploadedFile, UploadedBinaryFile, UnifiedFileListResponse } from "../../class/FileTypes";
+
+// 扩展UnifiedFile类型以添加新的属性
+interface UnifiedFile {
+  file_id?: string;
+  filename: string;
+  file_type?: string;
+  content?: string;
+  size: number;
+  status: string | { [key: number]: number };
+  created_at: Date | string;
+  type: string;
+  mime_type?: string;
+  parseStatus?: string;
+  parseProgress?: number;
+  recordId?: string;
+  taskType?: string;
+  ocr_info?: any;
+  qa_status_message?: string;
+  // 新增进度显示相关属性
+  inProgress?: boolean;
+  hasError?: boolean;
+};
   import type { APIResponse, UploadResponse, ParseResponse, TaskProgressResponse, FileIDRequest, FilenameRequest } from "../../class/APIResponse";
 
   // 添加额外的翻译文本
@@ -331,51 +353,33 @@
       return;
     }
 
-    // 将文件状态更新为pending
+    // 将文件状态更新为pending，并设置初始进度
     uploadedFiles = uploadedFiles.map(f =>
-      f.file_id === file.file_id ? { ...f, parseStatus: "pending", parseProgress: 0, recordId: null } : f
+      f.file_id === file.file_id ? { 
+        ...f, 
+        parseStatus: "pending", 
+        parseProgress: 0, 
+        recordId: null,
+        // 确保这些属性被正确初始化
+        status: f.status || "pending"
+      } : f
     );
+    
+    console.log("设置文件初始状态:", uploadedFiles.find(f => f.file_id === file.file_id));
 
     try {
-      // 处理文件，包括文本文件和二进制文件
+      // 所有文件类型统一使用/parse/file接口
       const fileRequest: FileIDRequest = { file_id: file.file_id };
       
-      console.log(`开始解析文件: ${file.filename}, 类型: ${file.type}`);
+      console.log(`开始解析文件: ${file.filename}, 类型: ${file.type}, ID: ${file.file_id}`);
       
-      // 根据文件类型选择不同的解析API
-      let parseResponse;
-      if (file.type === 'binary') {
-        // 对于二进制文件，使用专门的API
-        console.log(`使用二进制文件解析API: /parse/parse_binary, file_id: ${file.file_id}`);
-        parseResponse = await axios.post<ParseResponse>(
-          `http://127.0.0.1:8000/parse/parse_binary`, 
-          fileRequest
-        );
-        
-        console.log(`二进制文件解析API响应:`, parseResponse.data);
-        
-        // 对于二进制文件处理，设置任务类型为OCR
-        if (parseResponse.data.status === "success" && parseResponse.data.data.record_id) {
-          const recordId = parseResponse.data.data.record_id;
-          console.log(`设置任务类型为OCR, record_id: ${recordId}`);
-          
-          try {
-            await axios.patch(`http://127.0.0.1:8000/parse/records/${recordId}`, {
-              task_type: "ocr"
-            });
-            console.log(`成功更新任务类型为OCR`);
-          } catch (err) {
-            console.warn("Failed to update task type:", err);
-          }
-        }
-      } else {
-        // 对于文本文件，使用原有API
-        console.log(`使用文本文件解析API: /parse/parse/file, file_id: ${file.file_id}`);
-        parseResponse = await axios.post<ParseResponse>(
-          `http://127.0.0.1:8000/parse/parse/file`, 
-          fileRequest
-        );
-      }
+      // 统一使用parse/file接口进行解析
+      const parseResponse = await axios.post<ParseResponse>(
+        `http://127.0.0.1:8000/parse/parse/file`, 
+        fileRequest
+      );
+      
+      console.log(`解析API响应:`, parseResponse.data);
 
       if (parseResponse.data.status === "success") {
         const recordId = parseResponse.data.data.record_id;
@@ -385,8 +389,16 @@
           f.file_id === file.file_id ? { ...f, recordId: recordId, parseStatus: "processing" } : f
         );
         
-        // 如果直接成功，不需要轮询进度
-        if (parseResponse.data.data.content) {
+        // 判断文件类型 - 对于PDF和图片类型始终进行轮询
+        // 检查file.type === 'binary'或特定的文件扩展名
+        const isPdfOrImage = file.type === 'binary' || 
+                           file.file_type === 'pdf' || 
+                           ['jpg', 'jpeg', 'png'].includes(file.file_type);
+        console.log(`文件类型检测: ${file.filename}, type=${file.type}, file_type=${file.file_type}, isPdfOrImage=${isPdfOrImage}`);
+        
+        // 对于PDF和图片文件，即使有content也进行轮询
+        // 对于文本文件，有content则直接完成
+        if (parseResponse.data.data.content && !isPdfOrImage) {
           // 直接更新状态为已完成
           console.log(`解析直接完成，更新状态`);
           uploadedFiles = uploadedFiles.map(f =>
@@ -441,6 +453,22 @@
 
   async function fetchUploadedFiles(): Promise<void> {
     try {
+      // 保存当前处理中的文件状态，用于刷新后恢复
+      const processingFiles = new Map();
+      uploadedFiles.forEach(file => {
+        if ((file.parseStatus === 'processing' || file.inProgress) && file.file_id) {
+          processingFiles.set(file.file_id, {
+            parseStatus: file.parseStatus,
+            parseProgress: file.parseProgress,
+            inProgress: file.inProgress,
+            hasError: file.hasError,
+            recordId: file.recordId
+          });
+        }
+      });
+      
+      console.log('保存当前处理中的文件状态:', [...processingFiles.entries()]);
+      
       const response = await axios.get<UnifiedFileListResponse>(
         `http://127.0.0.1:8000/parse/files/all`
       );
@@ -458,19 +486,68 @@
               status = "parsed";
             }
             
-            // 返回带状态的文件对象
-            return {
+            // 创建基本文件对象
+            const updatedFile = {
               ...file,
               status: status,
               parseStatus: file.parseStatus || "",
               parseProgress: file.parseProgress || 0,
               recordId: file.recordId || null
             };
+            
+            // 检查是否有活跃的任务
+            if (file.file_id && processingFiles.has(file.file_id)) {
+              // 从保存的状态中恢复处理状态
+              const savedState = processingFiles.get(file.file_id);
+              console.log(`恢复文件 ${file.filename} 的处理状态:`, savedState);
+              
+              // 合并保存的状态
+              Object.assign(updatedFile, {
+                parseStatus: savedState.parseStatus,
+                parseProgress: savedState.parseProgress,
+                inProgress: savedState.inProgress,
+                hasError: savedState.hasError,
+                recordId: savedState.recordId
+              });
+            } else if (file.recordId) {
+              // 如果有recordId但没有保存的状态，查询后端获取当前任务状态
+              try {
+                const progressResponse = await fetchTaskProgress(file.recordId);
+                if (progressResponse.status === "success") {
+                  // 如果任务仍在处理中，恢复显示进度条
+                  if (progressResponse.data.status === "processing") {
+                    console.log(`文件 ${file.filename} 的任务仍在处理中，恢复进度条:`, progressResponse.data);
+                    Object.assign(updatedFile, {
+                      parseStatus: "processing",
+                      parseProgress: progressResponse.data.progress || 0,
+                      inProgress: true,
+                      taskType: progressResponse.data.task_type
+                    });
+                  }
+                }
+              } catch (err) {
+                console.warn(`获取文件 ${file.filename} 的任务状态失败:`, err);
+              }
+            }
+            
+            return updatedFile;
           })
         );
         
         // 更新上传文件列表
         uploadedFiles = filesWithStatus as UnifiedFile[];
+        
+        // 检查是否有进行中的任务，如果有，确保启动轮询
+        for (const file of uploadedFiles) {
+          if ((file.parseStatus === 'processing' || file.inProgress) && file.recordId && file.file_id) {
+            // 检查是否已经有轮询
+            if (!parsingProgressIntervals[file.file_id]) {
+              console.log(`恢复文件 ${file.filename} 的进度轮询, record_id: ${file.recordId}`);
+              startPollingParsingProgress(file.file_id, file.recordId);
+            }
+          }
+        }
+        
       } else {
         console.error("Error fetching uploaded files:", response);
         errorMessage = t("Failed to fetch uploaded files");
@@ -559,6 +636,38 @@
 
     console.log(`开始轮询任务进度, file_id: ${fileId}, record_id: ${recordId}`);
     
+    // 立即设置文件为处理状态，并且强制显示进度条
+    uploadedFiles = uploadedFiles.map(f =>
+      f.file_id === fileId ? { 
+        ...f, 
+        parseStatus: "processing", // 确保状态为processing
+        parseProgress: f.parseProgress || 1, // 保留现有进度或设置为1%
+        inProgress: true,          // 添加一个标志，表示正在处理中
+        recordId: recordId         // 确保recordId被设置
+      } : f
+    );
+    
+    // 保存任务状态到本地存储，以便在页面刷新后恢复
+    try {
+      // 获取现有的任务
+      const savedTasks = localStorage.getItem('parsingTasks') || '{}';
+      const tasks = JSON.parse(savedTasks);
+      
+      // 添加或更新当前任务
+      tasks[fileId] = {
+        fileId,
+        recordId,
+        timestamp: Date.now(),
+        filename: uploadedFiles.find(f => f.file_id === fileId)?.filename || ''
+      };
+      
+      // 保存回本地存储
+      localStorage.setItem('parsingTasks', JSON.stringify(tasks));
+      console.log(`任务状态已保存到本地存储:`, tasks);
+    } catch (e) {
+      console.warn('保存任务状态到本地存储失败:', e);
+    }
+    
     // 立即获取一次进度，而不是等待第一个间隔
     setTimeout(async () => {
       try {
@@ -571,17 +680,38 @@
     
     parsingProgressIntervals[fileId] = setInterval(async () => {
       try {
+        console.log(`轮询任务进度 (${new Date().toLocaleTimeString()}), file_id: ${fileId}, record_id: ${recordId}`);
         const progressResponse = await fetchTaskProgress(recordId);
+        console.log(`获取到的进度响应:`, progressResponse);
         updateFileProgress(fileId, recordId, progressResponse);
+        
+        // 轮询后检查文件状态
+        const updatedFile = uploadedFiles.find(f => f.file_id === fileId);
+        console.log(`轮询后文件状态:`, {
+          parseStatus: updatedFile?.parseStatus,
+          parseProgress: updatedFile?.parseProgress,
+          status: updatedFile?.status
+        });
       } catch (error) {
         console.error("Error fetching task progress:", error);
-        clearInterval(parsingProgressIntervals[fileId]);
-        delete parsingProgressIntervals[fileId];
-        uploadedFiles = uploadedFiles.map(f =>
-          f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
-        );
+        // 即使遇到错误也不立即停止轮询，改为每5次错误才停止
+        progressErrorCounter[fileId] = (progressErrorCounter[fileId] || 0) + 1;
+        
+        console.log(`轮询错误计数: ${progressErrorCounter[fileId]}/5`);
+        
+        // 如果连续错误超过5次，才停止轮询
+        if (progressErrorCounter[fileId] >= 5) {
+          console.log(`连续错误超过5次，停止轮询`);
+          clearInterval(parsingProgressIntervals[fileId]);
+          delete parsingProgressIntervals[fileId];
+          uploadedFiles = uploadedFiles.map(f =>
+            f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+          );
+          // 重置错误计数
+          progressErrorCounter[fileId] = 0;
+        }
       }
-    }, 2000); // 每2秒轮询一次
+    }, 1000); // 每1秒轮询一次，更频繁刷新
   }
   
   function updateFileProgress(fileId: string, recordId: string, progressResponse: TaskProgressResponse) {
@@ -592,14 +722,27 @@
       
       console.log(`进度更新: ${progress}%, 状态: ${status}, 任务类型: ${taskType}`);
       
+      // 查找当前文件
+      const currentFile = uploadedFiles.find(f => f.file_id === fileId);
+      if (!currentFile) {
+        console.error(`找不到文件 ID: ${fileId}`);
+        return;
+      }
+      
+      console.log(`更新前文件状态:`, {
+        parseStatus: currentFile.parseStatus,
+        parseProgress: currentFile.parseProgress,
+        status: currentFile.status
+      });
+      
       // 更新文件处理状态
       uploadedFiles = uploadedFiles.map(f => {
         if (f.file_id === fileId) {
-          // 基本状态更新
+          // 基本状态更新 - 确保保留原有数据
           const updatedFile = { 
             ...f, 
-            parseProgress: progress, 
-            parseStatus: status,
+            parseProgress: progress || 0, // 确保有值
+            parseStatus: status || 'processing', // 确保有值
             taskType: taskType // 保存任务类型
           };
           
@@ -609,6 +752,12 @@
             updatedFile.ocr_info = progressResponse.data.ocr_info;
           }
           
+          console.log(`更新后文件状态:`, {
+            parseStatus: updatedFile.parseStatus,
+            parseProgress: updatedFile.parseProgress,
+            status: updatedFile.status
+          });
+          
           return updatedFile;
         }
         return f;
@@ -616,20 +765,99 @@
       
       // 检查处理是否完成或失败
       if (status === "completed" || status === "failed") {
-        console.log(`任务状态: ${status}，停止轮询`);
-        clearInterval(parsingProgressIntervals[fileId]);
-        delete parsingProgressIntervals[fileId];
+        console.log(`任务状态: ${status}，但保持进度条显示`);
         
-        // 如果完成，更新文件状态为"已解析"
+        // 如果完成，更新文件状态为"已解析"，但保持进度条显示
         if (status === "completed") {
-          console.log(`任务完成，更新文件状态为"已解析"`);
+          console.log(`任务完成，更新文件状态为"已解析"但保持进度条显示`);
+          
+          // 先保留处理状态，只更新进度为100%
           uploadedFiles = uploadedFiles.map(f =>
             f.file_id === fileId ? { 
               ...f, 
-              status: "parsed",
-              recordId: recordId  // 确保记录ID被保存
+              status: "parsed",                // 文件状态为已解析
+              parseProgress: 100,              // 确保进度为100%
+              recordId: recordId,              // 确保记录ID被保存
+              inProgress: true,                // 保持显示进度条
+              parseStatus: "processing"        // 保持处理状态以显示进度条
             } : f
           );
+          
+          // 显示完成状态10秒后再更新为完成状态并清除定时器
+          setTimeout(() => {
+            console.log(`将任务 ${fileId} 标记为已完成`);
+            uploadedFiles = uploadedFiles.map(f =>
+              f.file_id === fileId ? { 
+                ...f, 
+                parseStatus: "completed",  // 更新为完成状态
+                inProgress: false          // 不再显示进度条
+              } : f
+            );
+            
+                          // 再等5秒后清除定时器并从本地存储中移除任务
+              setTimeout(() => {
+                console.log(`清除任务 ${fileId} 的进度轮询`);
+                clearInterval(parsingProgressIntervals[fileId]);
+                delete parsingProgressIntervals[fileId];
+                
+                // 从本地存储中移除任务
+                try {
+                  const savedTasks = localStorage.getItem('parsingTasks') || '{}';
+                  const tasks = JSON.parse(savedTasks);
+                  if (tasks[fileId]) {
+                    delete tasks[fileId];
+                    localStorage.setItem('parsingTasks', JSON.stringify(tasks));
+                    console.log(`已从本地存储中移除任务 ${fileId}`);
+                  }
+                } catch (e) {
+                  console.warn('从本地存储移除任务失败:', e);
+                }
+              }, 5000);
+          }, 10000);
+          
+        } else if (status === "failed") {
+          // 如果失败，先保持进度条显示，但标记为失败
+          console.log(`任务失败，更新文件状态为"失败"但保持进度条显示`);
+          uploadedFiles = uploadedFiles.map(f =>
+            f.file_id === fileId ? { 
+              ...f,
+              parseStatus: "processing",   // 保持处理状态以显示进度条
+              parseProgress: progress || 0,  // 保持当前进度
+              inProgress: true,            // 保持显示进度条
+              hasError: true               // 标记有错误
+            } : f
+          );
+          
+          // 显示失败状态10秒后再更新为失败状态并清除定时器
+          setTimeout(() => {
+            uploadedFiles = uploadedFiles.map(f =>
+              f.file_id === fileId ? { 
+                ...f,
+                parseStatus: "failed",    // 更新为失败状态
+                parseProgress: 0,
+                inProgress: false         // 不再显示进度条
+              } : f
+            );
+            
+                          // 再等5秒后清除定时器并从本地存储中移除任务
+              setTimeout(() => {
+                clearInterval(parsingProgressIntervals[fileId]);
+                delete parsingProgressIntervals[fileId];
+                
+                // 从本地存储中移除任务
+                try {
+                  const savedTasks = localStorage.getItem('parsingTasks') || '{}';
+                  const tasks = JSON.parse(savedTasks);
+                  if (tasks[fileId]) {
+                    delete tasks[fileId];
+                    localStorage.setItem('parsingTasks', JSON.stringify(tasks));
+                    console.log(`已从本地存储中移除任务 ${fileId}`);
+                  }
+                } catch (e) {
+                  console.warn('从本地存储移除任务失败:', e);
+                }
+              }, 5000);
+          }, 10000);
         }
       }
     } else {
@@ -692,16 +920,7 @@
       // 刷新文件列表
       await fetchUploadedFiles();
 
-      // 查找刚上传的文件
-      const latestFile = uploadedFiles.find(f => f.filename === file.name);
-      
-      // 如果找到文件，开始解析
-      if (latestFile && latestFile.file_id) {
-        console.log("Starting parsing for file:", latestFile.filename);
-        await parseFileForEntry(latestFile);
-      } else {
-        console.error("Uploaded file not found in file list:", file.name);
-      }
+
 
     } catch (error) {
       errorMessage = t("Failed to upload file");
@@ -717,9 +936,94 @@
   }
 
   let fetchEntriesUpdater: any;
+  // 创建错误计数器对象，用于跟踪每个文件的请求错误次数
+  let progressErrorCounter: {[fileId: string]: number} = {};
+  
+  // 从本地存储中恢复进行中的任务
+  async function restoreTasksFromLocalStorage() {
+    try {
+      const savedTasks = localStorage.getItem('parsingTasks');
+      if (!savedTasks) return;
+      
+      const tasks = JSON.parse(savedTasks);
+      console.log('从本地存储恢复任务:', tasks);
+      
+      // 获取当前时间
+      const now = Date.now();
+      const updatedTasks = {};
+      let tasksChanged = false;
+      
+      // 遍历所有保存的任务
+      for (const fileId in tasks) {
+        const task = tasks[fileId];
+        
+        // 检查任务是否过期（超过30分钟）
+        if (now - task.timestamp > 30 * 60 * 1000) {
+          console.log(`任务 ${fileId} 已过期，将被移除`);
+          tasksChanged = true;
+          continue;
+        }
+        
+        // 保留未过期的任务
+        updatedTasks[fileId] = task;
+        
+        // 尝试获取任务状态
+        try {
+          const progressResponse = await fetchTaskProgress(task.recordId);
+          
+          if (progressResponse.status === "success") {
+            // 检查任务是否仍在处理中
+            if (progressResponse.data.status === "processing") {
+              console.log(`恢复任务 ${fileId} 的进度轮询:`, progressResponse.data);
+              
+              // 找到对应的文件
+              const file = uploadedFiles.find(f => f.file_id === fileId);
+              if (file) {
+                // 更新文件状态
+                uploadedFiles = uploadedFiles.map(f =>
+                  f.file_id === fileId ? { 
+                    ...f, 
+                    parseStatus: "processing",
+                    parseProgress: progressResponse.data.progress || 0,
+                    inProgress: true,
+                    recordId: task.recordId
+                  } : f
+                );
+                
+                // 启动轮询
+                if (!parsingProgressIntervals[fileId]) {
+                  startPollingParsingProgress(fileId, task.recordId);
+                }
+              }
+            } else if (progressResponse.data.status === "completed" || progressResponse.data.status === "failed") {
+              // 任务已完成或失败，从保存的任务中移除
+              console.log(`任务 ${fileId} 已${progressResponse.data.status === "completed" ? "完成" : "失败"}，将被移除`);
+              delete updatedTasks[fileId];
+              tasksChanged = true;
+            }
+          }
+        } catch (error) {
+          console.warn(`检查任务 ${fileId} 状态时出错:`, error);
+        }
+      }
+      
+      // 如果任务列表有变化，更新本地存储
+      if (tasksChanged) {
+        localStorage.setItem('parsingTasks', JSON.stringify(updatedTasks));
+      }
+    } catch (error) {
+      console.error('恢复任务状态失败:', error);
+    }
+  }
+
   onMount(async () => {
     fetchEntriesUpdater = setInterval(fetchUploadedFiles, UPDATE_VIEW_INTERVAL);
+    
+    // 先获取文件列表
     await fetchUploadedFiles();
+    
+    // 然后尝试恢复任务状态
+    await restoreTasksFromLocalStorage();
   });
 
   onDestroy(() => {
@@ -933,11 +1237,22 @@
                     <div class="flex flex-col space-y-2 p-2">
                       <div class="flex items-center">
                         <span class="text-sm text-gray-600 mr-2">{t("data.uploader.parse_status")}: </span>
-                        {#if file.parseStatus === 'processing'}
+                        {#if file.parseStatus === 'processing' || file.parseStatus === 'pending' || file.inProgress}
                           <div class="flex-1 max-w-md">
-                            <Progressbar progress={file.parseProgress} size="sm" color="blue" />
+                            <Progressbar 
+                              progress={file.parseProgress || 0} 
+                              size="sm" 
+                              color={file.hasError ? "red" : (file.parseProgress >= 100 ? "green" : "blue")}
+                            />
                           </div>
-                          <span class="ml-2 text-sm text-blue-600">{file.parseProgress}%</span>
+                          <span class="ml-2 text-sm" class:text-blue-600={!file.hasError && file.parseProgress < 100} class:text-green-600={!file.hasError && file.parseProgress >= 100} class:text-red-600={file.hasError}>
+                            {file.parseProgress || 0}%
+                            {#if file.parseProgress >= 100 && !file.hasError}
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline ml-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                              </svg>
+                            {/if}
+                          </span>
                         {:else if file.parseStatus === 'completed'}
                           <span class="text-sm font-medium text-green-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -955,19 +1270,72 @@
                         {/if}
                       </div>
                       
+                      {#if file.parseStatus === 'processing' || file.parseStatus === 'pending' || file.inProgress}
+                        <div class="flex flex-wrap justify-between text-xs text-gray-600 gap-2 mt-2">
+                          <div class="font-semibold">
+                            <span class="px-2 py-1 rounded inline-block" 
+                              class:bg-blue-50={!file.hasError && file.parseProgress < 100}
+                              class:text-blue-700={!file.hasError && file.parseProgress < 100}
+                              class:bg-green-50={!file.hasError && file.parseProgress >= 100}
+                              class:text-green-700={!file.hasError && file.parseProgress >= 100}
+                              class:bg-red-50={file.hasError}
+                              class:text-red-700={file.hasError}
+                            >
+                              {#if file.hasError}
+                                任务遇到错误
+                              {:else if file.parseProgress >= 100}
+                                {file.type === 'binary' ? 'OCR处理完成' : '解析完成'}: 
+                              {:else}
+                                {file.type === 'binary' ? '正在处理' : '正在解析'}: 
+                              {/if}
+                              {file.filename}
+                            </span>
+                          </div>
+                          
+                          <div class="mt-1 text-xs text-gray-500" class:animate-pulse={file.parseProgress < 100}>
+                            {#if file.parseProgress < 100}
+                              {t("Refreshing progress every second...")}
+                            {:else}
+                              处理完成，将在数秒后隐藏进度条
+                            {/if}
+                          </div>
+                        </div>
+                        
+                        <!-- 添加中止任务按钮 -->
+                        {#if file.file_id}
+                          <div class="mt-2">
+                            <button 
+                              class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded flex items-center"
+                              on:click={() => {
+                                console.log(`用户点击中止任务: ${file.file_id}`);
+                                // 未实现: 中止任务功能可以后续添加
+                              }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              中止任务
+                            </button>
+                          </div>
+                        {/if}
+                      {/if}
+                      
                       <!-- 显示OCR详细信息 -->
                       {#if file.ocr_info}
-                        <div class="flex items-center text-sm text-gray-600">
-                          <span class="mr-4">
+                        <div class="flex flex-wrap items-center text-sm text-gray-600 mt-2 bg-gray-100 p-2 rounded">
+                          <span class="mr-4 mb-1 font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
                               <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                             </svg>
-                            页面进度: {file.ocr_info.processed_pages}/{file.ocr_info.total_pages}
+                            <span class="text-blue-700">OCR处理进度:</span> {file.ocr_info.processed_pages}/{file.ocr_info.total_pages} 页
+                            {#if file.ocr_info.total_pages > 0}
+                              ({Math.round((file.ocr_info.processed_pages / file.ocr_info.total_pages) * 100)}%)
+                            {/if}
                           </span>
                           
                           {#if file.ocr_info.elapsed_seconds > 0}
-                            <span class="mr-4">
+                            <span class="mr-4 mb-1">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                               </svg>
@@ -976,7 +1344,7 @@
                           {/if}
                           
                           {#if file.ocr_info.estimated_remaining_seconds > 0}
-                            <span>
+                            <span class="mb-1">
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                               </svg>
@@ -984,14 +1352,16 @@
                             </span>
                           {/if}
                         </div>
-                      {:else if file.parseStatus === 'processing' && file.type === 'binary' && file.file_type === 'pdf'}
-                        <div class="flex items-center text-sm text-gray-600">
+                      {:else if (file.parseStatus === 'processing' || file.parseStatus === 'pending') && file.type === 'binary'}
+                        <div class="flex items-center text-sm text-gray-600 mt-2 bg-purple-50 p-2 rounded">
                           <span class="mr-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
                               <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                             </svg>
-                            Processing: extracting text ....
+                            <span class="font-medium text-purple-800">
+                              {file.file_type === 'pdf' ? 'PDF处理中' : '图片OCR处理中'}
+                            </span>: 正在提取文本内容，请耐心等待...
                           </span>
                         </div>
                       {/if}

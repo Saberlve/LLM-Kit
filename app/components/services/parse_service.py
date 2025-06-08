@@ -130,54 +130,7 @@ class ParseService:
 
             raise Exception(f"Parse failed: {str(e)}")
 
-    async def get_parse_records(self):
-
-        """Get the most recent parsing history record"""
-
-        try:
-
-            # Only get the latest record
-
-            record = await self.parse_records.find_one(
-
-                sort=[("created_at", -1)]
-
-            )
-
-            if not record:
-                return []
-
-            return [{
-
-                "record_id": str(record["_id"]),
-
-                "input_file": record["input_file"],
-
-                "parsed_file_path": record.get("parsed_file_path", ""),
-
-                "status": record["status"],
-
-                "file_type": record["file_type"],
-
-                "save_path": record["save_path"],
-
-                "content": record.get("content", ""),
-
-                "progress": record.get("progress", 0),  # Add progress information
-
-                "task_type": record.get("task_type", "parse"),  # Add task type
-
-                "created_at": record["created_at"]
-
-            }]
-
-        except Exception as e:
-
-            import traceback
-
-            await self._log_error(str(e), "get_parse_records", traceback.format_exc())
-
-            raise Exception(f"Failed to get records: {str(e)}")
+   
 
     async def parse_content(self, content: str, filename: str, save_path: str, SK: List[str], AK: List[str],
                             parallel_num: int = 4, record_id: str = None):

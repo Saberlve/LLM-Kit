@@ -113,17 +113,7 @@
           
           console.log("上传成功:", response.data);
           
-          // 如果是二进制文件，调用解析接口
-          if (['pdf', 'png', 'jpg', 'jpeg'].includes(fileType) && response.data.status === "success") {
-            const fileId = response.data.data.file_id;
-            console.log(`开始解析二进制文件: ${fileId}`);
-            
-            const parseResponse = await axios.post(`/api/parse/parse_binary`, {
-              file_id: fileId
-            });
-            
-            console.log("解析结果:", parseResponse.data);
-          }
+          // 移除自动解析二进制文件的逻辑
           
           loadingProgress += 1;
         } catch (err) {
