@@ -33,7 +33,6 @@ class ParseRecord(MongoBaseModel):
     parsed_file_path: Optional[str] = None
     status: str = "processing"  # processing, completed, failed
     file_type: str
-    save_path: str
     progress: int = 0  # Progress field
     task_type: str = "parse"  # parse or ocr, used to distinguish task types
 

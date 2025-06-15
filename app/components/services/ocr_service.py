@@ -109,9 +109,7 @@ class OCRService:
                 if record_id:
                     await self._update_progress(record_id, 10)
                 
-                # 检查提取的文本是否足够
-                # 通常PDF中的文本量应该至少有一定数量的字符，这里设置阈值
-                # 这个阈值可以根据实际情况调整
+
                 TEXT_THRESHOLD = 50  # 如果少于50个字符，认为可能是扫描件
                 
                 if len(direct_text.strip()) > TEXT_THRESHOLD:

@@ -4,7 +4,6 @@ import yaml
 @dataclass
 class HyperParams:
     file_path: str
-    save_path: str
     parallel_num: int=1  # Number of parallel processes per file, must equal the length of SK,AK
     SK: list[str]=None
     AK: list[str]=None

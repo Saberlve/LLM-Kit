@@ -1,26 +1,19 @@
 import logging
-import re
 import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
-from app.components.models.schemas import ParseRequest, APIResponse, OCRRequest, FileUploadRequest
-from app.components.services.parse_service import ParseService
-from text_parse.parse import single_ocr
+from app.components.models.schemas import APIResponse,  FileUploadRequest
+
 from app.components.models.mongodb import UploadedFile, UploadedBinaryFile, ParseRecord
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Depends, APIRouter, File, UploadFile,Form,Body,status,Request, Query
+from fastapi import HTTPException, Depends, APIRouter, File, UploadFile,Body,status,Request
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 import os
 from typing import List, Dict, Any
-import mimetypes
 from loguru import logger
-from dotenv import load_dotenv
 import urllib.parse
-import json
-import glob
-
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -117,102 +110,6 @@ async def upload_file(
         logger.error(f"File upload failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/parse")
-async def parse_file(
-        request: ParseRequest,
-        db: AsyncIOMotorClient = Depends(get_database)
-):
-    """Parse the most recently uploaded file and save the record"""
-    try:
-        # Get the most recently uploaded file
-        latest_file = await db.llm_kit.uploaded_files.find_one(
-            {"status": "pending"},
-            sort=[("created_at", -1)]
-        )
-
-        if not latest_file:
-            raise HTTPException(status_code=404, detail="No pending file found")
-
-        # Create initial record
-        parse_record = ParseRecord(
-            input_file=latest_file['filename'],
-            status="processing",
-            file_type=latest_file['file_type'],
-            save_path=request.save_path,
-            task_type="parse",
-            progress=0  # Initialize progress as 0
-        )
-        result = await db.llm_kit.parse_records.insert_one(
-            parse_record.dict(by_alias=True)
-        )
-        record_id = result.inserted_id
-
-        try:
-            # 1. Update file preparation progress
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"progress": 20}}
-            )
-
-            # 2. Build complete filename
-            filename = f"{latest_file['filename']}.{latest_file['file_type']}"
-
-            # 3. Prepare parse service
-            service = ParseService(db)
-
-            # 4. Execute parsing (progress will be updated during parsing)
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"progress": 50}}
-            )
-
-            result = await service.parse_content(
-                content=latest_file["content"],
-                filename=filename,
-                save_path=request.save_path,
-                SK=request.SK,
-                AK=request.AK,
-                parallel_num=request.parallel_num,
-                record_id=str(record_id)
-            )
-
-            # 5. Update file status and progress
-            await db.llm_kit.uploaded_files.update_one(
-                {"_id": latest_file["_id"]},
-                {"$set": {"status": "processed"}}
-            )
-
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {
-                    "status": "completed",
-                    "progress": 100,
-                    "content": result.get("content", ""),
-                    "parsed_file_path": result.get("parsed_file_path", "")
-                }}
-            )
-
-            return APIResponse(
-                status="success",
-                message="File parsed successfully",
-                data={
-                    "record_id": str(record_id),
-                    **result
-                }
-            )
-
-        except Exception as e:
-            # Update failure status
-            await db.llm_kit.parse_records.update_one(
-                {"_id": record_id},
-                {"$set": {"status": "failed"}}
-            )
-            raise e
-
-    except Exception as e:
-        logger.error(f"Failed to parse file: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @router.get("/files/all")
@@ -299,7 +196,6 @@ async def parse_specific_file(
             input_file=filename,
             status="processing",
             file_type=file_type,
-            save_path=f"./parsed_files/{file_id}",
             task_type="parse" if not is_binary else "ocr",
             progress=0
         )
@@ -493,11 +389,6 @@ class ParsedFileInfo(BaseModel):
     created_at: str
     file_path: str
 
-
-
-
-
-
 @router.post("/delete_files")
 async def delete_files(request: Request):
     PARSED_FILES_DIR = os.path.join("parsed_files", "parsed_file")
@@ -586,89 +477,7 @@ async def get_ocr_progress(
     except Exception as e:
         logger.error(f"Failed to get OCR progress: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-        
-@router.get("/preview_parsed/{record_id}")
-async def preview_parsed_content(
-    record_id: str,
-    db: AsyncIOMotorClient = Depends(get_database)
-):
-    """预览解析后的内容（包括OCR解析结果和文本解析结果）"""
-    try:
-        from bson import ObjectId
-        
-        # 查找解析记录
-        parse_record = await db.llm_kit.parse_records.find_one({"_id": ObjectId(record_id)})
-        
-        if not parse_record:
-            logger.error(f"解析记录 {record_id} 未找到")
-            raise HTTPException(status_code=404, detail=f"解析记录 {record_id} 未找到")
-        
-        # 检查记录是否已完成
-        if parse_record.get("status") != "completed":
-            logger.warning(f"解析记录 {record_id} 状态为 {parse_record.get('status', 'unknown')}，尚未完成")
-            return APIResponse(
-                status="pending",
-                message=f"解析尚未完成，当前状态: {parse_record.get('status', 'unknown')}",
-                data={
-                    "status": parse_record.get("status", "unknown"),
-                    "progress": parse_record.get("progress", 0),
-                    "filename": parse_record.get("input_file", ""),
-                    "file_type": parse_record.get("file_type", ""),
-                    "task_type": parse_record.get("task_type", "parse")
-                }
-            )
-        
-        # 如果记录中有内容，则返回
-        if "content" in parse_record and parse_record["content"]:
-            # 确定任务类型
-            task_type = parse_record.get("task_type", "parse")
-            
-            return APIResponse(
-                status="success",
-                message="解析内容获取成功",
-                data={
-                    "content": parse_record["content"],
-                    "filename": parse_record.get("input_file", ""),
-                    "file_type": parse_record.get("file_type", ""),
-                    "task_type": task_type,
-                    "created_at": parse_record.get("created_at", datetime.utcnow()).isoformat(),
-                    "is_ocr_result": task_type == "ocr",
-                    "is_pdf_text": task_type == "pdf_text"
-                }
-            )
-        else:
-            # 如果记录中没有内容，则检查是否有文件路径
-            if "parsed_file_path" in parse_record and parse_record["parsed_file_path"]:
-                # 尝试从文件中读取内容
-                try:
-                    with open(parse_record["parsed_file_path"], 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    
-                    return APIResponse(
-                        status="success",
-                        message="从文件读取解析内容成功",
-                        data={
-                            "content": content,
-                            "filename": parse_record.get("input_file", ""),
-                            "file_type": parse_record.get("file_type", ""),
-                            "task_type": parse_record.get("task_type", "parse"),
-                            "created_at": parse_record.get("created_at", datetime.utcnow()).isoformat(),
-                            "is_ocr_result": parse_record.get("task_type") == "ocr"
-                        }
-                    )
-                except Exception as e:
-                    logger.error(f"从文件读取内容失败: {str(e)}", exc_info=True)
-                    raise HTTPException(status_code=500, detail=f"读取解析文件失败: {str(e)}")
-            else:
-                # 如果既没有内容也没有文件路径，返回错误
-                logger.error(f"解析记录 {record_id} 不包含内容或文件路径")
-                raise HTTPException(status_code=404, detail=f"解析记录 {record_id} 不包含内容")
-                
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"预览解析内容失败: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.patch("/records/{record_id}")
 async def update_record(
@@ -742,33 +551,41 @@ async def preview_raw_file(
             # 对于二进制文件，我们只返回元数据，不返回二进制内容
             logger.info(f"在二进制文件集合中找到文件: {decoded_filename}")
             
-            # 查找是否有对应的OCR解析记录
+            # 查找是否有对应的OCR或PDF文本提取解析记录
+            # 注意：修改查询条件，包括ocr和pdf_text两种任务类型
             parse_record = await db.llm_kit.parse_records.find_one(
                 {
                     "input_file": decoded_filename,
                     "status": "completed",
-                    "task_type": "ocr"
+                    "task_type": {"$in": ["ocr", "pdf_text"]}  # 同时查询OCR和PDF文本提取结果
                 },
                 sort=[("created_at", -1)]
             )
             
             if parse_record and "content" in parse_record:
-                # 如果找到OCR解析记录，返回解析后的内容
-                logger.info(f"找到文件 {decoded_filename} 的OCR解析结果")
+                # 如果找到解析记录，返回解析后的内容
+                task_type = parse_record.get("task_type", "ocr")
+                logger.info(f"找到文件 {decoded_filename} 的{task_type}解析结果")
+                
+                # 根据任务类型设置不同的标志
+                is_ocr_result = task_type == "ocr"
+                is_pdf_text = task_type == "pdf_text"
+                
                 return {
                     "status": "success",
-                    "message": "OCR解析内容获取成功",
+                    "message": f"{task_type}解析内容获取成功",
                     "data": {
                         "content": parse_record["content"],
                         "file_type": binary_file_record.get("file_type", "binary"),
                         "mime_type": binary_file_record.get("mime_type", "application/octet-stream"),
                         "size": binary_file_record.get("size", 0),
                         "created_at": binary_file_record.get("created_at", datetime.utcnow()).isoformat(),
-                        "is_ocr_result": True
+                        "is_ocr_result": is_ocr_result,
+                        "is_pdf_text": is_pdf_text
                     }
                 }
             else:
-                # 如果没有找到OCR解析记录，返回元数据
+                # 如果没有找到解析记录，返回元数据
                 return {
                     "status": "success",
                     "message": "文件元数据获取成功",
@@ -808,33 +625,41 @@ async def preview_raw_file(
                     if binary_file_record:
                         logger.info(f"通过ID在二进制文件集合中找到文件: {decoded_filename}")
                         
-                        # 查找是否有对应的OCR解析记录
+                        # 查找是否有对应的OCR或PDF文本提取解析记录
+                        # 注意：修改查询条件，包括ocr和pdf_text两种任务类型，同时检查original_file_id
                         parse_record = await db.llm_kit.parse_records.find_one(
                             {
                                 "original_file_id": str(obj_id),
                                 "status": "completed",
-                                "task_type": "ocr"
+                                "task_type": {"$in": ["ocr", "pdf_text"]}  # 同时查询OCR和PDF文本提取结果
                             },
                             sort=[("created_at", -1)]
                         )
                         
                         if parse_record and "content" in parse_record:
-                            # 如果找到OCR解析记录，返回解析后的内容
-                            logger.info(f"找到文件ID {decoded_filename} 的OCR解析结果")
+                            # 如果找到解析记录，返回解析后的内容
+                            task_type = parse_record.get("task_type", "ocr")
+                            logger.info(f"找到文件ID {decoded_filename} 的{task_type}解析结果")
+                            
+                            # 根据任务类型设置不同的标志
+                            is_ocr_result = task_type == "ocr"
+                            is_pdf_text = task_type == "pdf_text"
+                            
                             return {
                                 "status": "success",
-                                "message": "OCR解析内容获取成功",
+                                "message": f"{task_type}解析内容获取成功",
                                 "data": {
                                     "content": parse_record["content"],
                                     "file_type": binary_file_record.get("file_type", "binary"),
                                     "mime_type": binary_file_record.get("mime_type", "application/octet-stream"),
                                     "size": binary_file_record.get("size", 0),
                                     "created_at": binary_file_record.get("created_at", datetime.utcnow()).isoformat(),
-                                    "is_ocr_result": True
+                                    "is_ocr_result": is_ocr_result,
+                                    "is_pdf_text": is_pdf_text
                                 }
                             }
                         else:
-                            # 如果没有找到OCR解析记录，返回元数据
+                            # 如果没有找到解析记录，返回元数据
                             return {
                                 "status": "success",
                                 "message": "文件元数据获取成功",
@@ -853,15 +678,26 @@ async def preview_raw_file(
                 parse_record = await db.llm_kit.parse_records.find_one({"_id": obj_id})
                 if parse_record and "content" in parse_record:
                     logger.info(f"直接通过ID在解析记录中找到内容: {decoded_filename}")
+                    
+                    # 获取任务类型
+                    task_type = parse_record.get("task_type", "parse")
+                    
+                    # 根据任务类型设置不同的标志
+                    is_ocr_result = task_type == "ocr"
+                    is_pdf_text = task_type == "pdf_text"
+                    is_parsed_result = task_type == "parse"
+                    
                     return {
                         "status": "success",
                         "message": "解析内容获取成功",
                         "data": {
                             "content": parse_record["content"],
                             "file_type": parse_record.get("file_type", "txt"),
-                            "task_type": parse_record.get("task_type", "parse"),
+                            "task_type": task_type,
                             "created_at": parse_record.get("created_at", datetime.utcnow()).isoformat(),
-                            "is_parsed_result": True
+                            "is_ocr_result": is_ocr_result,
+                            "is_pdf_text": is_pdf_text,
+                            "is_parsed_result": is_parsed_result
                         }
                     }
         except Exception as e:

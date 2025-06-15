@@ -202,61 +202,36 @@ interface UnifiedFile {
     }
     
     previewModalTitle = `${file.filename} (解析结果)`;
-    previewContentType = 'parsed';
     previewLoading = true;
     previewErrorMessage = null;
     previewModalOpen = true;
     
-    await fetchParsedContent(file.recordId);
+    // 使用preview_raw接口，传入文件名而不是recordId
+    await fetchRawContent(file.filename);
   };
 
-  const fetchRawContent = async (filename: string) => {
+  const fetchRawContent = async (fileName: string) => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/parse/preview_raw/${filename}`);
+      const response = await axios.get(`http://127.0.0.1:8000/parse/preview_raw/${fileName}`);
       if (response.status === 200 && response.data.status === "success") {
         rawContent = response.data.data.content || '';
         
-        // 检查是否是OCR结果
+        // 检查返回的内容类型
         if (response.data.data.is_ocr_result) {
           previewContentType = 'ocr';
+        } else if (response.data.data.is_pdf_text) {
+          previewContentType = 'pdf_text';
+        } else if (response.data.data.is_parsed_result) {
+          previewContentType = 'parsed';
+        } else {
+          previewContentType = 'raw';
         }
       } else {
         previewErrorMessage = "Failed to preview file" + (response.data?.detail ? `: ${response.data.detail}` : '');
       }
     } catch (error) {
-      console.error('Error fetching raw content:', error);
+      console.error('Error fetching content:', error);
       previewErrorMessage = "Network error previewing file";
-    } finally {
-      previewLoading = false;
-    }
-  };
-  
-  const fetchParsedContent = async (recordId: string) => {
-    try {
-      const response = await axios.get(`http://127.0.0.1:8000/parse/preview_parsed/${recordId}`);
-      if (response.status === 200) {
-        if (response.data.status === "success") {
-          rawContent = response.data.data.content || '';
-          
-          // 根据任务类型设置预览内容类型
-          if (response.data.data.is_ocr_result) {
-            previewContentType = 'ocr';
-          } else if (response.data.data.task_type === 'pdf_text') {
-            previewContentType = 'pdf_text';
-          } else {
-            previewContentType = 'parsed';
-          }
-        } else if (response.data.status === "pending") {
-          previewErrorMessage = "解析尚未完成，请稍后再试";
-        } else {
-          previewErrorMessage = "Failed to preview parsed content" + (response.data?.message ? `: ${response.data.message}` : '');
-        }
-      } else {
-        previewErrorMessage = "Failed to preview parsed content" + (response.data?.detail ? `: ${response.data.detail}` : '');
-      }
-    } catch (error) {
-      console.error('Error fetching parsed content:', error);
-      previewErrorMessage = "Network error previewing parsed content";
     } finally {
       previewLoading = false;
     }
