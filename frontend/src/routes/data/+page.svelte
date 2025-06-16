@@ -1401,11 +1401,11 @@ interface UnifiedFile {
   <h3 slot="header" class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
     {previewModalTitle}
     {#if previewContentType === 'ocr'}
-      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">OCR解析结果</span>
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">OCR Result</span>
     {:else if previewContentType === 'pdf_text'}
-      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">PDF直接提取结果</span>
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">PDF Direct Extraction Result</span>
     {:else if previewContentType === 'parsed'}
-      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">解析结果</span>
+      <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Parsed Result</span>
     {/if}
   </h3>
 
@@ -1426,14 +1426,14 @@ interface UnifiedFile {
             <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
             <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
           </svg>
-          <span class="text-blue-700 font-medium">直接从PDF提取的文本内容</span>
+          <span class="text-blue-700 font-medium">Text Content Directly Extracted from PDF</span>
         </div>
       {:else if previewContentType === 'ocr'}
         <div class="bg-purple-50 rounded-lg p-2 mb-3 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
             <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
           </svg>
-          <span class="text-purple-700 font-medium">OCR识别结果</span>
+          <span class="text-purple-700 font-medium">OCR Recognition Result</span>
         </div>
       {/if}
       <div class="bg-gray-50 rounded-lg p-4 h-[70vh] overflow-auto">
