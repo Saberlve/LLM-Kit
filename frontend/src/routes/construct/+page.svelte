@@ -2,7 +2,7 @@
     import ActionPageTitle from '../components/ActionPageTitle.svelte';
     import { Accordion, AccordionItem } from 'flowbite-svelte';
     import { Table, TableHead, TableHeadCell, TableBody, TableBodyCell } from 'flowbite-svelte';
-    import { Button, Modal,  Progressbar } from 'flowbite-svelte';
+    import { Button, Modal, Progressbar } from 'flowbite-svelte';
     import { getContext } from "svelte";
     import axios from "axios";
     import { onMount, onDestroy } from 'svelte';
@@ -10,7 +10,7 @@
     import { goto } from '$app/navigation';
     import DatasetTable from "./DatasetTable.svelte";
     const dispatch = createEventDispatcher();
-
+   
     const t: any = getContext("t");
     if (!t("construct.title")) {
         t.add({
@@ -644,7 +644,7 @@
         }
     };
 
-    const fetchFiles = async () => {
+    export const fetchFiles = async () => {
         try {
             // 使用to_tex/parsed_files接口获取所有已解析的文件（包括OCR解析的二进制文件）
             const response = await axios.get('http://127.0.0.1:8000/to_tex/parsed_files');
@@ -791,7 +791,7 @@
             selectAllChecked = false;
             await fetchFiles();
             showDeleteConfirmation = false;
-
+            
             // Clear success message after 2 seconds
             setTimeout(() => {
                 successMessage = null;
@@ -921,16 +921,30 @@
     };
 
     const deleteQaFile = async (filename: string) => {
+        // filename is e.g. "paper.pdf"
+        // dataset name is "QA-paper"
+        const baseFilename = filename.substring(0, filename.lastIndexOf('.')) || filename;
+        const qaDatasetName = `QA-${baseFilename}`;
+
+        const datasetToDelete = datasetEntries.find(entry => entry.name === qaDatasetName);
+
+        if (!datasetToDelete) {
+            errorMessage = `Could not find QA dataset for ${filename} to delete.`;
+            setTimeout(() => errorMessage = null, 3000);
+            return;
+        }
+
+        const datasetId = datasetToDelete.id;
+
         try {
-            const response = await axios.post('http://127.0.0.1:8000/qa/delete_file', {
-                filename: filename
-            });
+            const response = await axios.delete(`http://127.0.0.1:8000/qa/delete_file/${datasetId}`);
             if (response.status === 200) {
                 successMessage = t("construct.qa_delete_success");
                 setTimeout(() => {
                     successMessage = null;
                 }, 2000);
                 await fetchFiles(); // Refresh file list to update status
+                await fetchDatasets(); // Refresh dataset list
             } else {
                 const errorData = response.data;
                 errorMessage = errorData.detail || t("construct.qa_delete_failed");
@@ -2163,6 +2177,7 @@
                 {#if datasetEntries.length > 0}
                     <DatasetTable 
                         datasetEntries={datasetEntries} 
+                        on:refreshFiles={fetchFiles}
                         on:modified={fetchDatasets}
                     />
                 {:else}

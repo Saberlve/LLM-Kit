@@ -50,6 +50,7 @@
       console.log("Dataset deleted successfully:", response.data);
       dispatch("modified");
       delete_modal = false;
+      dispatch("refreshFiles"); // 通知父组件刷新
     } catch (err) {
       console.error(`Failed to delete dataset ID ${id_to_delete}:`, err);
       alert(`Delete failed: ${err.message || "Unknown error"}`);

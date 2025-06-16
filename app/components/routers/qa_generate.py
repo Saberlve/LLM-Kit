@@ -564,24 +564,18 @@ class FilenameRequest(BaseModel):
     filename: str
 
 async def check_parsed_file_exist(raw_filename: str, db: AsyncIOMotorClient) -> int:
-    """Check if parsed result file exists in database"""
-    # 尝试按文件名查找
-    dataset = await db.llm_kit.dataset_entries.find_one({"name": raw_filename})
+    """Check if QA result file exists in database"""
+    base_filename = raw_filename.rsplit('.', 1)[0]
+    qa_dataset_name = f"QA-{base_filename}"
+    
+    # Find dataset by name, ensuring it is a QA dataset
+    dataset = await db.llm_kit.dataset_entries.find_one({
+        "name": qa_dataset_name,
+        "is_qa": True
+    })
+    
     if dataset:
         return 1
-    
-    # 尝试使用ID查找
-    try:
-        if len(raw_filename) == 24:
-            try:
-                obj_id = ObjectId(raw_filename)
-                dataset = await db.llm_kit.dataset_entries.find_one({"_id": obj_id})
-                if dataset:
-                    return 1
-            except:
-                pass
-    except:
-        pass
     
     return 0
 
@@ -616,53 +610,48 @@ async def delete_files(
         dataset = await db.llm_kit.dataset_entries.find_one({"_id": obj_id})
         if not dataset:
             raise HTTPException(status_code=404, detail="Dataset not found")
-        decoded_filename = dataset["name"]
-        if not decoded_filename:
-            raise HTTPException(status_code=400, detail="Dataset name is empty")
-       
-        decoded_filename = decoded_filename.split("QA-")[1]
-        # 删除dataset_entries
+
+        # 从数据集名称中提取原始文件名
+        dataset_name = dataset.get("name", "")
+        if dataset_name.startswith("QA-"):
+            base_filename = dataset_name[3:]
+        else:
+            base_filename = dataset_name.rsplit('.', 1)[0]
+        
+        # 删除dataset_entries中的记录
         result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail=f"未找到ID为 {dataset_id} 的数据集")
-        
+            logger.warning(f"Dataset with ID {dataset_id} not found for deletion.")
+
+        # 使用基础文件名匹配和删除相关记录
         # 删除tex_records
-        pattern = f"^{re.escape(decoded_filename)}"
-        tex_result = await db.llm_kit.tex_records.delete_many({
-            "input_file": {"$regex": pattern, "$options": "i"}
-        })
-        if tex_result.deleted_count == 0:
-            logger.warning(f"未找到匹配的tex_records: {pattern}")
+        tex_result = await db.llm_kit.tex_records.delete_many({"input_file": {"$regex": f"^{re.escape(base_filename)}\\."}})
         
-        # 删除qa_generations
-        qa_generations_cursor = db.llm_kit.qa_generations.find({"input_file": {"$regex": pattern, "$options": "i"}})
-        qa_generations = await qa_generations_cursor.to_list(length=None)
-        qa_generations_ids = [record["_id"] for record in qa_generations]
+        # 删除qa_generations并获取其ID
+        qa_generations_cursor = db.llm_kit.qa_generations.find({"input_file": {"$regex": f"^{re.escape(base_filename)}\\."}})
+        qa_generations_ids = [record["_id"] for record in await qa_generations_cursor.to_list(length=None)]
         
-        qa_gen_result = await db.llm_kit.qa_generations.delete_many({"input_file": {"$regex": pattern, "$options": "i"}})
-        if qa_gen_result.deleted_count == 0:
-            logger.warning(f"未找到匹配的qa_generations: {pattern}")
+        qa_gen_result = await db.llm_kit.qa_generations.delete_many({"_id": {"$in": qa_generations_ids}})
         
         # 删除qa_pairs
+        qa_pairs_result_count = 0
         if qa_generations_ids:
             qa_pairs_result = await db.llm_kit.qa_pairs.delete_many({"generation_id": {"$in": qa_generations_ids}})
-            if qa_pairs_result.deleted_count == 0:
-                logger.warning(f"未找到匹配的qa_pairs: {pattern}")
-        else:
-            logger.info("没有相关的qa_generations，无需删除qa_pairs")
+            qa_pairs_result_count = qa_pairs_result.deleted_count
     
-        logger.info(f"成功从数据库删除QA文件及相关记录: {decoded_filename}")
+        logger.info(f"Successfully deleted QA dataset and related records for base filename: {base_filename}")
         return {
             "status": "success",
             "deleted": {
+                "dataset_entries": result.deleted_count,
                 "tex_records": tex_result.deleted_count,
                 "qa_generations": qa_gen_result.deleted_count,
-                "qa_pairs": qa_pairs_result.deleted_count if qa_generations_ids else 0
+                "qa_pairs": qa_pairs_result_count
             }
         }
         
     except Exception as e:
-        logger.error(f"删除QA文件失败: {str(e)}", exc_info=True)
+        logger.error(f"Failed to delete QA file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

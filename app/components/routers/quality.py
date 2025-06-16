@@ -65,7 +65,7 @@ async def evaluate_and_optimize_qa(
         logger.error(f"QA pair quality evaluation and optimization failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/quality/history")
+@router.get("/history")
 async def get_quality_history(
     db: AsyncIOMotorClient = Depends(get_database)
 ):
@@ -117,7 +117,7 @@ async def get_qa_content(
         logger.error(f"Failed to get QA pair file content: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/quality/progress")
+@router.post("/progress")
 async def get_quality_progress(
     request: FilenameRequest,
     db: AsyncIOMotorClient = Depends(get_database)
