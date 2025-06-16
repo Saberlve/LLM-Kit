@@ -1,4 +1,5 @@
 import logging
+import re
 from fastapi import APIRouter, HTTPException, Depends,Request,Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -31,6 +32,46 @@ class RecordIDRequest(BaseModel):
 
 class FilenameRequest(BaseModel):
     filename: str
+
+@router.get("/dataset_entry")
+async def get_dataset_entry(
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    try:
+        query = {"is_qa": True}
+        cursor = db.llm_kit.dataset_entries.find(query)
+
+        # 收集结果
+        entries = []
+        async for doc in cursor:
+            # 调整文档格式以匹配前端期望的DatasetEntry结构
+            entry = {
+                "id": str(doc["_id"]),
+                "pool_id": doc["pool_id"],
+                "name": doc["name"],
+                "description": doc["description"],
+                "type": "json",  # 默认类型
+                "created_on": doc["created_at"].isoformat() if isinstance(doc["created_at"], datetime) else str(doc["created_at"]),
+                "size": len(doc.get("file_data", "")) if "file_data" in doc else 0,
+                "owner": "system",
+                "public": True
+            }
+            
+            # 添加其他可能的字段
+            for key, value in doc.items():
+                if key not in ["_id", "file_data", "created_at"] and key not in entry:
+                    entry[key] = value
+                    
+            entries.append(entry)
+        
+        return entries
+    except Exception as e:
+        logger.error(f"Failed to get dataset entries: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 
 @router.get("/tex_files", response_model=APIResponse)
 async def get_tex_files(
@@ -519,34 +560,6 @@ def format_time_duration(seconds: int) -> str:
     else:
         return f"{seconds}s"
 
-@router.delete("/qa_records")
-async def delete_qa_record(
-        request: RecordIDRequest,
-        db: AsyncIOMotorClient = Depends(get_database)
-):
-    """Delete QA generation record and related QA pairs by ID"""
-    try:
-        from bson import ObjectId
-
-        # 
-        result = await db.llm_kit.qa_generations.delete_one({"_id": ObjectId(request.record_id)})
-
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Record not found")
-
-        # 
-        await db.llm_kit.qa_pairs.delete_many({"generation_id": ObjectId(request.record_id)})
-
-        return APIResponse(
-            status="success",
-            message="QA record and related pairs deleted successfully",
-            data={"record_id": request.record_id}
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to delete QA record, record_id: {request.record_id}, error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
 class FilenameRequest(BaseModel):
     filename: str
 
@@ -592,54 +605,62 @@ async def get_parse_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/delete_file")
+@router.delete("/delete_file/{dataset_id}")
 async def delete_files(
-    request: FilenameRequest,
+    dataset_id: str,
     db: AsyncIOMotorClient = Depends(get_database)
 ):
-    '''Delete construction file from database and all related records'''
+    """Delete construction file from database and all related records"""
     try:
-        # URL解码文件名
-        decoded_filename = urllib.parse.unquote(request.filename)
-        logger.info(f"删除QA文件: 原始文件名={request.filename}, 解码后文件名={decoded_filename}")
+        obj_id = ObjectId(dataset_id)
+        dataset = await db.llm_kit.dataset_entries.find_one({"_id": obj_id})
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        decoded_filename = dataset["name"]
+        if not decoded_filename:
+            raise HTTPException(status_code=400, detail="Dataset name is empty")
+       
+        decoded_filename = decoded_filename.split("QA-")[1]
+        # 删除dataset_entries
+        result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail=f"未找到ID为 {dataset_id} 的数据集")
         
-        # 尝试按文件名删除dataset_entries
-        result = await db.llm_kit.dataset_entries.delete_one({"name": decoded_filename})
-        dataset_deleted = result.deleted_count > 0
+        # 删除tex_records
+        pattern = f"^{re.escape(decoded_filename)}"
+        tex_result = await db.llm_kit.tex_records.delete_many({
+            "input_file": {"$regex": pattern, "$options": "i"}
+        })
+        if tex_result.deleted_count == 0:
+            logger.warning(f"未找到匹配的tex_records: {pattern}")
         
-        # 尝试使用ID删除dataset_entries
-        try:
-            if len(decoded_filename) == 24:
-                obj_id = ObjectId(decoded_filename)
-                result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
-                dataset_deleted = dataset_deleted or result.deleted_count > 0
-        except Exception as e:
-            logger.warning(f"尝试通过ID删除QA文件时出错: {str(e)}")
+        # 删除qa_generations
+        qa_generations_cursor = db.llm_kit.qa_generations.find({"input_file": {"$regex": pattern, "$options": "i"}})
+        qa_generations = await qa_generations_cursor.to_list(length=None)
+        qa_generations_ids = [record["_id"] for record in qa_generations]
         
-        # 删除相关联的记录，确保数据一致性
-        # 1. 删除tex_records中相关记录
-        await db.llm_kit.tex_records.delete_many({"input_file": decoded_filename})
+        qa_gen_result = await db.llm_kit.qa_generations.delete_many({"input_file": {"$regex": pattern, "$options": "i"}})
+        if qa_gen_result.deleted_count == 0:
+            logger.warning(f"未找到匹配的qa_generations: {pattern}")
         
-        # 2. 删除qa_generations中相关记录
-        await db.llm_kit.qa_generations.delete_many({"input_file": decoded_filename})
-        
-        # 3. 删除qa_generations关联的qa_pairs
-        qa_generations = await db.llm_kit.qa_generations.find(
-            {"input_file": decoded_filename}
-        ).to_list(None)
-        
-        for record in qa_generations:
-            await db.llm_kit.qa_pairs.delete_many({"generation_id": record["_id"]})
-        
-        # 4. 删除parse_records中相关记录
-        await db.llm_kit.parse_records.delete_many({"input_file": decoded_filename})
-        
-        if dataset_deleted:
-            logger.info(f"成功从数据库删除QA文件及相关记录: {decoded_filename}")
-            return {"status": "success"}
+        # 删除qa_pairs
+        if qa_generations_ids:
+            qa_pairs_result = await db.llm_kit.qa_pairs.delete_many({"generation_id": {"$in": qa_generations_ids}})
+            if qa_pairs_result.deleted_count == 0:
+                logger.warning(f"未找到匹配的qa_pairs: {pattern}")
         else:
-            logger.warning(f"QA文件在数据库中不存在: {decoded_filename}")
-            return {"status": "failed", "message": "File not found in database"}
+            logger.info("没有相关的qa_generations，无需删除qa_pairs")
+    
+        logger.info(f"成功从数据库删除QA文件及相关记录: {decoded_filename}")
+        return {
+            "status": "success",
+            "deleted": {
+                "tex_records": tex_result.deleted_count,
+                "qa_generations": qa_gen_result.deleted_count,
+                "qa_pairs": qa_pairs_result.deleted_count if qa_generations_ids else 0
+            }
+        }
+        
     except Exception as e:
         logger.error(f"删除QA文件失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

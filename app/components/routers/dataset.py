@@ -154,7 +154,6 @@ async def get_dataset_entries_by_pool(
                     
             entries.append(entry)
         
-        logger.info(f"找到 {len(entries)} 个数据集条目")
         return entries
     except Exception as e:
         logger.error(f"获取数据集条目失败: {str(e)}", exc_info=True)
@@ -187,11 +186,71 @@ async def delete_dataset(
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"无效的数据集ID格式: {dataset_id}")
         
+        # 获取要删除的数据集，以便获取相关信息
+        dataset = await db.llm_kit.dataset_entries.find_one({"_id": obj_id})
+        if not dataset:
+            raise HTTPException(status_code=404, detail=f"未找到ID为 {dataset_id} 的数据集")
+        
         # 删除数据集
         result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail=f"未找到ID为 {dataset_id} 的数据集")
+        
+        # 如果是QA数据集，处理相关记录
+        if dataset.get("is_qa") == True:
+            # 提取原始文件名
+            dataset_name = dataset.get("name", "")
+            if dataset_name.startswith("QA-"):
+                original_filename = dataset_name[3:]  # 去掉"QA-"前缀
+                # original_filename_suffix = original_filename.split(".")[-1]
+                # original_filename_prefix = original_filename.split(".")[0]
+                # original_filename = f"{original_filename_prefix}_qa.{original_filename_suffix}"
+                
+                # 查找和删除相关的qa_generations记录
+                qa_generations = await db.llm_kit.qa_generations.find(
+                    {"original_file": f"{original_filename}"}
+                ).to_list(None)
+                
+                for record in qa_generations:
+                    # 删除qa_pairs记录
+                    await db.llm_kit.qa_pairs.delete_many({"generation_id": record["_id"]})
+                
+                # 删除qa_generations记录
+                await db.llm_kit.qa_generations.delete_many({"input_file": f"{original_filename}.txt"})
+                
+                # 也尝试不带扩展名的文件名
+                qa_generations = await db.llm_kit.qa_generations.find(
+                    {"input_file": original_filename}
+                ).to_list(None)
+                
+                for record in qa_generations:
+                    await db.llm_kit.qa_pairs.delete_many({"generation_id": record["_id"]})
+                
+                await db.llm_kit.qa_generations.delete_many({"input_file": original_filename})
+                
+                logger.info(f"已删除与文件 {original_filename} 相关的QA生成记录")
+                
+                # 查找可能的文件记录（尝试多种可能的文件名格式）
+                file_extensions = [".txt", ".pdf", ".json", ""]
+                for ext in file_extensions:
+                    file_record = await db.llm_kit.uploaded_files.find_one({"filename": f"{original_filename}{ext}"})
+                    if file_record:
+                        # 更新文件状态为未生成QA（将status[1]设置为0）
+                        current_status = file_record.get("status", {})
+                        if isinstance(current_status, dict):
+                            current_status["1"] = 0  # 设置QA状态为未生成
+                            await db.llm_kit.uploaded_files.update_one(
+                                {"_id": file_record["_id"]},
+                                {"$set": {"status": current_status}}
+                            )
+                        else:
+                            # 如果status不是字典，创建一个新的字典
+                            await db.llm_kit.uploaded_files.update_one(
+                                {"_id": file_record["_id"]},
+                                {"$set": {"status": {"1": 0}}}
+                            )
+                        logger.info(f"已更新文件 {file_record['filename']} 的QA状态为未生成")
             
         logger.info(f"成功删除数据集ID: {dataset_id}")
         return JSONResponse(

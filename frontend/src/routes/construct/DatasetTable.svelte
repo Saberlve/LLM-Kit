@@ -46,7 +46,7 @@
     
     try {
       console.log(`Deleting dataset ID: ${id_to_delete}`);
-      const response = await axios.delete(`http://127.0.0.1:8000/api/dataset/${id_to_delete}`);
+      const response = await axios.delete(`http://127.0.0.1:8000/qa/delete_file/${id_to_delete}`);
       console.log("Dataset deleted successfully:", response.data);
       dispatch("modified");
       delete_modal = false;

@@ -311,6 +311,8 @@ async def delete_record(
 
 class DeleteFileRequest(BaseModel):
     file_id: str
+    only_delete_parse_results: bool = False  # 新增参数，默认为False表示同时删除文件和解析结果
+
 class UnifiedFileListResponse(BaseModel):
     status: str
     message: str
@@ -325,40 +327,103 @@ async def delete_uploaded_file(
         request: DeleteFileRequest = Body(...),
         db: AsyncIOMotorClient = Depends(get_database)
 ):
-    """Delete uploaded file (and database record) by file_id, file_id is obtained from the request body"""
+    """删除上传的文件（包括数据库记录）和对应的解析结果，或仅删除解析结果"""
     file_id = request.file_id
-    print(file_id)
+    only_delete_parse_results = request.only_delete_parse_results
+    
+    logger.info(f"请求删除文件，file_id: {file_id}, 仅删除解析结果: {only_delete_parse_results}")
+    
     try:
-        # Validate if file_id is a valid ObjectId
+        # 验证file_id是否为有效的ObjectId
         try:
             object_id = ObjectId(file_id)
         except Exception:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file_id format")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无效的file_id格式")
 
-        # Try to delete from text file collection
-        text_delete_result = await db.llm_kit.uploaded_files.delete_one({"_id": object_id})
-        if text_delete_result.deleted_count > 0:
+        # 首先获取文件名，以便后续删除解析记录
+        filename = None
+        file_found = False
+        
+        # 尝试从文本文件集合中查找
+        text_file = await db.llm_kit.uploaded_files.find_one({"_id": object_id})
+        if text_file:
+            filename = text_file.get("filename")
+            file_found = True
+            
+            if not only_delete_parse_results:
+                # 删除文本文件
+                text_delete_result = await db.llm_kit.uploaded_files.delete_one({"_id": object_id})
+                if text_delete_result.deleted_count > 0:
+                    logger.info(f"已从文本文件集合中删除文件: {filename}")
+            else:
+                # 仅更新文件状态为未解析
+                await db.llm_kit.uploaded_files.update_one(
+                    {"_id": object_id},
+                    {"$set": {"status": "unparse"}}
+                )
+                logger.info(f"已将文本文件 {filename} 状态更新为未解析")
+        else:
+            # 如果在文本文件集合中未找到，尝试在二进制文件集合中查找
+            binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": object_id})
+            if binary_file:
+                filename = binary_file.get("filename")
+                file_found = True
+                
+                if not only_delete_parse_results:
+                    # 删除二进制文件
+                    binary_delete_result = await db.llm_kit.uploaded_binary_files.delete_one({"_id": object_id})
+                    if binary_delete_result.deleted_count > 0:
+                        logger.info(f"已从二进制文件集合中删除文件: {filename}")
+                else:
+                    # 仅更新文件状态为未解析
+                    await db.llm_kit.uploaded_binary_files.update_one(
+                        {"_id": object_id},
+                        {"$set": {"status": "unparse"}}
+                    )
+                    logger.info(f"已将二进制文件 {filename} 状态更新为未解析")
+            else:
+                # 如果在两个集合中都未找到，返回404
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"未找到ID为'{file_id}'的文件")
+        
+        # 如果找到了文件名，删除对应的解析记录
+        if filename:
+            # 删除与该文件相关的解析记录
+            parse_records_deleted = await db.llm_kit.parse_records.delete_many({
+                "$or": [
+                    {"input_file": filename},
+                    {"original_file_id": file_id}
+                ]
+            })
+            logger.info(f"删除文件 '{filename}' 的解析记录: {parse_records_deleted.deleted_count} 条")
+            
+            # 删除OCR处理进度记录
+            ocr_progress_deleted = await db.llm_kit.ocr_processing_progress.delete_many({
+                "task_id": {"$in": await db.llm_kit.parse_records.distinct("_id", {"input_file": filename})}
+            })
+            
+            operation_type = "重置" if only_delete_parse_results else "删除"
             return UnifiedFileDeleteResponse(
                 status="success",
-                message=f"File with id '{file_id}' deleted from text files."
+                message=f"已{operation_type}文件 '{filename}' 及其 {parse_records_deleted.deleted_count} 条解析记录",
+                data={
+                    "filename": filename,
+                    "parse_records_deleted": parse_records_deleted.deleted_count,
+                    "file_deleted": not only_delete_parse_results
+                }
             )
+        
+        # 如果没有找到文件名但删除了文件，仍然返回成功
+        return UnifiedFileDeleteResponse(
+            status="success",
+            message=f"文件已删除，但未能删除关联的解析记录",
+            data={"file_id": file_id}
+        )
 
-        # If not found in text file collection, try to delete from binary file collection
-        binary_delete_result = await db.llm_kit.uploaded_binary_files.delete_one({"_id": object_id})
-        if binary_delete_result.deleted_count > 0:
-            return UnifiedFileDeleteResponse(
-                status="success",
-                message=f"File with id '{file_id}' deleted from binary files."
-            )
-
-        # If not found in either collection, return 404 Not Found
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File with id '{file_id}' not found")
-
-    except HTTPException as http_exc: # Catch HTTPException and re-raise directly
+    except HTTPException as http_exc:  # 直接重新抛出HTTPException
         raise http_exc
     except Exception as e:
-        logger.error(f"Failed to delete file {file_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete file: {str(e)}")
+        logger.error(f"删除文件 {file_id} 失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"删除文件失败: {str(e)}")
 
 class FilenameRequest(BaseModel):
     filename: str
@@ -390,41 +455,53 @@ class ParsedFileInfo(BaseModel):
     file_path: str
 
 @router.post("/delete_files")
-async def delete_files(request: Request):
-    PARSED_FILES_DIR = os.path.join("parsed_files", "parsed_file")
-    files_to_delete = await request.json()
-    # Process deletion logic here
-    for filename in files_to_delete["files"]:
-        parsed_filename = f"{filename}_parsed.txt"
-        file_path = os.path.join(PARSED_FILES_DIR, parsed_filename)
-
-        PARSED_FILES_DIR1 = os.path.join(filename, "tex_files")
-        raw_filename = filename.split('.')[0]
-        parsed_filename1 = f"{raw_filename}.json"
-        file_path1 = os.path.join(PARSED_FILES_DIR1, parsed_filename1)
-
-
-        PARSED_FILES_DIR2 = os.path.join("result", "qas")
-        PARSED_FILES_DIR3 = os.path.join(filename, "tex_files")
-
-        filename3 = filename.split('.')[0]
-        parsed_filename2 = f"{filename3}_qa.json"
-        file_path2 = os.path.join(PARSED_FILES_DIR2, parsed_filename2)
-
-        parsed_filename3 = f"{filename3}.json"
-        file_path3 = os.path.join(PARSED_FILES_DIR3, parsed_filename3)
-
-
-        if os.path.exists(file_path1):
-            os.remove(file_path1)
-        if os.path.exists(file_path2):
-            os.remove(file_path2)
-        if os.path.exists(file_path3):
-            os.remove(file_path3)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            return {"status": "success"}
-    return {"status": "failed"}
+async def delete_files(
+    request: Request,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """从数据库中删除指定文件名的解析结果，并将文件状态更新为未解析"""
+    try:
+        data = await request.json()
+        filenames = data.get("files", [])
+        
+        if not filenames:
+            return {"status": "failed", "message": "未提供文件名列表"}
+        
+        deleted_count = 0
+        updated_files = 0
+        
+        for filename in filenames:
+            # 查找并删除与该文件名相关的解析记录
+            result = await db.llm_kit.parse_records.delete_many({
+                "input_file": filename
+            })
+            deleted_count += result.deleted_count
+            
+            # 更新文本文件状态为未解析
+            text_update = await db.llm_kit.uploaded_files.update_many(
+                {"filename": filename},
+                {"$set": {"status": "unparse"}}
+            )
+            
+            # 更新二进制文件状态为未解析
+            binary_update = await db.llm_kit.uploaded_binary_files.update_many(
+                {"filename": filename},
+                {"$set": {"status": "unparse"}}
+            )
+            
+            updated_files += text_update.modified_count + binary_update.modified_count
+            
+            logger.info(f"删除文件 '{filename}' 的解析记录: {result.deleted_count} 条, 更新文件状态: {text_update.modified_count + binary_update.modified_count} 个")
+        
+        return {
+            "status": "success",
+            "message": f"成功删除 {deleted_count} 条解析记录，更新 {updated_files} 个文件状态为未解析",
+            "deleted_count": deleted_count,
+            "updated_files": updated_files
+        }
+    except Exception as e:
+        logger.error(f"删除解析记录失败: {str(e)}", exc_info=True)
+        return {"status": "failed", "message": f"删除解析记录失败: {str(e)}"}
 
 @router.get("/task/progress")
 async def get_task_progress(

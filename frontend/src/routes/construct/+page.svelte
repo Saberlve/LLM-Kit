@@ -713,9 +713,8 @@
     const fetchDatasets = async () => {
         try {
             datasetLoaded = false;
-            console.log("Fetching datasets for pool ID 2...");
-            const response = await axios.get('http://127.0.0.1:8000/api/dataset_entry/by_pool/2');
-            
+            const response = await axios.get('http://127.0.0.1:8000/qa/dataset_entry');
+            console.log("Dataset entries:", response.data);
             if (response.status === 200) {
                 const entries = response.data || [];
                 console.log("Raw dataset entries:", entries);
