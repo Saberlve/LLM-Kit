@@ -168,7 +168,7 @@ async def parse_specific_file(
         file_id = request.file_id
         logger.info(f"Starting to parse file with ID: {file_id}")
         
-        # 尝试在文本文件集合中查找
+        
         text_file = await db.llm_kit.uploaded_files.find_one({"_id": ObjectId(file_id)})
         file_type = None
         is_binary = False
@@ -179,7 +179,7 @@ async def parse_specific_file(
             filename = text_file['filename']
             file_type = text_file.get('file_type', 'unknown')
         else:
-            # 如果在文本文件集合中未找到，尝试在二进制文件集合中查找
+            
             binary_file = await db.llm_kit.uploaded_binary_files.find_one({"_id": ObjectId(file_id)})
             if not binary_file:
                 logger.error(f"File with ID {file_id} not found in any collection")
@@ -191,7 +191,7 @@ async def parse_specific_file(
             file_type = binary_file.get('file_type', 'unknown')
             is_binary = True
 
-        # 创建解析记录
+        
         parse_record = ParseRecord(
             input_file=filename,
             status="processing",
@@ -200,7 +200,7 @@ async def parse_specific_file(
             progress=0
         )
         
-        # 确保parse_record可以正确序列化
+        # ensure parse_record can be serialized
         if hasattr(parse_record, "model_dump"):
             record_dict = parse_record.model_dump(by_alias=True)
         else:
@@ -211,33 +211,33 @@ async def parse_specific_file(
         logger.info(f"Created parse record with ID: {record_id}")
 
         try:
-            # 根据文件类型选择处理方法
+            # according to file type to choose processing method
             if is_binary:
-                # 对于二进制文件（PDF或图像）
+                # for binary file (PDF or image)
                 from app.components.services.ocr_service import OCRService
                 ocr_service = OCRService(db)
                 
                 if file_type == 'pdf':
                     content = await ocr_service.process_pdf(file_content, filename, str(record_id))
-                else:  # 图像文件
+                else:  # image file
                     content = await ocr_service.process_image(file_content, filename, str(record_id))
                 
-                # 更新二进制文件状态
+                # update binary file status
                 await db.llm_kit.uploaded_binary_files.update_one(
                     {"_id": ObjectId(file_id)},
                     {"$set": {"status": "parsed"}}
                 )
             else:
-                # 对于文本文件，使用简化的处理                
+                # for text file, use simplified processing                
                 content = file_content
                 
-                # 更新文本文件状态
+                # update text file status
                 await db.llm_kit.uploaded_files.update_one(
                     {"_id": ObjectId(file_id)},
                     {"$set": {"status": "parsed"}}
                 )
             
-            # 更新解析记录
+            # update parse record
             await db.llm_kit.parse_records.update_one(
                 {"_id": record_id},
                 {"$set": {

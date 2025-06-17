@@ -125,12 +125,12 @@
         return response.data.data.qa_pairs || response.data.data.content || [];
       } else {
         console.error("Error fetching file content:", response.data.message);
-        errorMessage = "获取文件内容失败: " + response.data.message;
+        errorMessage = "Failed to fetch file content: " + response.data.message;
         return null;
       }
     } catch (error) {
       console.error("Error fetching file content:", error);
-      errorMessage = "获取文件内容失败，请检查网络或服务器状态";
+      errorMessage = "Failed to fetch file content, please check network or server status";
       return null;
     }
   }
@@ -145,7 +145,7 @@
     
     const contentData = await fetchFileContent(selectedFileId);
     if (!contentData || contentData.length === 0) {
-        errorMessage = "无法获取或解析源文件内容，请检查文件。";
+        errorMessage = "Unable to fetch or parse source file content, please check the file.";
         quality_eval_processing = false;
         progressStatus = "failed";
         errorMsg = errorMessage;
@@ -171,11 +171,11 @@
       if (response.data && response.data.status === "success") {
         startProgressPolling(selectedFilename);
       } else {
-        throw new Error(response.data.message || "请求失败，服务器返回非成功状态");
+        throw new Error(response.data.message || "Request failed, server returned non-success status");
       }
     } catch (error) {
       console.error("Error during quality evaluation:", error);
-      errorMessage = `质量评估启动失败: ${error.message || "未知错误"}`;
+      errorMessage = `Quality evaluation startup failed: ${error.message || "Unknown error"}`;
       quality_eval_processing = false;
       progressStatus = "failed";
       errorMsg = errorMessage;
@@ -280,14 +280,19 @@
   async function deleteHistoryRecord() {
     if (!historyIdToDelete) return;
     try {
-        await axios.post(`http://127.0.0.1:8000/quality/quality_records/delete`, { 
-            record_id: historyIdToDelete 
+        const response = await axios.delete(`http://127.0.0.1:8000/quality/quality_records`, {
+            data: { record_id: historyIdToDelete }
         });
-        successMessage = "历史记录删除成功";
-        setTimeout(() => successMessage = null, 3000);
-        await fetchQualityHistory(); // Refresh list
+
+        if (response.data && response.data.status === "success") {
+            successMessage = "History record deleted successfully";
+            setTimeout(() => successMessage = null, 3000);
+            await fetchQualityHistory(); // Refresh list
+        } else {
+            errorMessage = response.data.message || "Failed to delete history record";
+        }
     } catch (err) {
-        errorMessage = "删除历史记录失败";
+        errorMessage = "Failed to delete history record";
         console.error(err);
     } finally {
         showDeleteHistoryModal = false;
@@ -342,23 +347,34 @@
 
 </script>
 
-<ActionPageTitle
-  title={t("quality_eval.title")}
-  subtitle={t("quality_eval.subtitle")}
-/>
+ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
 
 <div class="w-full flex flex-col space-y-6 p-4">
+    <!-- Error Message Section -->
     {#if errorMessage}
-        <Alert color="red" on:dismiss={() => errorMessage = null}>
-            <span class="font-medium">错误!</span> {errorMessage}
-        </Alert>
-    {/if}
-    {#if successMessage}
-        <Alert color="green" on:dismiss={() => successMessage = null}>
-            <span class="font-medium">成功!</span> {successMessage}
-        </Alert>
+        <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-md">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span>{errorMessage}</span>
+            </div>
+        </div>
     {/if}
 
+    <!-- Success Message Section -->
+    {#if successMessage}
+        <div class="p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded shadow-md">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span><strong class="font-bold">Success!</strong> {successMessage}</span>
+            </div>
+        </div>
+    {/if}
+
+    <!-- Statistics Overview -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow-md p-4 flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
@@ -367,7 +383,7 @@
                 </svg>
             </div>
             <div>
-                <p class="text-gray-500 text-sm">总QA数据集</p>
+                <p class="text-gray-500 text-sm">Total QA Datasets</p>
                 <p class="text-2xl font-semibold">{upQAFiles.length}</p>
             </div>
         </div>
@@ -379,7 +395,7 @@
                 </svg>
             </div>
             <div>
-                <p class="text-gray-500 text-sm">已运行优化</p>
+                <p class="text-gray-500 text-sm">Quality Evaluations Run</p>
                 <p class="text-2xl font-semibold">{qualityHistory.length}</p>
             </div>
         </div>
@@ -391,39 +407,63 @@
                 </svg>
             </div>
             <div>
-                <p class="text-gray-500 text-sm">成功优化</p>
+                <p class="text-gray-500 text-sm">Successful Evaluations</p>
                 <p class="text-2xl font-semibold">{qualityHistory.filter(r => r.status === 'completed').length}</p>
             </div>
         </div>
     </div>
 
-
+    <!-- Main Content - Left/Right Layout -->
     <div class="flex flex-col md:flex-row gap-6">
+        <!-- Left Side - File List -->
         <div class="w-full md:w-1/2">
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-700">{t("quality_eval.qa_files")}</h2>
                 </div>
+
+                <div class="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div>
+                        <span class="text-sm text-gray-500">{upQAFiles.length} files, {selectedFileId ? 1 : 0} selected</span>
+                    </div>
+                </div>
                 <div class="overflow-x-auto" style="max-height: 600px;">
-                    <Table hoverable={true}>
-                        <TableHead>
-                            <TableHeadCell class="p-4">{t("quality_eval.files.select")}</TableHeadCell>
+                    <Table striped={true} hoverable={true}>
+                        <TableHead class="bg-gray-50 sticky top-0 z-10">
+                            <TableHeadCell class="w-10">
+                                <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" checked={selectedFileId !== ''} on:change={() => selectedFileId = selectedFileId ? '' : (upQAFiles[0]?.id || '')} />
+                            </TableHeadCell>
                             <TableHeadCell>{t("quality_eval.files.filename")}</TableHeadCell>
                             <TableHeadCell>{t("quality_eval.files.create_at")}</TableHeadCell>
-                            <TableHeadCell>操作</TableHeadCell>
+                            <TableHeadCell>Operations</TableHeadCell>
                         </TableHead>
                         <TableBody>
                             {#each upQAFiles as file}
-                                <TableBodyRow class="cursor-pointer" on:click={() => selectedFileId = file.id}>
-                                    <TableBodyCell class="p-4">
-                                        <Checkbox checked={selectedFileId === file.id} />
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <TableBodyCell>
+                                        <input
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                            checked={selectedFileId === file.id}
+                                            on:change={() => selectedFileId = selectedFileId === file.id ? '' : file.id}
+                                        />
                                     </TableBodyCell>
-                                    <TableBodyCell>{file.filename}</TableBodyCell>
+                                    <TableBodyCell>
+                                        <div class="flex items-center">
+                                            <!-- File type icon -->
+                                            <span class="mr-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                                </svg>
+                                            </span>
+                                            <span class="text-blue-600 hover:text-blue-800">{file.filename}</span>
+                                        </div>
+                                    </TableBodyCell>
                                     <TableBodyCell>{new Date(file.created_at).toLocaleString()}</TableBodyCell>
-                                     <TableBodyCell>
-                                        <Button size="xs" color="light" on:click={(e) => { e.stopPropagation(); previewDataset(file.id); }}>预览</Button>
+                                    <TableBodyCell>
+                                        <Button size="xs" color="light" on:click={(e) => { e.stopPropagation(); previewDataset(file.id); }}>Preview</Button>
                                     </TableBodyCell>
-                                </TableBodyRow>
+                                </tr>
                             {/each}
                         </TableBody>
                     </Table>
@@ -431,55 +471,114 @@
             </div>
         </div>
 
+        <!-- Right Side - Parameter Settings -->
         <div class="w-full md:w-1/2">
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-700">{t("quality_eval.params")}</h2>
                 </div>
                 <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.parallel_num")}</label>
-                        <Input type="number" bind:value={parallel_num} min="1" />
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.parallel_num")}</label>
+                            <input
+                                type="number"
+                                min="1"
+                                bind:value={parallel_num}
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.domain")}</label>
+                            <input
+                                type="text"
+                                bind:value={description}
+                                placeholder="Enter domain (optional)"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                        </div>
                     </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.model_name")}</label>
-                        <select bind:value={modelname} class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <select
+                            bind:value={modelname}
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
                             {#each modelOptions as option}
                                 <option value={option.value}>{option.label}</option>
                             {/each}
                         </select>
                     </div>
-                    {#each Array(parallel_num) as _, index}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.AK")} {index + 1}</label>
-                            <Input type="text" placeholder="Access Key" bind:value={api_keys[index]} />
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-3">API Keys</h3>
+                        <div class="space-y-3">
+                            {#each Array(parallel_num) as _, index}
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{t("quality_eval.AK")} {index + 1}</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Access Key"
+                                            bind:value={api_keys[index]}
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{t("quality_eval.SK")} {index + 1}</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Secret Key"
+                                            bind:value={secret_keys[index]}
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                            {/each}
                         </div>
-                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.SK")} {index + 1}</label>
-                            <Input type="password" placeholder="Secret Key" bind:value={secret_keys[index]} />
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-3">Quality Parameters</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.similarity_rate")} ({similarity_rate})</label>
+                                <input type="range" bind:value={similarity_rate} min={0} max={1} step={0.01} class="w-full" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.coverage_rate")} ({coverage_rate})</label>
+                                <input type="range" bind:value={coverage_rate} min={0} max={1} step={0.01} class="w-full" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.max_attempts")}</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    bind:value={max_attempts}
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                            </div>
                         </div>
-                    {/each}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.domain")}</label>
-                        <Input type="text" bind:value={description} />
                     </div>
-                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.similarity_rate")} ({similarity_rate})</label>
-                        <input type="range" bind:value={similarity_rate} min={0} max={1} step={0.01} class="w-full" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.coverage_rate")} ({coverage_rate})</label>
-                        <input type="range" bind:value={coverage_rate} min={0} max={1} step={0.01} class="w-full" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.max_attempts")}</label>
-                        <Input type="number" bind:value={max_attempts} min="1" max="10" />
-                    </div>
+
                     <div class="flex justify-center pt-4">
-                         <Button on:click={startQualityEval} disabled={!validForQualityEval || quality_eval_processing} color="green" class="w-full">
+                        <Button
+                            type="button"
+                            color="green"
+                            class="px-6 py-2 flex items-center w-full"
+                            disabled={!validForQualityEval || quality_eval_processing}
+                            on:click={startQualityEval}
+                        >
                             {#if quality_eval_processing}
-                                <Spinner class="mr-2" /> {t("quality_eval.processing")}
+                                <div class="mr-2 animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
+                                {t("quality_eval.processing")}
                             {:else}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                                </svg>
                                 {t("quality_eval.start")}
                             {/if}
                         </Button>
@@ -488,138 +587,202 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Quality Evaluation History -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden mt-6">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-700">优化历史</h2>
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-700">Quality Evaluation History</h2>
+            <div class="text-sm text-gray-500">
+                {qualityHistory.length} evaluations completed
+            </div>
         </div>
         <div class="p-4">
             {#if historyLoaded}
                 {#if qualityHistory.length > 0}
-                    <Table>
-                        <TableHead>
-                            <TableHeadCell>输入文件</TableHeadCell>
-                            <TableHeadCell>状态</TableHeadCell>
-                            <TableHeadCell>QA数量</TableHeadCell>
-                            <TableHeadCell>创建时间</TableHeadCell>
-                            <TableHeadCell>操作</TableHeadCell>
+                    <Table striped={true} hoverable={true}>
+                        <TableHead class="bg-gray-50">
+                            <TableHeadCell>Input File</TableHeadCell>
+                            <TableHeadCell>Status</TableHeadCell>
+                            <TableHeadCell>QA Count</TableHeadCell>
+                            <TableHeadCell>Created</TableHeadCell>
+                            <TableHeadCell>Operations</TableHeadCell>
                         </TableHead>
                         <TableBody>
                             {#each qualityHistory as record}
-                                <TableBodyRow>
-                                    <TableBodyCell>{record.input_file}</TableBodyCell>
+                                <tr class="hover:bg-gray-50 transition-colors">
                                     <TableBodyCell>
-                                        <span class:text-green-500={record.status === 'completed'}
-                                              class:text-red-500={record.status === 'failed'}
-                                              class:text-yellow-500={record.status === 'aborted'}>
+                                        <div class="flex items-center">
+                                            <span class="mr-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                                </svg>
+                                            </span>
+                                            <span class="font-medium">{record.input_file}</span>
+                                        </div>
+                                    </TableBodyCell>
+                                    <TableBodyCell>
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                              class:bg-green-100={record.status === 'completed'}
+                                              class:text-green-800={record.status === 'completed'}
+                                              class:bg-red-100={record.status === 'failed'}
+                                              class:text-red-800={record.status === 'failed'}
+                                              class:bg-yellow-100={record.status === 'aborted'}
+                                              class:text-yellow-800={record.status === 'aborted'}
+                                              class:bg-gray-100={record.status !== 'completed' && record.status !== 'failed' && record.status !== 'aborted'}
+                                              class:text-gray-800={record.status !== 'completed' && record.status !== 'failed' && record.status !== 'aborted'}>
                                             {record.status}
                                         </span>
                                     </TableBodyCell>
-                                    <TableBodyCell>{record.qa_count}</TableBodyCell>
+                                    <TableBodyCell>
+                                        <span class="font-semibold text-blue-600">{record.qa_count}</span>
+                                    </TableBodyCell>
                                     <TableBodyCell>{new Date(record.created_at).toLocaleString()}</TableBodyCell>
                                     <TableBodyCell>
-                                        <div class="flex space-x-2">
-                                            <Button size="xs" color="light" on:click={() => previewDataset(record.dataset_id || record.generation_id)}>预览</Button>
-                                            <Button size="xs" color="light" on:click={() => downloadDataset(record.dataset_id || record.generation_id)}>下载</Button>
-                                            <Button size="xs" color="red" on:click={() => { historyIdToDelete = record.generation_id; showDeleteHistoryModal = true; }}>删除</Button>
+                                        <div class="flex items-center space-x-3">
+                                            <!-- Preview button -->
+                                            <button
+                                                class="px-3 py-1 text-xs font-medium text-center text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300"
+                                                on:click={() => previewDataset(record.dataset_id || record.generation_id)}
+                                            >
+                                                Preview
+                                            </button>
+
+                                            <!-- Download button -->
+                                            <button
+                                                class="px-3 py-1 text-xs font-medium text-center text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300"
+                                                on:click={() => downloadDataset(record.dataset_id || record.generation_id)}
+                                            >
+                                                Download
+                                            </button>
+
+                                            <!-- Delete button -->
+                                            <button
+                                                class="px-3 py-1 text-xs font-medium text-center text-white bg-red-600 rounded-lg hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300"
+                                                on:click={() => { historyIdToDelete = record.generation_id; showDeleteHistoryModal = true; }}
+                                            >
+                                                Delete
+                                            </button>
                                         </div>
                                     </TableBodyCell>
-                                </TableBodyRow>
+                                </tr>
                             {/each}
                         </TableBody>
                     </Table>
                 {:else}
-                    <p class="text-center text-gray-500 py-6">没有优化历史记录。</p>
+                    <div class="py-6 text-center text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p>No quality evaluation history available. Run quality evaluations first.</p>
+                    </div>
                 {/if}
             {:else}
-                <div class="flex justify-center py-6"><Spinner /></div>
+                <div class="py-6 text-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <p class="mt-2 text-gray-500">Loading evaluation history...</p>
+                </div>
             {/if}
         </div>
     </div>
 </div>
 
-<!-- Modals -->
-<Modal title="删除历史记录" bind:open={showDeleteHistoryModal} size="md" autoclose>
-    <p class="text-center">您确定要删除这条历史记录吗？此操作无法撤销。</p>
-    <svelte:fragment slot="footer">
-        <Button color="red" on:click={deleteHistoryRecord}>确认删除</Button>
-        <Button color="alternative" on:click={() => showDeleteHistoryModal = false}>取消</Button>
-    </svelte:fragment>
+<!-- Delete History Modal -->
+<Modal title="Delete History Record" bind:open={showDeleteHistoryModal} size="md" autoclose={false} class="rounded-lg">
+    <h3 slot="header" class="text-xl font-bold text-gray-900">
+        Delete History Record
+    </h3>
+    <div class="my-6 text-gray-600">
+        <div class="flex items-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <p>Are you sure you want to delete this history record? This action cannot be undone!</p>
+        </div>
+    </div>
+    <div slot="footer" class="flex justify-end gap-2">
+        <Button color="light" on:click={() => showDeleteHistoryModal = false}>Cancel</Button>
+        <Button color="red" on:click={deleteHistoryRecord}>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            Confirm Delete
+        </Button>
+    </div>
 </Modal>
 
-<!-- 进度模态框 -->
+<!-- Progress Modal -->
 <Modal
   title={t("quality_eval.progress_title")}
   bind:open={showProgressModal}
   autoclose={false}
   size="lg"
+  class="rounded-lg"
 >
+  <h3 slot="header" class="text-xl font-bold text-gray-900">
+    Quality Evaluation Progress
+  </h3>
+
   <div class="space-y-6">
     {#if progressStatus === 'failed' || progressStatus === 'aborted'}
-      <Alert color="red">
-        <span class="font-medium">{t("quality_eval.error")}</span>
-        {errorMsg}
-      </Alert>
+      <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-md">
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span class="font-medium">Error:</span>
+          <span class="ml-1">{errorMsg}</span>
+        </div>
+      </div>
     {/if}
 
-    <div>
-      <div class="flex justify-between mb-1">
-        <span class="text-base font-medium text-blue-700 dark:text-white">{t("quality_eval.progress")}</span>
-        <span class="text-sm font-medium text-blue-700 dark:text-white">{progress}%</span>
+    <div class="space-y-4">
+      <div>
+        <div class="flex justify-between text-sm text-gray-600 mb-2">
+          <div class="font-medium">Overall Progress</div>
+          <div class={progressStatus === 'completed' ? "text-green-600" : progressStatus === 'failed' || progressStatus === 'aborted' ? "text-red-600" : "text-blue-600"}>
+            {progressStatus === 'processing' ? 'Processing...' :
+             progressStatus === 'completed' ? 'Completed' :
+             progressStatus === 'failed' ? 'Failed' :
+             progressStatus === 'aborted' ? 'Aborted' :
+             'Idle'}
+          </div>
+        </div>
+        <Progressbar
+          progress={progress}
+          size="h-3"
+          color={
+            progressStatus === 'failed' || progressStatus === 'aborted'
+              ? 'red'
+              : progressStatus === 'completed'
+              ? 'green'
+              : 'blue'
+          }
+        />
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span>{progress}% Complete</span>
+          <span>{processedItems} / {totalItems} items</span>
+        </div>
       </div>
-      <Progressbar 
-        progress={progress} 
-        size="h-4"
-        color={
-          progressStatus === 'failed' || progressStatus === 'aborted'
-            ? 'red'
-            : progressStatus === 'completed'
-            ? 'green'
-            : 'blue'
-        }
-      />
-    </div>
 
-    <div class="grid grid-cols-2 gap-4 mt-4">
-      <div>
-        <span class="block text-sm font-medium text-gray-700">
-          {t("quality_eval.status")}:
-        </span>
-        <span class="block font-semibold">
-          {progressStatus === 'processing' ? t("quality_eval.processing_status") :
-           progressStatus === 'completed' ? t("quality_eval.completed_status") :
-           progressStatus === 'failed' ? t("quality_eval.failed_status") :
-           progressStatus === 'aborted' ? t("quality_eval.aborted_status") :
-           t("quality_eval.idle_status")}
-        </span>
+      <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+        <div class="bg-gray-50 p-3 rounded-lg">
+          <div class="text-sm font-medium text-gray-700 mb-1">Elapsed Time</div>
+          <div class="text-lg font-semibold text-blue-600">{elapsedTime}</div>
+        </div>
+
+        <div class="bg-gray-50 p-3 rounded-lg">
+          <div class="text-sm font-medium text-gray-700 mb-1">Remaining Time</div>
+          <div class="text-lg font-semibold text-blue-600">
+            {progressStatus === 'completed' ? '0s' : estimatedRemainingTime}
+          </div>
+        </div>
       </div>
-      
-      <div>
-        <span class="block text-sm font-medium text-gray-700">
-          {t("quality_eval.progress_items")}:
-        </span>
-        <span class="block font-semibold">
-          {processedItems} / {totalItems}
-        </span>
-      </div>
-      
-      <div>
-        <span class="block text-sm font-medium text-gray-700">
-          {t("quality_eval.elapsed_time")}:
-        </span>
-        <span class="block font-semibold">
-          {elapsedTime}
-        </span>
-      </div>
-      
-      <div>
-        <span class="block text-sm font-medium text-gray-700">
-          {t("quality_eval.remaining_time")}:
-        </span>
-        <span class="block font-semibold">
-          {progressStatus === 'completed' ? '0s' : estimatedRemainingTime}
-        </span>
-      </div>
+
+      {#if progressStatus === 'processing'}
+        <div class="text-xs text-gray-500 animate-pulse text-center">
+          Refreshing progress every second...
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -627,115 +790,162 @@
     <div class="flex justify-between w-full">
       {#if progressStatus === 'processing'}
         <Button color="red" on:click={() => abortConfirmModal = true}>
-          {t("quality_eval.abort")}
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Abort Task
         </Button>
       {:else}
-        <div></div> <!-- 空元素保持布局 -->
+        <div></div>
       {/if}
-      
+
       <Button color="alternative" on:click={() => showProgressModal = false}>
-        {t("quality_eval.close")}
+        Close
       </Button>
     </div>
   </svelte:fragment>
 </Modal>
 
-<!-- 中止确认对话框 -->
+<!-- Abort Confirmation Modal -->
 <Modal
-  title={t("quality_eval.abort_confirm_title")}
+  title="Abort Quality Evaluation"
   bind:open={abortConfirmModal}
   autoclose={false}
   size="sm"
+  class="rounded-lg"
 >
-  <p class="text-base leading-relaxed text-gray-600 dark:text-gray-400">
-    {t("quality_eval.abort_confirm_message")}
-  </p>
-  
+  <h3 slot="header" class="text-xl font-bold text-gray-900">
+    Abort Quality Evaluation
+  </h3>
+
+  <div class="my-6 text-gray-600">
+    <div class="flex items-center mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-yellow-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <p>Are you sure you want to abort the current quality evaluation task? This action cannot be undone.</p>
+    </div>
+  </div>
+
   <svelte:fragment slot="footer">
-    <Button color="red" on:click={abortQualityTask}>
-      {t("quality_eval.confirm_abort")}
-    </Button>
-    <Button color="alternative" on:click={() => abortConfirmModal = false}>
-      {t("quality_eval.cancel")}
-    </Button>
+    <div class="flex justify-end gap-2">
+      <Button color="light" on:click={() => abortConfirmModal = false}>
+        Cancel
+      </Button>
+      <Button color="red" on:click={abortQualityTask}>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Confirm Abort
+      </Button>
+    </div>
   </svelte:fragment>
 </Modal>
 
-<!-- 预览模态框 -->
-<Modal
-  title={t("quality_eval.preview_title")}
-  bind:open={previewModal}
-  size="xl"
->
-  <div class="overflow-y-auto max-h-96">
+<!-- Preview Modal -->
+<Modal bind:open={previewModal} size="xl" autoclose={false} class="w-full max-w-5xl">
+  <h3 slot="header" class="flex justify-between items-center text-xl font-semibold text-gray-900 dark:text-white">
+    <span>Preview Quality Evaluation Results</span>
+    <Button color="blue" size="sm" on:click={() => downloadDataset(currentDatasetId)} class="flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+      Download
+    </Button>
+  </h3>
+
+  <div class="space-y-4">
     {#if previewData.length > 0}
-      <div class="space-y-6">
-        {#each previewData as item, i}
-          <div class="border border-gray-200 rounded-lg p-4">
-            <h3 class="font-bold text-lg text-blue-700">Q{i + 1 + (currentPage - 1) * pageSize}:</h3>
-            <p class="mb-4">{item.question}</p>
-            <h3 class="font-bold text-lg text-green-700">A:</h3>
-            <p class="whitespace-pre-wrap">{item.answer}</p>
-            
-            {#if item.original_question || item.original_answer}
-              <div class="mt-4 pt-4 border-t border-gray-200">
-                <h4 class="font-bold text-gray-700">{t("quality_eval.original_qa")}:</h4>
-                {#if item.original_question}
-                  <p class="text-sm mb-2"><span class="font-medium">Q:</span> {item.original_question}</p>
-                {/if}
-                {#if item.original_answer}
-                  <p class="text-sm"><span class="font-medium">A:</span> {item.original_answer}</p>
-                {/if}
-              </div>
-            {/if}
-            
-            {#if item.similarity_score !== undefined || item.coverage_score !== undefined}
-              <div class="mt-4 flex flex-wrap gap-2">
-                {#if item.similarity_score !== undefined}
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                    {t("quality_eval.similarity")}: {(item.similarity_score * 100).toFixed(1)}%
-                  </span>
-                {/if}
-                {#if item.coverage_score !== undefined}
-                  <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                    {t("quality_eval.coverage")}: {(item.coverage_score * 100).toFixed(1)}%
-                  </span>
-                {/if}
-              </div>
-            {/if}
-          </div>
-        {/each}
+      <div class="bg-white rounded-lg overflow-hidden mb-4">
+        <Table striped={true}>
+          <TableHead>
+            <TableHeadCell class="table-cell-border">Question</TableHeadCell>
+            <TableHeadCell class="table-cell-border">Answer</TableHeadCell>
+            <TableHeadCell class="table-cell-border">Quality Scores</TableHeadCell>
+          </TableHead>
+          <TableBody class="divide-y">
+            {#each previewData as item, i}
+              <tr>
+                <TableBodyCell class="whitespace-normal break-words max-w-xs">
+                  <div class="font-medium text-blue-700">Q{i + 1 + (currentPage - 1) * pageSize}:</div>
+                  <div class="mt-1">{item.question}</div>
+                  {#if item.original_question}
+                    <div class="mt-2 pt-2 border-t border-gray-100">
+                      <div class="text-xs text-gray-500 font-medium">Original:</div>
+                      <div class="text-sm text-gray-600">{item.original_question}</div>
+                    </div>
+                  {/if}
+                </TableBodyCell>
+                <TableBodyCell class="whitespace-normal break-words max-w-xs">
+                  <div class="prose prose-sm">{item.answer}</div>
+                  {#if item.original_answer}
+                    <div class="mt-2 pt-2 border-t border-gray-100">
+                      <div class="text-xs text-gray-500 font-medium">Original:</div>
+                      <div class="text-sm text-gray-600">{item.original_answer}</div>
+                    </div>
+                  {/if}
+                </TableBodyCell>
+                <TableBodyCell class="whitespace-normal break-words max-w-xs">
+                  {#if item.similarity_score !== undefined || item.coverage_score !== undefined}
+                    <div class="flex flex-col gap-2">
+                      {#if item.similarity_score !== undefined}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full text-center">
+                          Similarity: {(item.similarity_score * 100).toFixed(1)}%
+                        </span>
+                      {/if}
+                      {#if item.coverage_score !== undefined}
+                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full text-center">
+                          Coverage: {(item.coverage_score * 100).toFixed(1)}%
+                        </span>
+                      {/if}
+                    </div>
+                  {:else}
+                    <span class="text-gray-400 text-sm">No scores available</span>
+                  {/if}
+                </TableBodyCell>
+              </tr>
+            {/each}
+          </TableBody>
+        </Table>
       </div>
+
+      {#if totalPages > 1}
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200">
+          <div class="flex items-center gap-2">
+            <Button color="blue" disabled={currentPage === 1} on:click={() => changePage(-1)}>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+              Previous
+            </Button>
+            <Button color="blue" disabled={currentPage === totalPages} on:click={() => changePage(1)}>
+              Next
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+            </Button>
+          </div>
+
+          <span class="text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
+            Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalPreviewItems)} of {totalPreviewItems} items
+          </span>
+
+          <span class="text-gray-700 bg-gray-100 px-3 py-1 rounded-md">
+            Page {currentPage} / {totalPages}
+          </span>
+        </div>
+      {/if}
     {:else}
-      <p class="text-center text-gray-500">
-        {t("quality_eval.no_preview_data")}
-      </p>
+      <div class="bg-gray-50 rounded-lg p-8 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+        <p class="text-gray-600">No preview data available</p>
+      </div>
     {/if}
   </div>
-  
-  {#if totalPages > 1}
-    <div class="flex justify-between items-center mt-4">
-      <div>
-        {t("quality_eval.showing")} {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalPreviewItems)} {t("quality_eval.of")} {totalPreviewItems} {t("quality_eval.items")}
-      </div>
-      <div class="flex space-x-2">
-        <Button size="sm" disabled={currentPage === 1} on:click={() => changePage(-1)}>
-          {t("quality_eval.prev")}
-        </Button>
-        <Button size="sm" disabled={currentPage === totalPages} on:click={() => changePage(1)}>
-          {t("quality_eval.next")}
-        </Button>
-      </div>
-    </div>
-  {/if}
 
   <svelte:fragment slot="footer">
-    <Button on:click={() => downloadDataset(currentDatasetId)}>
-      <ArrowDownToBracketOutline class="mr-2 h-5 w-5" />
-      {t("quality_eval.download")}
-    </Button>
-    <Button color="alternative" on:click={() => previewModal = false}>
-      {t("quality_eval.close")}
-    </Button>
+    <Button color="light" on:click={() => previewModal = false}>Close</Button>
   </svelte:fragment>
 </Modal>
