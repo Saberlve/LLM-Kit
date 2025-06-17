@@ -94,7 +94,7 @@ class QualityService:
             self,
             content: List[dict],
             filename: str,
-            save_path: str,
+           
             SK: list,
             AK: list,
             parallel_num: int,
@@ -123,7 +123,6 @@ class QualityService:
                             "status": "processing",
                             "progress": 0,
                             "model_name": model_name,
-                            "save_path": save_path,
                             "start_time": datetime.now(timezone.utc),
                             "item_info": {
                                 "total_items": len(content),
@@ -138,7 +137,6 @@ class QualityService:
                 # Create new record
                 generation = QualityControlGeneration(
                     input_file=filename,
-                    save_path=save_path,
                     model_name=model_name,
                     status="processing",
                     source_text=json.dumps(content, ensure_ascii=False),
@@ -161,7 +159,6 @@ class QualityService:
                 )
 
                 # Create save directory
-                os.makedirs(save_path, exist_ok=True)
                 total_qas = len(content)
                 processed_qas = 0
 
@@ -271,15 +268,8 @@ class QualityService:
                     # 将QA对序列化为JSON字符串
                     qa_json = json.dumps(optimized_qas, ensure_ascii=False)
                     
-                    # Use simplified filename format: original_filename_quality.json
-                    final_save_path = os.path.join(
-                        save_path,
-                        f"{base_filename}_quality.json"
-                    )
-
-                    # Save final results to file
-                    with open(final_save_path, 'w', encoding='utf-8') as f:
-                        json.dump(optimized_qas, f, ensure_ascii=False, indent=4)
+                
+   
 
                     # 将结果保存到数据库中的dataset_entries集合
                     dataset_entry = {
@@ -304,7 +294,6 @@ class QualityService:
                         {
                             "$set": {
                                 "status": "completed",
-                                "save_path": final_save_path,
                                 "progress": 100,
                                 "content": qa_json,
                                 "dataset_id": dataset_id,
@@ -319,10 +308,9 @@ class QualityService:
                     return {
                         "generation_id": str(generation_id),
                         "dataset_id": dataset_id,
-                        "filename": os.path.basename(final_save_path),
+                        "filename": os.path.basename(filename),
                         "qa_pairs": optimized_qas,
-                        "source_text": json.dumps(content, ensure_ascii=False),
-                        "save_path": final_save_path
+                        "source_text": json.dumps(content, ensure_ascii=False)
                     }
 
             except Exception as e:
@@ -383,7 +371,6 @@ class QualityService:
                     "generation_id": str(record["_id"]),
                     "input_file": record["input_file"],
                     "dataset_id": record.get("dataset_id", ""),
-                    "output_file": record.get("save_path", ""),
                     "model_name": record["model_name"],
                     "status": record["status"],
                     "qa_count": len(qa_pairs),
@@ -404,7 +391,7 @@ class QualityService:
         try:
             # 首先从dataset_entries中获取质量评估的数据集
             cursor = self.dataset_entries.find(
-                {"kind": 3, "is_qa": True}
+                {"is_qa": True}
             ).sort("created_at", -1)
             
             files = []
@@ -420,47 +407,47 @@ class QualityService:
                     "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
                 })
             
-            # 然后从quality_generations中获取记录
-            cursor = self.quality_generations.find(
-                {"status": "completed"}
-            ).sort("created_at", -1)
+            # # 然后从quality_generations中获取记录
+            # cursor = self.quality_generations.find(
+            #     {"status": "completed"}
+            # ).sort("created_at", -1)
             
-            async for record in cursor:
-                # 如果已经有对应的数据集ID，跳过（避免重复）
-                if "dataset_id" in record and any(f["id"] == record["dataset_id"] for f in files):
-                    continue
+            # async for record in cursor:
+            #     # 如果已经有对应的数据集ID，跳过（避免重复）
+            #     if "dataset_id" in record and any(f["id"] == record["dataset_id"] for f in files):
+            #         continue
                 
-                file_id = str(record["_id"])
-                filename = record["input_file"]
-                created_at = record["created_at"]
+            #     file_id = str(record["_id"])
+            #     filename = record["input_file"]
+            #     created_at = record["created_at"]
                 
-                # 添加到文件列表
-                files.append({
-                    "id": file_id,
-                    "filename": f"{filename}_optimized",
-                    "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
-                })
+            #     # 添加到文件列表
+            #     files.append({
+            #         "id": file_id,
+            #         "filename": f"{filename}_optimized",
+            #         "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
+            #     })
             
-            # 还可以添加原始QA文件（未优化的）
-            qa_cursor = self.qa_generations.find(
-                {"status": "completed"}
-            ).sort("created_at", -1)
+            # # 还可以添加原始QA文件（未优化的）
+            # qa_cursor = self.qa_generations.find(
+            #     {"status": "completed"}
+            # ).sort("created_at", -1)
             
-            async for qa_record in qa_cursor:
-                file_id = str(qa_record["_id"])
-                filename = qa_record["input_file"]
-                created_at = qa_record["created_at"]
+            # async for qa_record in qa_cursor:
+            #     file_id = str(qa_record["_id"])
+            #     filename = qa_record["input_file"]
+            #     created_at = qa_record["created_at"]
                 
-                # 添加到文件列表
-                files.append({
-                    "id": file_id,
-                    "filename": filename,
-                    "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
-                })
+            #     # 添加到文件列表
+            #     files.append({
+            #         "id": file_id,
+            #         "filename": filename,
+            #         "created_at": created_at.isoformat() if isinstance(created_at, datetime) else str(created_at)
+            #     })
                 
-                # 限制返回文件数量
-                if len(files) >= 30:
-                    break
+            #     # 限制返回文件数量
+            #     if len(files) >= 30:
+            #         break
             
             return files
         except Exception as e:
@@ -519,12 +506,7 @@ class QualityService:
                     qa_pairs = record["content"]
             
             # 如果内容为空，尝试从文件读取
-            if not qa_pairs and "save_path" in record and record["save_path"]:
-                try:
-                    with open(record["save_path"], 'r', encoding='utf-8') as f:
-                        qa_pairs = json.load(f)
-                except Exception as e:
-                    logger.warning(f"Failed to read QA file: {str(e)}")
+          
             
             return {
                 "id": record_id,

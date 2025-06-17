@@ -625,10 +625,10 @@ async def delete_files(
 
         # 使用基础文件名匹配和删除相关记录
         # 删除tex_records
-        tex_result = await db.llm_kit.tex_records.delete_many({"input_file": {"$regex": f"^{re.escape(base_filename)}\\."}})
+        tex_result = await db.llm_kit.tex_records.delete_many({"input_file": {"$regex": f"^{re.escape(base_filename)}"}})
         
         # 删除qa_generations并获取其ID
-        qa_generations_cursor = db.llm_kit.qa_generations.find({"input_file": {"$regex": f"^{re.escape(base_filename)}\\."}})
+        qa_generations_cursor = db.llm_kit.qa_generations.find({"input_file": {"$regex": f"^{re.escape(base_filename)}"}})
         qa_generations_ids = [record["_id"] for record in await qa_generations_cursor.to_list(length=None)]
         
         qa_gen_result = await db.llm_kit.qa_generations.delete_many({"_id": {"$in": qa_generations_ids}})

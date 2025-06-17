@@ -427,21 +427,23 @@ async def delete_uploaded_file(
 
 class FilenameRequest(BaseModel):
     filename: str
-def check_parsed_file_exist(raw_filename: str) -> int:
+async def check_parsed_file_exist(raw_filename: str, db: AsyncIOMotorClient) -> int:
     """Check if the parsed result file exists"""
-    parsed_dir = os.path.join("parsed_files", "parsed_file")
-    parsed_filename = f"{raw_filename}_parsed.txt"
-    target_path = os.path.join(parsed_dir, parsed_filename)
-    return 1 if os.path.isfile(target_path) else 0
+    parse_records = await db.llm_kit.parse_records.find_one({"input_file": raw_filename})
+    if parse_records:
+        return 1
+    else:
+        return 0
+    
 
 
 @router.post("/phistory")
-async def get_parse_history(request: FilenameRequest):  
+async def get_parse_history(request: FilenameRequest, db: AsyncIOMotorClient = Depends(get_database)):  
     try:
         filename = request.filename 
 
-        exists = check_parsed_file_exist(filename)
-
+        exists = await check_parsed_file_exist(filename, db)
+        
         return {"status": "OK", "exists": exists}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

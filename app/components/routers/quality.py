@@ -46,7 +46,6 @@ async def evaluate_and_optimize_qa(
         result = await service.evaluate_and_optimize_qa(
             content=request.content,
             filename=request.filename,
-            save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
             parallel_num=request.parallel_num,

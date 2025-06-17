@@ -39,7 +39,6 @@ class DedupRequest(BaseModel):
 class QualityControlRequest(BaseModel):
     content: str  # QA pair content, a list of dictionaries
     filename: str  # Filename
-    save_path: str = "result/"
     SK: Optional[List[str]] = None
     AK: Optional[List[str]] = None
     parallel_num: int = 1
