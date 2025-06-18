@@ -404,7 +404,7 @@ let modelname: String = 'erine';
 
 </script>
 
-<ActionPageTitle returnTo="/quality_eval/" title="Quality Control" />
+<ActionPageTitle returnTo="/" title="Quality Control" />
 
 <div class="w-full flex flex-col space-y-6 p-4">
     <!-- Error Message Section -->

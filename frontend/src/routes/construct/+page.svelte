@@ -1399,7 +1399,7 @@
     };
 </script>
 
-<ActionPageTitle returnTo="/construct/" title={t("construct.title")} />
+<ActionPageTitle returnTo="/" title={t("construct.title")} />
 
 <div class="w-full flex flex-col space-y-6 p-4">
     <!-- Error Message Section -->

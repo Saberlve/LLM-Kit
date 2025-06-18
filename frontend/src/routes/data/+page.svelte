@@ -1077,7 +1077,7 @@ interface UnifiedFile {
 </script>
 
 
-<ActionPageTitle returnTo={"/data"} title={t("data.uploader.title")} />
+<ActionPageTitle returnTo={"/"} title={t("data.uploader.title")} />
 
 {#if !loading}
   <div class="w-full flex flex-col space-y-6 p-4">
