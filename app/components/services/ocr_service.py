@@ -70,39 +70,52 @@ class OCRService:
     
     async def process_pdf(self, content: bytes, filename: str, record_id: str = None) -> str:
         """process PDF file, extract text content"""
+        start_time = datetime.utcnow()
+        logger.info(f"开始处理PDF文件: {filename}, 大小: {len(content)} bytes, record_id: {record_id}")
+
         try:
             # update progress
             if record_id:
                 await self._update_progress(record_id, 5)
-                
+                logger.debug(f"初始进度更新: 5%")
+
             # 1. first try to extract text directly from PDF
             loop = asyncio.get_event_loop()
-            
+
             # create temporary PDF file
             pdf_temp_path = None
             try:
                 with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
                     temp_pdf.write(content)
                     pdf_temp_path = temp_pdf.name
-                
-                logger.info(f"try to extract text directly from PDF '{filename}'")
-                
+
+                logger.info(f"创建临时PDF文件: {pdf_temp_path}")
+                logger.info(f"尝试直接从PDF提取文本: '{filename}'")
+
                 # use PyMuPDF (fitz) to extract text
                 import fitz
-                
+
                 # execute in a separate thread to avoid blocking
                 def extract_text_directly():
                     try:
                         doc = fitz.open(pdf_temp_path)
                         text = ""
-                        for page in doc:
-                            text += page.get_text()
+                        page_count = doc.page_count
+                        logger.info(f"PDF总页数: {page_count}")
+
+                        for page_num, page in enumerate(doc):
+                            page_text = page.get_text()
+                            text += page_text
+                            if page_num < 3:  # 只记录前3页的文本长度
+                                logger.debug(f"第{page_num+1}页文本长度: {len(page_text)}")
+
                         doc.close()
+                        logger.info(f"直接提取完成，总文本长度: {len(text)}")
                         return text
                     except Exception as e:
-                        logger.warning(f"failed to extract text directly from PDF: {str(e)}")
+                        logger.warning(f"直接提取PDF文本失败: {str(e)}")
                         return ""
-                
+
                 direct_text = await loop.run_in_executor(None, extract_text_directly)
                 
                 # 更新进度
@@ -199,41 +212,58 @@ class OCRService:
             total_pages = len(images)
             
             for i, image in enumerate(images):
-             
+                logger.info(f"开始处理第 {i+1}/{total_pages} 页")
+
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
                     image.save(tmp_file.name, format="PNG")
                     temp_path = tmp_file.name
-                
+
                 try:
                     # OCR识别
                     res = await loop.run_in_executor(
-                        None, 
+                        None,
                         lambda: self.model.chat(self.tokenizer, temp_path, ocr_type='ocr')
                     )
-                    
+
                     all_text += f"--- 第 {i+1} 页 ---\n"
                     all_text += res + "\n\n"
-                    
-                    # 更新进度
+
+                    # 更新进度 - 使用更平滑的进度计算
                     if record_id:
-                        progress = 20 + int(70 * (i + 1) / total_pages)
+                        # 20-90%的范围用于OCR处理，最后10%用于保存
+                        base_progress = 20
+                        ocr_range = 70
+                        progress = base_progress + int(ocr_range * (i + 1) / total_pages)
+
+                        logger.info(f"页面 {i+1}/{total_pages} 处理完成，进度: {progress}%")
                         await self._update_progress(record_id, progress)
-                        
+
+                        # 批量更新数据库记录
+                        current_time = datetime.utcnow()
+
+                        # 更新OCR进度跟踪记录
                         await self.db.llm_kit.ocr_processing_progress.update_one(
                             {"task_id": record_id},
                             {"$set": {
                                 "processed_pages": i + 1,
-                                "last_update": datetime.utcnow()
+                                "last_update": current_time
                             }}
                         )
-                        
+
+                        # 更新主解析记录中的OCR信息
                         await self.db.llm_kit.parse_records.update_one(
                             {"_id": ObjectId(record_id)},
                             {"$set": {
-                                "ocr_info.processed_pages": i + 1
+                                "ocr_info.processed_pages": i + 1,
+                                "ocr_info.last_update": current_time
                             }}
                         )
-                    
+
+                except Exception as page_error:
+                    logger.error(f"处理第 {i+1} 页时出错: {str(page_error)}")
+                    # 继续处理下一页，不中断整个流程
+                    all_text += f"--- 第 {i+1} 页 (处理失败) ---\n[页面处理失败: {str(page_error)}]\n\n"
+
                 finally:
                     if os.path.exists(temp_path):
                         os.unlink(temp_path)
@@ -494,13 +524,27 @@ class OCRService:
         try:
             current_time = datetime.utcnow().timestamp()
             last_update = self.last_progress_update.get(record_id, 0)
-            
-            # 限制更新频率，避免频繁数据库操作
-            if current_time - last_update >= 0.5:
+
+            # 确保进度值在合理范围内
+            progress = max(0, min(100, progress))
+
+            # 限制更新频率，避免频繁数据库操作，但确保重要进度点被更新
+            should_update = (
+                current_time - last_update >= 0.5 or  # 至少0.5秒间隔
+                progress == 0 or  # 开始
+                progress == 100 or  # 完成
+                progress % 10 == 0  # 每10%的重要节点
+            )
+
+            if should_update:
                 await self.db.llm_kit.parse_records.update_one(
                     {"_id": ObjectId(record_id)},
-                    {"$set": {"progress": progress}}
+                    {"$set": {
+                        "progress": progress,
+                        "last_progress_update": datetime.utcnow()
+                    }}
                 )
                 self.last_progress_update[record_id] = current_time
+                logger.debug(f"进度更新: record_id={record_id}, progress={progress}%")
         except Exception as e:
-            logger.error(f"更新进度失败: {str(e)}") 
+            logger.error(f"更新进度失败: {str(e)}")

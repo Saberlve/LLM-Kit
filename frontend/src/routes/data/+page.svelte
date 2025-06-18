@@ -44,6 +44,8 @@ interface UnifiedFile {
   // 新增进度显示相关属性
   inProgress?: boolean;
   hasError?: boolean;
+  isCompleted?: boolean;
+  isFailed?: boolean;
 };
   import type { APIResponse, UploadResponse, ParseResponse, TaskProgressResponse, FileIDRequest, FilenameRequest } from "../../class/APIResponse";
 
@@ -323,84 +325,175 @@ interface UnifiedFile {
   }
 
   async function parseFileForEntry(file: UnifiedFile) {
+    const startTime = Date.now();
+
     if (!file.file_id) {
-      console.error("File ID is missing, cannot parse.");
+      console.error("解析失败: 文件ID缺失", {
+        filename: file.filename,
+        file_type: file.file_type,
+        type: file.type
+      });
       return;
     }
 
+    // 检查文件是否已经在处理中
+    if (file.parseStatus === "processing" || file.inProgress) {
+      console.warn("文件已在处理中，忽略重复请求", {
+        filename: file.filename,
+        file_id: file.file_id,
+        parseStatus: file.parseStatus,
+        inProgress: file.inProgress
+      });
+      return;
+    }
+
+    console.log("开始解析文件", {
+      filename: file.filename,
+      file_id: file.file_id,
+      file_type: file.file_type,
+      type: file.type,
+      size: file.size,
+      current_status: file.status
+    });
+
     // 将文件状态更新为pending，并设置初始进度
     uploadedFiles = uploadedFiles.map(f =>
-      f.file_id === file.file_id ? { 
-        ...f, 
-        parseStatus: "pending", 
-        parseProgress: 0, 
+      f.file_id === file.file_id ? {
+        ...f,
+        parseStatus: "pending",
+        parseProgress: 0,
         recordId: null,
+        inProgress: true,
+        hasError: false,
+        isCompleted: false,
+        isFailed: false,
         // 确保这些属性被正确初始化
         status: f.status || "pending"
       } : f
     );
-    
-    console.log("设置文件初始状态:", uploadedFiles.find(f => f.file_id === file.file_id));
+
+    console.log("设置文件初始状态完成", {
+      filename: file.filename,
+      updated_state: uploadedFiles.find(f => f.file_id === file.file_id)
+    });
 
     try {
       // 所有文件类型统一使用/parse/file接口
       const fileRequest: FileIDRequest = { file_id: file.file_id };
-      
-      console.log(`开始解析文件: ${file.filename}, 类型: ${file.type}, ID: ${file.file_id}`);
-      
+
+      console.log("发送解析请求", {
+        filename: file.filename,
+        request: fileRequest,
+        endpoint: "http://127.0.0.1:8000/parse/parse/file"
+      });
+
       // 统一使用parse/file接口进行解析
       const parseResponse = await axios.post<ParseResponse>(
-        `http://127.0.0.1:8000/parse/parse/file`, 
+        `http://127.0.0.1:8000/parse/parse/file`,
         fileRequest
       );
-      
-      console.log(`解析API响应:`, parseResponse.data);
+
+      const elapsedTime = Date.now() - startTime;
+      console.log("解析API响应", {
+        filename: file.filename,
+        elapsed_time_ms: elapsedTime,
+        response_status: parseResponse.data.status,
+        response_data: parseResponse.data
+      });
 
       if (parseResponse.data.status === "success") {
         const recordId = parseResponse.data.data.record_id;
-        console.log(`解析任务创建成功, record_id: ${recordId}`);
-        
+        console.log("解析任务创建成功", {
+          filename: file.filename,
+          record_id: recordId,
+          has_content: !!parseResponse.data.data.content,
+          content_length: parseResponse.data.data.content?.length || 0
+        });
+
         uploadedFiles = uploadedFiles.map(f =>
           f.file_id === file.file_id ? { ...f, recordId: recordId, parseStatus: "processing" } : f
         );
-        
+
         // 判断文件类型 - 对于PDF和图片类型始终进行轮询
         // 检查file.type === 'binary'或特定的文件扩展名
-        const isPdfOrImage = file.type === 'binary' || 
-                           file.file_type === 'pdf' || 
+        const isPdfOrImage = file.type === 'binary' ||
+                           file.file_type === 'pdf' ||
                            ['jpg', 'jpeg', 'png'].includes(file.file_type);
-        console.log(`文件类型检测: ${file.filename}, type=${file.type}, file_type=${file.file_type}, isPdfOrImage=${isPdfOrImage}`);
-        
+        console.log("文件类型检测", {
+          filename: file.filename,
+          type: file.type,
+          file_type: file.file_type,
+          isPdfOrImage: isPdfOrImage
+        });
+
         // 对于PDF和图片文件，即使有content也进行轮询
         // 对于文本文件，有content则直接完成
         if (parseResponse.data.data.content && !isPdfOrImage) {
           // 直接更新状态为已完成
-          console.log(`解析直接完成，更新状态`);
+          console.log("解析直接完成，更新状态", {
+            filename: file.filename,
+            content_length: parseResponse.data.data.content.length
+          });
           uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === file.file_id ? { 
-              ...f, 
-              status: "parsed", 
-              parseStatus: "completed", 
+            f.file_id === file.file_id ? {
+              ...f,
+              status: "parsed",
+              parseStatus: "completed",
               parseProgress: 100,
-              recordId: recordId
+              recordId: recordId,
+              inProgress: false,
+              isCompleted: true
             } : f
           );
         } else {
           // 否则开始轮询进度
-          console.log(`开始轮询解析进度, record_id: ${recordId}`);
+          console.log("开始轮询解析进度", {
+            filename: file.filename,
+            record_id: recordId,
+            reason: isPdfOrImage ? "PDF或图片文件" : "无直接内容"
+          });
           startPollingParsingProgress(file.file_id, recordId);
         }
       } else {
-        console.error(`解析失败:`, parseResponse);
+        console.error("解析请求失败", {
+          filename: file.filename,
+          response_status: parseResponse.data.status,
+          response_message: parseResponse.data.message,
+          full_response: parseResponse.data
+        });
         uploadedFiles = uploadedFiles.map(f =>
-          f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+          f.file_id === file.file_id ? {
+            ...f,
+            parseStatus: "failed",
+            parseProgress: 0,
+            inProgress: false,
+            isFailed: true,
+            hasError: true
+          } : f
         );
+        errorMessage = `解析文件 ${file.filename} 失败: ${parseResponse.data.message}`;
       }
     } catch (error) {
-      console.error("Error starting parsing:", error);
+      const elapsedTime = Date.now() - startTime;
+      console.error("解析文件时发生异常", {
+        filename: file.filename,
+        file_id: file.file_id,
+        elapsed_time_ms: elapsedTime,
+        error: error,
+        error_message: error instanceof Error ? error.message : String(error),
+        error_stack: error instanceof Error ? error.stack : undefined
+      });
       uploadedFiles = uploadedFiles.map(f =>
-        f.file_id === file.file_id ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        f.file_id === file.file_id ? {
+          ...f,
+          parseStatus: "failed",
+          parseProgress: 0,
+          inProgress: false,
+          isFailed: true,
+          hasError: true
+        } : f
       );
+      errorMessage = `解析文件 ${file.filename} 时发生错误`;
     }
   }
 
@@ -657,31 +750,47 @@ interface UnifiedFile {
     parsingProgressIntervals[fileId] = setInterval(async () => {
       try {
         console.log(`轮询任务进度 (${new Date().toLocaleTimeString()}), file_id: ${fileId}, record_id: ${recordId}`);
+
+        // 检查当前文件是否还在处理中，如果已经完成则不再轮询
+        const currentFile = uploadedFiles.find(f => f.file_id === fileId);
+        if (currentFile && (currentFile.isCompleted || currentFile.isFailed)) {
+          console.log(`任务 ${fileId} 已完成或失败，停止轮询`);
+          clearInterval(parsingProgressIntervals[fileId]);
+          delete parsingProgressIntervals[fileId];
+          return;
+        }
+
         const progressResponse = await fetchTaskProgress(recordId);
         console.log(`获取到的进度响应:`, progressResponse);
+
+        // 重置错误计数（成功获取响应）
+        progressErrorCounter[fileId] = 0;
+
         updateFileProgress(fileId, recordId, progressResponse);
-        
+
         // 轮询后检查文件状态
         const updatedFile = uploadedFiles.find(f => f.file_id === fileId);
         console.log(`轮询后文件状态:`, {
           parseStatus: updatedFile?.parseStatus,
           parseProgress: updatedFile?.parseProgress,
-          status: updatedFile?.status
+          status: updatedFile?.status,
+          isCompleted: updatedFile?.isCompleted,
+          isFailed: updatedFile?.isFailed
         });
       } catch (error) {
         console.error("Error fetching task progress:", error);
         // 即使遇到错误也不立即停止轮询，改为每5次错误才停止
         progressErrorCounter[fileId] = (progressErrorCounter[fileId] || 0) + 1;
-        
+
         console.log(`轮询错误计数: ${progressErrorCounter[fileId]}/5`);
-        
+
         // 如果连续错误超过5次，才停止轮询
         if (progressErrorCounter[fileId] >= 5) {
           console.log(`连续错误超过5次，停止轮询`);
           clearInterval(parsingProgressIntervals[fileId]);
           delete parsingProgressIntervals[fileId];
           uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+            f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0, inProgress: false } : f
           );
           // 重置错误计数
           progressErrorCounter[fileId] = 0;
@@ -715,133 +824,88 @@ interface UnifiedFile {
       uploadedFiles = uploadedFiles.map(f => {
         if (f.file_id === fileId) {
           // 基本状态更新 - 确保保留原有数据
-          const updatedFile = { 
-            ...f, 
+          const updatedFile = {
+            ...f,
             parseProgress: progress || 0, // 确保有值
-            parseStatus: status || 'processing', // 确保有值
-            taskType: taskType // 保存任务类型
+            parseStatus: status === "completed" || status === "failed" ? "processing" : status, // 保持processing状态直到手动清除
+            taskType: taskType, // 保存任务类型
+            inProgress: true, // 始终保持进度条显示，直到手动清除
+            recordId: recordId // 确保记录ID被保存
           };
-          
+
           // 如果有OCR详细信息，添加到文件对象
           if (progressResponse.data.ocr_info) {
             console.log(`添加OCR详细信息到文件对象:`, progressResponse.data.ocr_info);
             updatedFile.ocr_info = progressResponse.data.ocr_info;
           }
-          
+
+          // 如果任务完成，标记完成状态但保持进度条显示
+          if (status === "completed") {
+            updatedFile.isCompleted = true;
+            updatedFile.parseProgress = 100;
+            updatedFile.status = "parsed"; // 文件状态为已解析
+          } else if (status === "failed") {
+            updatedFile.isFailed = true;
+            updatedFile.hasError = true;
+          }
+
           console.log(`更新后文件状态:`, {
             parseStatus: updatedFile.parseStatus,
             parseProgress: updatedFile.parseProgress,
-            status: updatedFile.status
+            status: updatedFile.status,
+            inProgress: updatedFile.inProgress,
+            isCompleted: updatedFile.isCompleted,
+            isFailed: updatedFile.isFailed
           });
-          
+
           return updatedFile;
         }
         return f;
       });
       
-      // 检查处理是否完成或失败
+      // 检查处理是否完成或失败，延迟清除进度条
       if (status === "completed" || status === "failed") {
-        console.log(`任务状态: ${status}，但保持进度条显示`);
-        
-        // 如果完成，更新文件状态为"已解析"，但保持进度条显示
-        if (status === "completed") {
-          console.log(`任务完成，更新文件状态为"已解析"但保持进度条显示`);
-          
-          // 先保留处理状态，只更新进度为100%
+        console.log(`任务状态: ${status}，延迟清除进度条显示`);
+
+        // 延迟清除进度条和轮询
+        setTimeout(() => {
+          console.log(`延迟清除任务 ${fileId} 的进度条和轮询`);
           uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === fileId ? { 
-              ...f, 
-              status: "parsed",                // 文件状态为已解析
-              parseProgress: 100,              // 确保进度为100%
-              recordId: recordId,              // 确保记录ID被保存
-              inProgress: true,                // 保持显示进度条
-              parseStatus: "processing"        // 保持处理状态以显示进度条
-            } : f
-          );
-          
-          // 显示完成状态10秒后再更新为完成状态并清除定时器
-          setTimeout(() => {
-            console.log(`将任务 ${fileId} 标记为已完成`);
-            uploadedFiles = uploadedFiles.map(f =>
-              f.file_id === fileId ? { 
-                ...f, 
-                parseStatus: "completed",  // 更新为完成状态
-                inProgress: false          // 不再显示进度条
-              } : f
-            );
-            
-                          // 再等5秒后清除定时器并从本地存储中移除任务
-              setTimeout(() => {
-                console.log(`清除任务 ${fileId} 的进度轮询`);
-                clearInterval(parsingProgressIntervals[fileId]);
-                delete parsingProgressIntervals[fileId];
-                
-                // 从本地存储中移除任务
-                try {
-                  const savedTasks = localStorage.getItem('parsingTasks') || '{}';
-                  const tasks = JSON.parse(savedTasks);
-                  if (tasks[fileId]) {
-                    delete tasks[fileId];
-                    localStorage.setItem('parsingTasks', JSON.stringify(tasks));
-                    console.log(`已从本地存储中移除任务 ${fileId}`);
-                  }
-                } catch (e) {
-                  console.warn('从本地存储移除任务失败:', e);
-                }
-              }, 5000);
-          }, 10000);
-          
-        } else if (status === "failed") {
-          // 如果失败，先保持进度条显示，但标记为失败
-          console.log(`任务失败，更新文件状态为"失败"但保持进度条显示`);
-          uploadedFiles = uploadedFiles.map(f =>
-            f.file_id === fileId ? { 
+            f.file_id === fileId ? {
               ...f,
-              parseStatus: "processing",   // 保持处理状态以显示进度条
-              parseProgress: progress || 0,  // 保持当前进度
-              inProgress: true,            // 保持显示进度条
-              hasError: true               // 标记有错误
+              parseStatus: status, // 最终设置为实际状态
+              inProgress: false,   // 清除进度条显示
+              isCompleted: status === "completed",
+              isFailed: status === "failed"
             } : f
           );
-          
-          // 显示失败状态10秒后再更新为失败状态并清除定时器
-          setTimeout(() => {
-            uploadedFiles = uploadedFiles.map(f =>
-              f.file_id === fileId ? { 
-                ...f,
-                parseStatus: "failed",    // 更新为失败状态
-                parseProgress: 0,
-                inProgress: false         // 不再显示进度条
-              } : f
-            );
-            
-                          // 再等5秒后清除定时器并从本地存储中移除任务
-              setTimeout(() => {
-                clearInterval(parsingProgressIntervals[fileId]);
-                delete parsingProgressIntervals[fileId];
-                
-                // 从本地存储中移除任务
-                try {
-                  const savedTasks = localStorage.getItem('parsingTasks') || '{}';
-                  const tasks = JSON.parse(savedTasks);
-                  if (tasks[fileId]) {
-                    delete tasks[fileId];
-                    localStorage.setItem('parsingTasks', JSON.stringify(tasks));
-                    console.log(`已从本地存储中移除任务 ${fileId}`);
-                  }
-                } catch (e) {
-                  console.warn('从本地存储移除任务失败:', e);
-                }
-              }, 5000);
-          }, 10000);
-        }
+
+          // 清除轮询
+          if (parsingProgressIntervals[fileId]) {
+            clearInterval(parsingProgressIntervals[fileId]);
+            delete parsingProgressIntervals[fileId];
+          }
+
+          // 从本地存储中移除任务
+          try {
+            const savedTasks = localStorage.getItem('parsingTasks') || '{}';
+            const tasks = JSON.parse(savedTasks);
+            if (tasks[fileId]) {
+              delete tasks[fileId];
+              localStorage.setItem('parsingTasks', JSON.stringify(tasks));
+              console.log(`已从本地存储中移除任务 ${fileId}`);
+            }
+          } catch (e) {
+            console.warn('从本地存储移除任务失败:', e);
+          }
+        }, 8000); // 8秒后清除进度条，给用户足够时间看到完成状态
       }
     } else {
       console.error("Error fetching task progress:", progressResponse);
       clearInterval(parsingProgressIntervals[fileId]);
       delete parsingProgressIntervals[fileId];
       uploadedFiles = uploadedFiles.map(f =>
-        f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0 } : f
+        f.file_id === fileId ? { ...f, parseStatus: "failed", parseProgress: 0, inProgress: false } : f
       );
     }
   }
