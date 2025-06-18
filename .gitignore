@@ -108,3 +108,5 @@ test*/
 result**/
 parsed_files/
 *.db
+saves.zip
+models.zip
