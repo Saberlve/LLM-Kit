@@ -69,28 +69,28 @@ class OCRService:
         self.model = self.model.eval()
     
     async def process_pdf(self, content: bytes, filename: str, record_id: str = None) -> str:
-        """处理PDF文件，提取文本内容"""
+        """process PDF file, extract text content"""
         try:
-            # 更新进度
+            # update progress
             if record_id:
                 await self._update_progress(record_id, 5)
                 
-            # 1. 首先尝试直接从PDF中提取文本
+            # 1. first try to extract text directly from PDF
             loop = asyncio.get_event_loop()
             
-            # 创建临时PDF文件
+            # create temporary PDF file
             pdf_temp_path = None
             try:
                 with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
                     temp_pdf.write(content)
                     pdf_temp_path = temp_pdf.name
                 
-                logger.info(f"尝试直接从PDF '{filename}' 提取文本")
+                logger.info(f"try to extract text directly from PDF '{filename}'")
                 
-                # 使用PyMuPDF (fitz) 提取文本
+                # use PyMuPDF (fitz) to extract text
                 import fitz
                 
-                # 在单独的线程中执行以避免阻塞
+                # execute in a separate thread to avoid blocking
                 def extract_text_directly():
                     try:
                         doc = fitz.open(pdf_temp_path)
@@ -100,7 +100,7 @@ class OCRService:
                         doc.close()
                         return text
                     except Exception as e:
-                        logger.warning(f"直接提取PDF文本失败: {str(e)}")
+                        logger.warning(f"failed to extract text directly from PDF: {str(e)}")
                         return ""
                 
                 direct_text = await loop.run_in_executor(None, extract_text_directly)
@@ -110,14 +110,14 @@ class OCRService:
                     await self._update_progress(record_id, 10)
                 
 
-                TEXT_THRESHOLD = 50  # 如果少于50个字符，认为可能是扫描件
+                TEXT_THRESHOLD = 50  # if less than 50 characters, it may be a scanned document
                 
                 if len(direct_text.strip()) > TEXT_THRESHOLD:
-                    logger.info(f"成功直接提取PDF文本，文本长度: {len(direct_text)}")
+                    logger.info(f"successfully extracted text directly from PDF, text length: {len(direct_text)}")
                     
-                    # 创建OCR处理记录，虽然不需要OCR，但仍需要记录处理信息
+                    # create OCR processing record, although OCR is not needed, it still needs to record processing information
                     if record_id:
-                        # 设置进度为100%
+                        # set progress to 100%
                         await self._update_progress(record_id, 100)
                         
                         # 更新解析记录
@@ -126,7 +126,7 @@ class OCRService:
                             {"$set": {
                                 "status": "completed",
                                 "progress": 100,
-                                "task_type": "pdf_text",  # 使用不同的任务类型标识
+                                "task_type": "pdf_text",  # 
                                 "content": direct_text,
                                 "ocr_info": {
                                     "total_pages": 1,
@@ -148,32 +148,30 @@ class OCRService:
                     
                     return direct_text
                 
-                logger.info(f"直接提取的PDF文本内容太少 ({len(direct_text.strip())} 字符)，切换到OCR模式")
+                logger.info(f"text content extracted from PDF is too short ({len(direct_text.strip())} characters), switch to OCR mode")
                 
             except Exception as e:
-                logger.warning(f"尝试直接提取PDF文本时出错: {str(e)}")
+                logger.warning(f"error occurred when trying to extract text directly from PDF: {str(e)}")
             finally:
-                # 清理临时PDF文件
                 if pdf_temp_path and os.path.exists(pdf_temp_path):
                     os.unlink(pdf_temp_path)
             
-            # 2. 如果直接提取失败或文本太少，使用OCR
-            # 确保模型已加载
+            # 2. if direct extraction fails or text is too short, use OCR
+            # ensure model is loaded
             model_loaded = await self._load_model()
             if not model_loaded:
-                raise Exception("OCR模型加载失败")
+                raise Exception("OCR model loading failed")
             
-            # 更新进度
+         
             if record_id:
                 await self._update_progress(record_id, 15)
             
-            # 将PDF转换为图像列表
             images = await loop.run_in_executor(None, lambda: convert_from_bytes(content))
             
             if record_id:
                 await self._update_progress(record_id, 20)
                 
-                # 创建OCR处理记录，记录总页数信息
+                # create OCR processing record, record total pages information
                 total_pages = len(images)
                 await self.db.llm_kit.parse_records.update_one(
                     {"_id": ObjectId(record_id)},
@@ -183,11 +181,10 @@ class OCRService:
                             "processed_pages": 0,
                             "status": "processing"
                         },
-                        "task_type": "ocr"  # 确认任务类型为OCR
+                        "task_type": "ocr"  # confirm task type is OCR
                     }}
                 )
                 
-                # 创建进度跟踪记录
                 await self.db.llm_kit.ocr_processing_progress.insert_one({
                     "task_id": record_id,
                     "total_pages": total_pages,
@@ -197,12 +194,12 @@ class OCRService:
                     "last_update": datetime.utcnow()
                 })
             
-            # 进行OCR识别
+          
             all_text = ""
             total_pages = len(images)
             
             for i, image in enumerate(images):
-                # 创建临时图像文件
+             
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
                     image.save(tmp_file.name, format="PNG")
                     temp_path = tmp_file.name
@@ -219,11 +216,9 @@ class OCRService:
                     
                     # 更新进度
                     if record_id:
-                        # 计算当前页进度
                         progress = 20 + int(70 * (i + 1) / total_pages)
                         await self._update_progress(record_id, progress)
                         
-                        # 更新OCR进度跟踪记录
                         await self.db.llm_kit.ocr_processing_progress.update_one(
                             {"task_id": record_id},
                             {"$set": {
@@ -232,7 +227,6 @@ class OCRService:
                             }}
                         )
                         
-                        # 更新主记录中的OCR信息
                         await self.db.llm_kit.parse_records.update_one(
                             {"_id": ObjectId(record_id)},
                             {"$set": {
@@ -241,15 +235,12 @@ class OCRService:
                         )
                     
                 finally:
-                    # 删除临时文件
                     if os.path.exists(temp_path):
                         os.unlink(temp_path)
             
-            # 设置最终进度
             if record_id:
                 await self._update_progress(record_id, 100)
                 
-                # 更新OCR处理状态为已完成
                 await self.db.llm_kit.parse_records.update_one(
                     {"_id": ObjectId(record_id)},
                     {"$set": {

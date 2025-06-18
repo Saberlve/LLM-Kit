@@ -410,6 +410,7 @@ interface UnifiedFile {
       const response = await axios.post(
               "http://127.0.0.1:8000/parse/phistory",
               filenameRequest,
+              
               { headers: { "Content-Type": "application/json" } }
       );
 
@@ -1192,7 +1193,7 @@ interface UnifiedFile {
                           <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                           <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
                         </svg>
-                        解析结果
+                        Parsed results
                       </Button>
                     {/if}
                   </div>
@@ -1257,11 +1258,11 @@ interface UnifiedFile {
                               class:text-red-700={file.hasError}
                             >
                               {#if file.hasError}
-                                任务遇到错误
+                                Task encountered an error
                               {:else if file.parseProgress >= 100}
-                                {file.type === 'binary' ? 'OCR处理完成' : '解析完成'}: 
+                                {file.type === 'binary' ? 'OCR processing completed' : 'Parsing completed'}: 
                               {:else}
-                                {file.type === 'binary' ? '正在处理' : '正在解析'}: 
+                                {file.type === 'binary' ? 'Processing' : 'Parsing'}: 
                               {/if}
                               {file.filename}
                             </span>
@@ -1271,7 +1272,7 @@ interface UnifiedFile {
                             {#if file.parseProgress < 100}
                               {t("Refreshing progress every second...")}
                             {:else}
-                              处理完成，将在数秒后隐藏进度条
+                              Processing completed
                             {/if}
                           </div>
                         </div>
@@ -1289,7 +1290,7 @@ interface UnifiedFile {
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                               </svg>
-                              中止任务
+                              Stop task
                             </button>
                           </div>
                         {/if}
@@ -1303,7 +1304,7 @@ interface UnifiedFile {
                               <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
                               <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                             </svg>
-                            <span class="text-blue-700">OCR处理进度:</span> {file.ocr_info.processed_pages}/{file.ocr_info.total_pages} 页
+                            <span class="text-blue-700">OCR processing progress:</span> {file.ocr_info.processed_pages}/{file.ocr_info.total_pages} pages
                             {#if file.ocr_info.total_pages > 0}
                               ({Math.round((file.ocr_info.processed_pages / file.ocr_info.total_pages) * 100)}%)
                             {/if}
@@ -1314,7 +1315,7 @@ interface UnifiedFile {
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                               </svg>
-                              已用时间: {Math.floor(file.ocr_info.elapsed_seconds / 60)}分{file.ocr_info.elapsed_seconds % 60}秒
+                              Elapsed time: {Math.floor(file.ocr_info.elapsed_seconds / 60)} minutes {file.ocr_info.elapsed_seconds % 60} seconds
                             </span>
                           {/if}
                           
@@ -1323,7 +1324,7 @@ interface UnifiedFile {
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                               </svg>
-                              预计剩余: {Math.floor(file.ocr_info.estimated_remaining_seconds / 60)}分{file.ocr_info.estimated_remaining_seconds % 60}秒
+                              Estimated remaining time: {Math.floor(file.ocr_info.estimated_remaining_seconds / 60)} minutes {file.ocr_info.estimated_remaining_seconds % 60} seconds
                             </span>
                           {/if}
                         </div>
@@ -1335,8 +1336,8 @@ interface UnifiedFile {
                               <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                             </svg>
                             <span class="font-medium text-purple-800">
-                              {file.file_type === 'pdf' ? 'PDF处理中' : '图片OCR处理中'}
-                            </span>: 正在提取文本内容，请耐心等待...
+                              {file.file_type === 'pdf' ? 'PDF processing' : 'Image OCR processing'}
+                            </span>: Extracting text content, please wait...
                           </span>
                         </div>
                       {/if}

@@ -42,11 +42,16 @@ async def evaluate_and_optimize_qa(
                 detail="Parallel count cannot be greater than the number of API key pairs"
             )
             
+        # Convert content from string to list (content is always a JSON string now)
+        try:
+            content_data = json.loads(request.content)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON format in content")
+
         service = QualityService(db)
         result = await service.evaluate_and_optimize_qa(
-            content=request.content,
+            content=content_data,
             filename=request.filename,
-            save_path=request.save_path,
             SK=request.SK,
             AK=request.AK,
             parallel_num=request.parallel_num,
@@ -275,6 +280,13 @@ async def delete_quality_record(
 ):
     """Delete quality control record and related quality assessment records by ID"""
     try:
+        
+        
+        # Delete from dataset entries if saved there
+        record = await db.llm_kit.quality_generations.find_one({"_id": ObjectId(request.record_id)})
+        if record and "dataset_id" in record:
+            await db.llm_kit.dataset_entries.delete_one({"_id": ObjectId(record["dataset_id"])})
+            
         # Delete quality control record
         result = await db.llm_kit.quality_generations.delete_one({"_id": ObjectId(request.record_id)})
 
@@ -284,11 +296,6 @@ async def delete_quality_record(
         # Delete related quality assessment records
         await db.llm_kit.quality_records.delete_many({"generation_id": ObjectId(request.record_id)})
 
-        # Delete from dataset entries if saved there
-        record = await db.llm_kit.quality_generations.find_one({"_id": ObjectId(request.record_id)})
-        if record and "dataset_id" in record:
-            await db.llm_kit.dataset_entries.delete_one({"_id": ObjectId(record["dataset_id"])})
-
         return APIResponse(
             status="success",
             message="Quality control record and related assessments deleted successfully",
@@ -296,6 +303,43 @@ async def delete_quality_record(
         )
     except Exception as e:
         logger.error(f"Failed to delete quality control record, record_id: {request.record_id}, error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/delete_file/{dataset_id}")
+async def delete_quality_file(
+    dataset_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """Delete quality evaluation file from database and all related records"""
+    try:
+        obj_id = ObjectId(dataset_id)
+        dataset = await db.llm_kit.dataset_entries.find_one({"_id": obj_id})
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # Get dataset name for logging
+        dataset_name = dataset.get("name", "")
+
+        # Delete from dataset_entries
+        result = await db.llm_kit.dataset_entries.delete_one({"_id": obj_id})
+        if result.deleted_count == 0:
+            logger.warning(f"Dataset with ID {dataset_id} not found for deletion.")
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # Delete related quality generation records
+        await db.llm_kit.quality_generations.delete_many({"dataset_id": str(obj_id)})
+
+        # Delete related quality records
+        await db.llm_kit.quality_records.delete_many({"dataset_id": str(obj_id)})
+
+        logger.info(f"Successfully deleted quality dataset {dataset_name} (ID: {dataset_id}) and related records")
+        return APIResponse(
+            status="success",
+            message="Quality dataset and related records deleted successfully",
+            data={"dataset_id": dataset_id}
+        )
+    except Exception as e:
+        logger.error(f"Failed to delete quality dataset {dataset_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/abort_quality_task")

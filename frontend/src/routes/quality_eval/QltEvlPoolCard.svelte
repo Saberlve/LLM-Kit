@@ -8,39 +8,37 @@
   
   <a
     href={`/quality_eval/quality_eval_main?pool_id=${pool.id}`}
-    class="block p-2 bg-white rounded-md overflow-hidden border shadow-sm shadow-gray-300 border-grey-300 text-decoration-none"
+    class="block p-4 bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300"
   >
-    <div class="md:flex">
-      <div class="p-2">
-        <div class="tracking-wide text-sm text-blue-600 font-semibold">
-          {pool.name}
-        </div>
-        <div>
-          <p class="mt-2 text-gray-500">
-            {pool.description}
-            {#if pool.description.length == 0}
-              <span class="italic text-gray-400">&nbsp;</span>
-            {/if}
-          </p>
-        </div>
-        <div class="mt-2">
-          <span class="text-gray-900 font-bold">ID: </span>
-          <span class="text-gray-600">{pool.id}</span>
-        </div>
-        <div class="mt-2">
-          <span class="text-gray-900 font-bold">{t("data.detail.create_on")}</span>
-          <span class="text-gray-600">{pool.created_on}</span>
-        </div>
-        <div class="mt-2">
-          <span class="text-gray-900 font-bold">{t("data.detail.size")}</span>
-          <span class="text-gray-600">{pool.size}</span>
-        </div>
-        <div class="mt-2">
-          <VisbilityButton
-            id={pool.id.toString()}
-            asset="pool"
-            interactStyle="link"
-          />
+    <div class="flex flex-col h-full">
+      <div class="mb-2">
+        <h3 class="text-lg font-semibold text-blue-600 truncate">{pool.name}</h3>
+        <p class="mt-2 text-gray-600 text-sm">
+          {pool.description || "No description available"}
+        </p>
+      </div>
+      
+      <div class="mt-auto pt-4 border-t border-gray-100">
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <span class="text-gray-700 font-medium">ID:</span>
+            <span class="text-gray-600 ml-1">{pool.id}</span>
+          </div>
+          <div>
+            <span class="text-gray-700 font-medium">Created:</span>
+            <span class="text-gray-600 ml-1">{pool.created_on}</span>
+          </div>
+          <div>
+            <span class="text-gray-700 font-medium">Size:</span>
+            <span class="text-gray-600 ml-1">{pool.size}</span>
+          </div>
+          <div>
+            <VisbilityButton
+              id={pool.id.toString()}
+              asset="pool"
+              interactStyle="link"
+            />
+          </div>
         </div>
       </div>
     </div>

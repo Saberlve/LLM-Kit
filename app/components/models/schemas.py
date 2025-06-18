@@ -30,16 +30,31 @@ class COTGenerateRequest(BaseRequest):
     model_name: str
     domain: str = "Medicine"
 
+class FileSelection(BaseModel):
+    file_id: str
+    file_type: str  # "optimized" or "unoptimized"
+    priority: int  # Priority order (1 = highest priority)
+    filename: str
+
 class DedupRequest(BaseModel):
-    quality_filenames: List[str]
+    selected_files: List[FileSelection]  # List of selected files with priorities
     dedup_by_answer: bool = False
     min_answer_length: int = 10
     dedup_threshold: float = 0.8
 
+class DedupPreviewResponse(BaseModel):
+    dedup_id: str
+    original_count: int
+    kept_count: int
+    deleted_count: int
+    kept_pairs: List[dict]  # Preview of kept QA pairs
+    deleted_groups: List[List[dict]]  # Preview of deleted QA pair groups
+    created_at: datetime
+    status: str
+
 class QualityControlRequest(BaseModel):
-    content: str  # QA pair content, a list of dictionaries
+    content: str  # QA pair content as JSON string (to match frontend)
     filename: str  # Filename
-    save_path: str = "result/"
     SK: Optional[List[str]] = None
     AK: Optional[List[str]] = None
     parallel_num: int = 1
@@ -47,7 +62,7 @@ class QualityControlRequest(BaseModel):
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8
     max_attempts: int = 3
-    domain: str
+    domain: str = ""  # Make domain optional with default empty string
 
 class ParseRequest(BaseRequest):
     # file_path: str
