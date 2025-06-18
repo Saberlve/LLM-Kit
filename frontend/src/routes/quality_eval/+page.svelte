@@ -52,28 +52,28 @@
     created_at: string;
   }
 
-  let description = ""; // Domain description - removed from UI but kept for API compatibility
-  let quality_eval_processing: boolean = false;
-  let errorMessage: string | null = null;
-  let successMessage: string | null = null;
-  let upQAFiles: QAFile[] = [];
-  let qualityHistory: QualityHistoryRecord[] = [];
-  let historyLoaded = false;
-  let lastHistoryRefresh: Date | null = null;
+  let description = ""; // Domain description
+let quality_eval_processing: boolean = false;
+let errorMessage: string | null = null;
+let successMessage: string | null = null;
+let upQAFiles: QAFile[] = [];
+let qualityHistory: QualityHistoryRecord[] = [];
+let historyLoaded = false;
+let lastHistoryRefresh: Date | null = null;
 
-  let parallel_num: number = 2;
-  let similarity_rate: number = 0.8;
-  let coverage_rate: number = 0.8;
-  let max_attempts: number = 1;
-  let modelOptions = [
+let parallel_num: number = 2;
+let similarity_rate: number = 0.5;
+let coverage_rate: number = 0.5;
+let max_attempts: number = 1;
+let modelOptions = [
     { value: 'Qwen' , label: 'Qwen'  },
     { value: 'erine', label: 'erine' },
     { value: 'flash', label: 'flash' },
     { value: 'lite' , label: 'lite'  }
-  ];
-  let selectedFileId: string = '';
+];
+let selectedFileId: string = '';
 
-  let modelname: String = 'Qwen';
+let modelname: String = 'erine';
   // Default AK/SK values from config
   let api_keys = ["nNgmVkQ22wuaVu4h2OimBvYM", "NDodQ4HrnTA0pV9nCf5cipaU"];
   let secret_keys = ["AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x", "cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr"];
@@ -110,7 +110,7 @@
   
   $: {
     if (parallel_num < 1) parallel_num = 1;
-    if (parallel_num > 2) parallel_num = 2; // Limit to 2 based on available keys
+    if (parallel_num > 10) parallel_num = 10; // Allow up to 10 parallel processes
     // Initialize with default values from config, then fill remaining slots if needed
     const defaultAKs = ["nNgmVkQ22wuaVu4h2OimBvYM", "NDodQ4HrnTA0pV9nCf5cipaU"];
     const defaultSKs = ["AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x", "cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr"];
@@ -602,19 +602,32 @@
                     <h2 class="text-lg font-semibold text-gray-700">{t("quality_eval.params")}</h2>
                 </div>
                 <div class="p-6 space-y-4">
-                    <div class="mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.parallel_num")}</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="2"
-                                bind:value={parallel_num}
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                            <p class="text-xs text-gray-500 mt-1">Maximum 2 parallel processes supported</p>
-                        </div>
-                    </div>
+                    <div class="flex gap-4 mb-4">
+
+            <div class="w-1/2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.parallel_num")}</label>
+                <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    bind:value={parallel_num}
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Maximum 10 parallel processes supported</p>
+            </div>
+
+            <div class="w-1/2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Domain Description</label>
+                <input
+                    type="text"
+                    placeholder="Enter domain description"
+                    bind:value={description}
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Optional domain context for quality evaluation</p>
+            </div>
+
+        </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.model_name")}</label>

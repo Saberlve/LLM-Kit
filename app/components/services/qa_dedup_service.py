@@ -468,3 +468,65 @@ class QADedupService:
             }]
         except Exception as e:
             raise Exception(f"Failed to get records: {str(e)}")
+
+    async def get_unoptimized_content(self, file_id: str):
+        """Get unoptimized QA content based on file ID"""
+        try:
+            # Find QA generation record with specified ID
+            record = await self.db.llm_kit.qa_generations.find_one({"_id": ObjectId(file_id)})
+
+            if not record:
+                raise Exception(f"QA generation record with ID {file_id} not found")
+
+            # Get content from record
+            content = []
+            if "content" in record and record["content"]:
+                if isinstance(record["content"], str):
+                    try:
+                        content = json.loads(record["content"])
+                    except json.JSONDecodeError:
+                        raise Exception("Invalid JSON format in content")
+                elif isinstance(record["content"], list):
+                    content = record["content"]
+            else:
+                raise Exception("No content found in record")
+
+            return {
+                "filename": record["input_file"],
+                "content": content,
+                "created_at": record["created_at"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_unoptimized_content")
+            raise Exception(f"Failed to get unoptimized content: {str(e)}")
+
+    async def get_optimized_content(self, file_id: str):
+        """Get optimized QA content based on file ID"""
+        try:
+            # Find quality generation record with specified ID
+            record = await self.quality_generations.find_one({"_id": ObjectId(file_id)})
+
+            if not record:
+                raise Exception(f"Quality generation record with ID {file_id} not found")
+
+            # Get content from record
+            content = []
+            if "content" in record and record["content"]:
+                if isinstance(record["content"], str):
+                    try:
+                        content = json.loads(record["content"])
+                    except json.JSONDecodeError:
+                        raise Exception("Invalid JSON format in content")
+                elif isinstance(record["content"], list):
+                    content = record["content"]
+            else:
+                raise Exception("No content found in record")
+
+            return {
+                "filename": record["input_file"],
+                "content": content,
+                "created_at": record["created_at"]
+            }
+        except Exception as e:
+            await self._log_error(str(e), "get_optimized_content")
+            raise Exception(f"Failed to get optimized content: {str(e)}")
