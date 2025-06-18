@@ -52,15 +52,16 @@
     created_at: string;
   }
 
-  let description = `quality_control-${Date.now().toString().substring(5, 10)}`;
+  let description = ""; // Domain description - removed from UI but kept for API compatibility
   let quality_eval_processing: boolean = false;
   let errorMessage: string | null = null;
   let successMessage: string | null = null;
   let upQAFiles: QAFile[] = [];
   let qualityHistory: QualityHistoryRecord[] = [];
   let historyLoaded = false;
-  
-  let parallel_num: number = 1;
+  let lastHistoryRefresh: Date | null = null;
+
+  let parallel_num: number = 2;
   let similarity_rate: number = 0.8;
   let coverage_rate: number = 0.8;
   let max_attempts: number = 1;
@@ -71,24 +72,27 @@
     { value: 'lite' , label: 'lite'  }
   ];
   let selectedFileId: string = '';
-  
-  let modelname: String = 'Qwen';
-  let api_keys = [""];
-  let secret_keys = [""];
 
-  // 进度追踪
-  let progress = 0;
-  let progressStatus = "idle"; // idle, processing, completed, failed, aborted
-  let progressIntervalId: number | null = null;
-  let elapsedTime = "0s";
-  let estimatedRemainingTime = "0s";
-  let estimatedCompletionTime = "";
-  let processedItems = 0;
-  let totalItems = 0;
-  let errorMsg = "";
-  
+  let modelname: String = 'Qwen';
+  // Default AK/SK values from config
+  let api_keys = ["nNgmVkQ22wuaVu4h2OimBvYM", "NDodQ4HrnTA0pV9nCf5cipaU"];
+  let secret_keys = ["AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x", "cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr"];
+
+  // 进度追踪 - 改为文件级别的进度跟踪
+  let progressIntervals: { [filename: string]: number } = {};
+  let fileProgress: { [filename: string]: {
+    progress: number,
+    status: string,
+    elapsedTime: string,
+    remainingTime: string,
+    estimatedCompletionTime: string,
+    processedItems: number,
+    totalItems: number,
+    isComplete: boolean,
+    errorMessage: string
+  }} = {};
+
   // 显示控制
-  let showProgressModal = false;
   let abortConfirmModal = false;
   let previewModal = false;
   let previewData = [];
@@ -106,8 +110,13 @@
   
   $: {
     if (parallel_num < 1) parallel_num = 1;
-    api_keys = Array(parallel_num).fill("");
-    secret_keys = Array(parallel_num).fill("");
+    if (parallel_num > 2) parallel_num = 2; // Limit to 2 based on available keys
+    // Initialize with default values from config, then fill remaining slots if needed
+    const defaultAKs = ["nNgmVkQ22wuaVu4h2OimBvYM", "NDodQ4HrnTA0pV9nCf5cipaU"];
+    const defaultSKs = ["AzMeGq4B89wjCkTQSHSXhOFu4MoB1P3x", "cFLtpSn773bVJLx0JTA8P0aSLIYoFMQr"];
+
+    api_keys = Array(parallel_num).fill("").map((_, i) => defaultAKs[i] || "");
+    secret_keys = Array(parallel_num).fill("").map((_, i) => defaultSKs[i] || "");
   }
   
   $: validForQualityEval = selectedFileId !== '' && api_keys.every(key => key.trim() !== '');
@@ -137,28 +146,33 @@
 
   async function startQualityEval() {
     quality_eval_processing = true;
-    showProgressModal = true;
     errorMessage = null;
-    progress = 0;
-    progressStatus = "processing";
-    processedItems = 0;
-    
+
     const contentData = await fetchFileContent(selectedFileId);
     if (!contentData || contentData.length === 0) {
         errorMessage = "Unable to fetch or parse source file content, please check the file.";
         quality_eval_processing = false;
-        progressStatus = "failed";
-        errorMsg = errorMessage;
         return;
     }
-    totalItems = contentData.length;
-    
+
+    // 初始化文件进度跟踪
+    fileProgress[selectedFilename] = {
+      progress: 0,
+      status: 'processing',
+      elapsedTime: '0s',
+      remainingTime: 'Calculating...',
+      estimatedCompletionTime: 'Calculating...',
+      processedItems: 0,
+      totalItems: contentData.length,
+      isComplete: false,
+      errorMessage: ''
+    };
+
     try {
       const response = await axios.post(`http://127.0.0.1:8000/quality/quality`, {
-        content: contentData,
+        content: JSON.stringify(contentData), // Convert to string for current server schema
         filename: selectedFilename,
         model_name: modelname,
-        save_path: "/result",
         SK: secret_keys,
         AK: api_keys,
         parallel_num: parallel_num,
@@ -177,40 +191,63 @@
       console.error("Error during quality evaluation:", error);
       errorMessage = `Quality evaluation startup failed: ${error.message || "Unknown error"}`;
       quality_eval_processing = false;
-      progressStatus = "failed";
-      errorMsg = errorMessage;
+      if (fileProgress[selectedFilename]) {
+        fileProgress[selectedFilename].status = 'failed';
+        fileProgress[selectedFilename].errorMessage = errorMessage;
+      }
     }
   }
 
   function startProgressPolling(filename: string) {
-    if (progressIntervalId !== null) clearInterval(progressIntervalId);
-    
-    progressIntervalId = setInterval(async () => {
+    if (progressIntervals[filename]) {
+      clearInterval(progressIntervals[filename]);
+    }
+
+    progressIntervals[filename] = setInterval(async () => {
       try {
         const response = await axios.post(`http://127.0.0.1:8000/quality/progress`, { filename });
-        
+
         if (response.data && response.data.status === "success") {
           const data = response.data.data;
-          progress = data.progress;
-          progressStatus = data.status;
-          elapsedTime = data.formatted_elapsed_time || "-";
-          estimatedRemainingTime = data.formatted_remaining_time || "-";
-          estimatedCompletionTime = data.formatted_completion_time || "-";
-          processedItems = data.processed_items || 0;
-          totalItems = data.total_items || 0;
-          
+
+          if (fileProgress[filename]) {
+            fileProgress[filename] = {
+              progress: data.progress,
+              status: data.status,
+              elapsedTime: data.formatted_elapsed_time || "-",
+              remainingTime: data.formatted_remaining_time || "-",
+              estimatedCompletionTime: data.formatted_completion_time || "-",
+              processedItems: data.processed_items || 0,
+              totalItems: data.total_items || 0,
+              isComplete: data.status === 'completed',
+              errorMessage: data.status === 'failed' ? (data.error_message || "Processing failed") : ''
+            };
+
+            // 强制更新UI
+            fileProgress = {...fileProgress};
+          }
+
           if (["completed", "failed", "aborted"].includes(data.status)) {
-            clearInterval(progressIntervalId);
-            progressIntervalId = null;
+            clearInterval(progressIntervals[filename]);
+            delete progressIntervals[filename];
             quality_eval_processing = false;
             await fetchQAFiles();
             await fetchQualityHistory();
-            
-            if (data.status === "failed") errorMsg = data.error_message || "处理失败";
-            if (data.status === "aborted") errorMsg = "任务已被用户中止";
+
+            if (data.status === "aborted") {
+              if (fileProgress[filename]) {
+                fileProgress[filename].errorMessage = "Task was aborted by user";
+              }
+            }
             if (data.status === "completed") {
-                successMessage = "质量评估完成！";
-                setTimeout(() => successMessage = null, 3000);
+              successMessage = "Quality evaluation completed!";
+              setTimeout(() => successMessage = null, 3000);
+
+              // 5秒后移除进度条
+              setTimeout(() => {
+                delete fileProgress[filename];
+                fileProgress = {...fileProgress};
+              }, 5000);
             }
           }
         } else if(response.data.status !== 'not_found') {
@@ -229,14 +266,29 @@
       });
       if (response.data && response.data.status === "success") {
         console.log("Task aborted successfully");
-        successMessage = "任务已成功中止";
+        successMessage = "Task aborted successfully";
         setTimeout(() => successMessage = null, 3000);
+
+        // 停止进度跟踪
+        if (progressIntervals[selectedFilename]) {
+          clearInterval(progressIntervals[selectedFilename]);
+          delete progressIntervals[selectedFilename];
+        }
+
+        // 更新文件进度状态
+        if (fileProgress[selectedFilename]) {
+          fileProgress[selectedFilename].status = 'aborted';
+          fileProgress[selectedFilename].errorMessage = 'Task was aborted by user';
+          fileProgress = {...fileProgress};
+        }
+
+        quality_eval_processing = false;
       } else {
-        errorMessage = response.data.message || "中止任务失败";
+        errorMessage = response.data.message || "Failed to abort task";
       }
       abortConfirmModal = false;
     } catch (error) {
-      errorMessage = error.message || "中止任务时发生网络错误";
+      errorMessage = error.message || "Network error occurred while aborting task";
       console.error("Error aborting task:", error);
     }
   }
@@ -266,12 +318,13 @@
           );
           if (response.data.status === "success") {
               qualityHistory = response.data.data.records || [];
+              lastHistoryRefresh = new Date();
           } else {
-              errorMessage = "加载优化历史失败: " + response.data.message;
+              errorMessage = "Failed to load quality evaluation history: " + response.data.message;
           }
       } catch (error) {
           console.error("Error fetching quality history:", error);
-          errorMessage = "加载优化历史失败，请检查网络或服务器";
+          errorMessage = "Failed to load quality evaluation history, please check network or server";
       } finally {
           historyLoaded = true;
       }
@@ -312,10 +365,10 @@
         totalPreviewItems = response.data.total_items || 0;
         currentPage = response.data.page || 1;
       } else {
-        errorMessage = "无法获取预览数据";
+        errorMessage = "Unable to get preview data";
       }
     } catch (error) {
-      errorMessage = `获取预览失败: ${error.message || "未知错误"}`;
+      errorMessage = `Failed to get preview: ${error.message || "Unknown error"}`;
     }
   }
   
@@ -334,20 +387,24 @@
   onMount(async () => {
     await fetchQAFiles();
     await fetchQualityHistory();
+    // 只定期刷新QA文件列表，不刷新历史记录
     fetchEntriesUpdater = setInterval(() => {
         fetchQAFiles();
-        fetchQualityHistory();
+        // fetchQualityHistory(); // 移除频繁刷新历史记录
     }, UPDATE_VIEW_INTERVAL);
   });
 
   onDestroy(() => {
     clearInterval(fetchEntriesUpdater);
-    if (progressIntervalId !== null) clearInterval(progressIntervalId);
+    // 清理所有进度跟踪间隔
+    Object.values(progressIntervals).forEach(intervalId => {
+      clearInterval(intervalId);
+    });
   });
 
 </script>
 
-ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
+<ActionPageTitle returnTo="/quality_eval/" title="Quality Control" />
 
 <div class="w-full flex flex-col space-y-6 p-4">
     <!-- Error Message Section -->
@@ -464,6 +521,73 @@ ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
                                         <Button size="xs" color="light" on:click={(e) => { e.stopPropagation(); previewDataset(file.id); }}>Preview</Button>
                                     </TableBodyCell>
                                 </tr>
+
+                                <!-- Inline Progress Bar Row -->
+                                {#if fileProgress[file.filename] && fileProgress[file.filename].status === 'processing'}
+                                    <tr class="bg-blue-50">
+                                        <td colspan="4" class="px-6 py-4">
+                                            <div class="w-full space-y-3">
+                                                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                                                    <div class="font-medium">Quality Evaluation Progress</div>
+                                                    <div class="text-blue-600">Processing...</div>
+                                                </div>
+                                                <Progressbar
+                                                    progress={fileProgress[file.filename].progress}
+                                                    size="h-2"
+                                                    color="blue"
+                                                />
+                                                <div class="flex justify-between text-xs text-gray-500">
+                                                    <span>{fileProgress[file.filename].progress}% Complete</span>
+                                                    <span>{fileProgress[file.filename].processedItems} / {fileProgress[file.filename].totalItems} items</span>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-4 text-xs text-gray-600">
+                                                    <div>
+                                                        <span class="font-medium">Elapsed:</span> {fileProgress[file.filename].elapsedTime}
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-medium">Remaining:</span> {fileProgress[file.filename].remainingTime}
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-between items-center">
+                                                    <div class="text-xs text-gray-500 animate-pulse">
+                                                        Refreshing progress every second...
+                                                    </div>
+                                                    <Button size="xs" color="red" on:click={() => abortConfirmModal = true}>
+                                                        Abort Task
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {/if}
+
+                                <!-- Error/Completed Status Row -->
+                                {#if fileProgress[file.filename] && (fileProgress[file.filename].status === 'failed' || fileProgress[file.filename].status === 'aborted' || fileProgress[file.filename].status === 'completed')}
+                                    <tr class="bg-gray-50">
+                                        <td colspan="4" class="px-6 py-3">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center">
+                                                    {#if fileProgress[file.filename].status === 'completed'}
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                                        </svg>
+                                                        <span class="text-green-700 font-medium">Quality evaluation completed successfully!</span>
+                                                    {:else}
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                                        </svg>
+                                                        <span class="text-red-700 font-medium">{fileProgress[file.filename].errorMessage || 'Task failed'}</span>
+                                                    {/if}
+                                                </div>
+                                                {#if fileProgress[file.filename].status === 'completed'}
+                                                    <div class="text-xs text-gray-500">
+                                                        Progress will be hidden in a few seconds...
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {/if}
                             {/each}
                         </TableBody>
                     </Table>
@@ -478,25 +602,17 @@ ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
                     <h2 class="text-lg font-semibold text-gray-700">{t("quality_eval.params")}</h2>
                 </div>
                 <div class="p-6 space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
+                    <div class="mb-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.parallel_num")}</label>
                             <input
                                 type="number"
                                 min="1"
+                                max="2"
                                 bind:value={parallel_num}
                                 class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                             />
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">{t("quality_eval.domain")}</label>
-                            <input
-                                type="text"
-                                bind:value={description}
-                                placeholder="Enter domain (optional)"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            />
+                            <p class="text-xs text-gray-500 mt-1">Maximum 2 parallel processes supported</p>
                         </div>
                     </div>
 
@@ -592,8 +708,21 @@ ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
     <div class="bg-white rounded-lg shadow-md overflow-hidden mt-6">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-700">Quality Evaluation History</h2>
-            <div class="text-sm text-gray-500">
-                {qualityHistory.length} evaluations completed
+            <div class="flex items-center space-x-3">
+                <div class="text-sm text-gray-500">
+                    <div>{qualityHistory.length} evaluations completed</div>
+                    {#if lastHistoryRefresh}
+                        <div class="text-xs text-gray-400">
+                            Last updated: {lastHistoryRefresh.toLocaleTimeString()}
+                        </div>
+                    {/if}
+                </div>
+                <Button size="xs" color="light" on:click={fetchQualityHistory} disabled={!historyLoaded}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    Refresh
+                </Button>
             </div>
         </div>
         <div class="p-4">
@@ -710,101 +839,7 @@ ActionPageTitle returnTo="/quality_eval/" title={t("quality_eval.title")} />
     </div>
 </Modal>
 
-<!-- Progress Modal -->
-<Modal
-  title={t("quality_eval.progress_title")}
-  bind:open={showProgressModal}
-  autoclose={false}
-  size="lg"
-  class="rounded-lg"
->
-  <h3 slot="header" class="text-xl font-bold text-gray-900">
-    Quality Evaluation Progress
-  </h3>
 
-  <div class="space-y-6">
-    {#if progressStatus === 'failed' || progressStatus === 'aborted'}
-      <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded shadow-md">
-        <div class="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-          </svg>
-          <span class="font-medium">Error:</span>
-          <span class="ml-1">{errorMsg}</span>
-        </div>
-      </div>
-    {/if}
-
-    <div class="space-y-4">
-      <div>
-        <div class="flex justify-between text-sm text-gray-600 mb-2">
-          <div class="font-medium">Overall Progress</div>
-          <div class={progressStatus === 'completed' ? "text-green-600" : progressStatus === 'failed' || progressStatus === 'aborted' ? "text-red-600" : "text-blue-600"}>
-            {progressStatus === 'processing' ? 'Processing...' :
-             progressStatus === 'completed' ? 'Completed' :
-             progressStatus === 'failed' ? 'Failed' :
-             progressStatus === 'aborted' ? 'Aborted' :
-             'Idle'}
-          </div>
-        </div>
-        <Progressbar
-          progress={progress}
-          size="h-3"
-          color={
-            progressStatus === 'failed' || progressStatus === 'aborted'
-              ? 'red'
-              : progressStatus === 'completed'
-              ? 'green'
-              : 'blue'
-          }
-        />
-        <div class="flex justify-between text-xs text-gray-500 mt-1">
-          <span>{progress}% Complete</span>
-          <span>{processedItems} / {totalItems} items</span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-        <div class="bg-gray-50 p-3 rounded-lg">
-          <div class="text-sm font-medium text-gray-700 mb-1">Elapsed Time</div>
-          <div class="text-lg font-semibold text-blue-600">{elapsedTime}</div>
-        </div>
-
-        <div class="bg-gray-50 p-3 rounded-lg">
-          <div class="text-sm font-medium text-gray-700 mb-1">Remaining Time</div>
-          <div class="text-lg font-semibold text-blue-600">
-            {progressStatus === 'completed' ? '0s' : estimatedRemainingTime}
-          </div>
-        </div>
-      </div>
-
-      {#if progressStatus === 'processing'}
-        <div class="text-xs text-gray-500 animate-pulse text-center">
-          Refreshing progress every second...
-        </div>
-      {/if}
-    </div>
-  </div>
-
-  <svelte:fragment slot="footer">
-    <div class="flex justify-between w-full">
-      {#if progressStatus === 'processing'}
-        <Button color="red" on:click={() => abortConfirmModal = true}>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Abort Task
-        </Button>
-      {:else}
-        <div></div>
-      {/if}
-
-      <Button color="alternative" on:click={() => showProgressModal = false}>
-        Close
-      </Button>
-    </div>
-  </svelte:fragment>
-</Modal>
 
 <!-- Abort Confirmation Modal -->
 <Modal

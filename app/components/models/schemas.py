@@ -31,13 +31,13 @@ class COTGenerateRequest(BaseRequest):
     domain: str = "Medicine"
 
 class DedupRequest(BaseModel):
-    quality_filenames: List[str]
+    quality_filenames: List[str]  # Can be either filenames or file IDs
     dedup_by_answer: bool = False
     min_answer_length: int = 10
     dedup_threshold: float = 0.8
 
 class QualityControlRequest(BaseModel):
-    content: str  # QA pair content, a list of dictionaries
+    content: str  # QA pair content as JSON string (to match frontend)
     filename: str  # Filename
     SK: Optional[List[str]] = None
     AK: Optional[List[str]] = None
@@ -46,7 +46,7 @@ class QualityControlRequest(BaseModel):
     similarity_rate: float = 0.8
     coverage_rate: float = 0.8
     max_attempts: int = 3
-    domain: str
+    domain: str = ""  # Make domain optional with default empty string
 
 class ParseRequest(BaseRequest):
     # file_path: str

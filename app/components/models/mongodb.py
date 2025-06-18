@@ -82,11 +82,16 @@ class QAPairDB(MongoBaseModel):
 class QualityControlGeneration(MongoBaseModel):
     """Quality control record"""
     input_file: str
-    save_path: str
     model_name: str
     status: str = "processing"  # processing, completed, failed
-    source_text: str
+    source_text: str = ""  # Default empty string
     progress: int = 0  # Progress field
+    start_time: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    estimated_completion_time: Optional[datetime] = None
+    item_info: dict = Field(default_factory=lambda: {"total_items": 0, "processed_items": 0})
+    content: Optional[str] = None  # Optimized QA content
+    dataset_id: Optional[str] = None  # Reference to dataset_entries
+    error_message: Optional[str] = None  # Error message if failed
 
 class QAQualityRecord(MongoBaseModel):
     """Q&A quality record"""

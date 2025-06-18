@@ -5,7 +5,7 @@ from utils.hparams import HyperParams
 from app.components.models.mongodb import QAQualityRecord, QualityControlGeneration, PyObjectId
 import json
 import os
-from typing import List
+from typing import List, Optional
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
@@ -32,69 +32,320 @@ class QualityService:
         }
         await self.error_logs.insert_one(error_log)
 
-    def process_single_qa_with_api(self, qa: dict, index: int, total_content: List[dict], 
+    def process_single_qa_with_api(self, qa: dict, index: int, total_content: List[dict],
                                    ak: str, sk: str, model_name: str, domain: str,
                                    similarity_rate: float, coverage_rate: float, max_attempts: int):
-        """Synchronously process a single QA pair"""
+        """Synchronously process a single QA pair using actual quality control logic"""
         try:
-            # 创建质量评估器，仅针对单个QA对
-            from quality_control.quality_control import QAQualityChecker
-            
-            # 创建简化的hparams对象，仅包含必要的参数
-            hparams = {
-                "model_name": model_name,
-                "similarity_rate": similarity_rate,
-                "coverage_rate": coverage_rate,
-                "max_attempts": max_attempts,
-                "AK": ak, 
-                "SK": sk,
-                "domain": domain
-            }
-            
-            # 创建质量检查器
-            checker = QAQualityChecker(hparams)
-            
-            # 对单个QA对进行质量评估和优化
-            optimized_qa = checker.optimize_qa_pair(qa["question"], qa["answer"], index, qa.get("text", ""))
-            
-            # 如果优化成功，返回优化后的QA对，否则返回原始QA对
+            # Store original QA for comparison
+            original_qa = qa.copy()
+
+            # Get nearby QAs for context (similar to quality_control implementation)
+            nearby_qas = self._get_nearby_qas(total_content, index)
+
+            # Apply quality evaluation and regeneration logic
+            optimized_qa = self._evaluate_qa_and_regenerate(qa, nearby_qas, ak, sk, model_name, domain, similarity_rate, max_attempts)
+
             if optimized_qa:
-                # 添加原始QA对供比较
-                optimized_qa["original_question"] = qa["question"]
-                optimized_qa["original_answer"] = qa["answer"]
-                return optimized_qa
-            else:
-                # 如果优化失败，返回原始QA对，但标记为未优化
-                return {
-                    "question": qa["question"],
-                    "answer": qa["answer"],
-                    "original_question": qa["question"],
-                    "original_answer": qa["answer"],
-                    "optimized": False,
-                    "similarity_score": 0.0,
-                    "coverage_score": 0.0,
-                    "text": qa.get("text", "")
-                }
+                # Apply coverage check and potentially generate more QAs
+                final_qa = self._check_coverage_and_regenerate(optimized_qa, nearby_qas, ak, sk, model_name, domain, coverage_rate, max_attempts)
+
+                if final_qa:
+                    # Calculate actual scores
+                    similarity_score = self._calculate_similarity_score(final_qa)
+                    coverage_score = self._calculate_coverage_score(final_qa, nearby_qas)
+
+                    # Return optimized QA with scores
+                    return {
+                        "question": final_qa["question"],
+                        "answer": final_qa["answer"],
+                        "text": final_qa.get("text", ""),
+                        "original_question": original_qa["question"],
+                        "original_answer": original_qa["answer"],
+                        "optimized": True,
+                        "similarity_score": similarity_score,
+                        "coverage_score": coverage_score,
+                        "index": index
+                    }
+
+            # If optimization failed, return original QA with calculated scores
+            similarity_score = self._calculate_similarity_score(original_qa)
+            coverage_score = self._calculate_coverage_score(original_qa, nearby_qas)
+
+            return {
+                "question": original_qa["question"],
+                "answer": original_qa["answer"],
+                "text": original_qa.get("text", ""),
+                "original_question": original_qa["question"],
+                "original_answer": original_qa["answer"],
+                "optimized": False,
+                "similarity_score": similarity_score,
+                "coverage_score": coverage_score,
+                "index": index
+            }
+
         except Exception as e:
             logger.error(f"处理QA对时出错: {str(e)}")
-            # 如果处理过程中出错，返回原始QA对，但标记为错误
+            # If processing fails, return original QA with error info
             return {
                 "question": qa["question"],
                 "answer": qa["answer"],
+                "text": qa.get("text", ""),
                 "original_question": qa["question"],
                 "original_answer": qa["answer"],
                 "optimized": False,
                 "error": str(e),
                 "similarity_score": 0.0,
                 "coverage_score": 0.0,
-                "text": qa.get("text", "")
+                "index": index
             }
+
+    def _get_nearby_qas(self, qas: List[dict], index: int) -> List[dict]:
+        """Get nearby QA pairs based on text similarity (from quality_control.py)"""
+        if index >= len(qas):
+            return []
+
+        target_text = qas[index].get('text', '')
+        nearby_qas = []
+        nearby_qas.append(qas[index])
+
+        # Check backward
+        j = index - 1
+        while j >= 0 and target_text in qas[j].get('text', ''):
+            nearby_qas.append(qas[j])
+            j -= 1
+
+        # Check forward
+        j = index + 1
+        while j < len(qas) and target_text in qas[j].get('text', ''):
+            nearby_qas.append(qas[j])
+            j += 1
+
+        return nearby_qas
+
+    def _calculate_similarity(self, str1: str, str2: str) -> float:
+        """Calculate similarity between two strings using Levenshtein ratio"""
+        try:
+            from Levenshtein import ratio
+            return ratio(str1, str2)
+        except ImportError:
+            # Fallback to simple character-based similarity if Levenshtein is not available
+            if not str1 or not str2:
+                return 0.0
+            set1, set2 = set(str1.lower()), set(str2.lower())
+            intersection = len(set1.intersection(set2))
+            union = len(set1.union(set2))
+            return intersection / union if union > 0 else 0.0
+
+    def _calculate_similarity_score(self, qa: dict) -> float:
+        """Calculate similarity score between answer and text"""
+        try:
+            answer = qa.get('answer', '')
+            text = qa.get('text', '')
+
+            if not answer or not text:
+                return 0.0
+
+            # Split by Chinese period as in original implementation
+            answer_list = answer.split('。')
+            text_list = text.split('。')
+
+            # Calculate maximum similarity between any answer part and text part
+            max_ratio = 0.0
+            for answer_part in answer_list:
+                for text_part in text_list:
+                    if answer_part.strip() and text_part.strip():
+                        ratio = self._calculate_similarity(answer_part.strip(), text_part.strip())
+                        max_ratio = max(max_ratio, ratio)
+
+            return max_ratio
+        except Exception as e:
+            logger.error(f"Error calculating similarity score: {str(e)}")
+            return 0.0
+
+    def _calculate_coverage_score(self, qa: dict, nearby_qas: List[dict]) -> float:
+        """Calculate coverage score using token-based approach"""
+        try:
+            import tiktoken
+            tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
+
+            text = qa.get('text', '')
+            if not text:
+                return 0.0
+
+            text_tokens = set(tokenizer.encode(text))
+            answer_tokens = set()
+
+            # Collect tokens from nearby QA answers
+            for nearby_qa in nearby_qas:
+                answer = nearby_qa.get('answer', '')
+                if answer:
+                    answer_tokens.update(tokenizer.encode(answer))
+
+            if not text_tokens:
+                return 0.0
+
+            remaining_tokens = text_tokens - answer_tokens
+            coverage = 1 - len(remaining_tokens) / len(text_tokens)
+            return max(0.0, min(1.0, coverage))
+
+        except Exception as e:
+            logger.error(f"Error calculating coverage score: {str(e)}")
+            return 0.0
+
+    def _is_relative(self, question: str, ak: str, sk: str, model_name: str, domain: str) -> bool:
+        """Check if question is relative to the domain"""
+        try:
+            from utils.helper import generate
+            from model_api.prompts import PROMPT_DICT
+
+            # Replace domain placeholder in prompt
+            prompt_template = PROMPT_DICT.get('RELATIVE',
+                "Please determine whether the given question <question> is relative to the 'domain'. Based on the following two conditions, provide <reply>: If it is likely, <reply> should be 1; if it is unlikely, <reply> should be 0.\n<question>: {}\n<reply>:")
+            prompt_template = prompt_template.replace("'domain'", domain)
+
+            response = generate(question, model_name, 'RELATIVE', ak, sk)
+            # Count occurrences of '1' vs '0' in response
+            return response.count('1') > response.count('0')
+        except Exception as e:
+            logger.error(f"Error checking domain relevance: {str(e)}")
+            return True  # Default to True if check fails
+
+    def _is_explicit(self, question: str, ak: str, sk: str, model_name: str) -> bool:
+        """Check if question is explicit and specific"""
+        try:
+            from utils.helper import generate
+
+            response = generate(question, model_name, 'EXPLICIT', ak, sk)
+            # Count occurrences of '1' vs '0' in response
+            return response.count('1') > response.count('0')
+        except Exception as e:
+            logger.error(f"Error checking question explicitness: {str(e)}")
+            return True  # Default to True if check fails
+
+    def _regenerate_qa(self, qa: dict, nearby_qas: List[dict], ak: str, sk: str, model_name: str) -> Optional[dict]:
+        """Regenerate QA pair using API"""
+        try:
+            from utils.helper import generate, extract_qa
+
+            text = qa.get('text', '')
+            if not text:
+                return None
+
+            response = generate(text, model_name, 'ToQA', ak, sk)
+            if response:
+                new_qas = extract_qa(response)
+                if new_qas:
+                    # Find the most suitable QA from generated ones
+                    selected_qa = self._find_suitable_qa(new_qas, nearby_qas) if len(new_qas) > 1 else new_qas[0]
+                    selected_qa['text'] = text
+                    return selected_qa
+        except Exception as e:
+            logger.error(f"Error regenerating QA pair: {str(e)}")
+        return None
+
+    def _find_suitable_qa(self, new_qas: List[dict], nearby_qas: List[dict]) -> dict:
+        """Find the most suitable QA from generated ones"""
+        if not new_qas:
+            return {}
+
+        if not nearby_qas:
+            return new_qas[0]
+
+        best_index = 0
+        min_similarity = 1.0
+
+        for i, new_qa in enumerate(new_qas):
+            new_question = new_qa.get('question', '')
+            for old_qa in nearby_qas:
+                old_question = old_qa.get('question', '')
+                if new_question and old_question:
+                    similarity = self._calculate_similarity(new_question, old_question)
+                    if similarity < min_similarity:
+                        min_similarity = similarity
+                        best_index = i
+
+        return new_qas[best_index]
+
+    def _evaluate_qa_and_regenerate(self, qa: dict, nearby_qas: List[dict], ak: str, sk: str,
+                                   model_name: str, domain: str, similarity_rate: float, max_attempts: int) -> Optional[dict]:
+        """Evaluate QA pair and regenerate if needed"""
+        current_qa = qa.copy()
+
+        for attempt in range(max_attempts):
+            try:
+                # Calculate similarity score
+                similarity_score = self._calculate_similarity_score(current_qa)
+                current_qa['ratio'] = similarity_score
+
+                # Check if question is explicit and domain-relevant
+                is_explicit = self._is_explicit(current_qa.get('question', ''), ak, sk, model_name)
+                is_relevant = self._is_relative(current_qa.get('question', ''), ak, sk, model_name, domain)
+
+                # If QA meets quality criteria, return it
+                if (similarity_score >= similarity_rate and is_explicit and is_relevant):
+                    return current_qa
+
+                # Otherwise, try to regenerate
+                regenerated_qa = self._regenerate_qa(current_qa, nearby_qas, ak, sk, model_name)
+                if regenerated_qa:
+                    current_qa = regenerated_qa
+                else:
+                    break  # If regeneration fails, stop trying
+
+            except Exception as e:
+                logger.error(f"Error during quality evaluation attempt {attempt + 1}: {str(e)}")
+                break
+
+        return current_qa
+
+    def _generate_more_qas(self, qa: dict, ak: str, sk: str, model_name: str, max_attempts: int) -> Optional[List[dict]]:
+        """Generate more QA pairs for better coverage"""
+        try:
+            from utils.helper import generate, extract_qa
+
+            text = qa.get('text', '')
+            if not text:
+                return None
+
+            for attempt in range(max_attempts):
+                try:
+                    response = generate(text, model_name, 'MORE_QA', ak, sk)
+                    if response:
+                        new_qas = extract_qa(response)
+                        if new_qas:
+                            # Add text to each generated QA
+                            for new_qa in new_qas:
+                                new_qa['text'] = text
+                            return new_qas
+                except Exception as e:
+                    logger.error(f"Error generating more QAs attempt {attempt + 1}: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error in generate_more_qas: {str(e)}")
+        return None
+
+    def _check_coverage_and_regenerate(self, qa: dict, nearby_qas: List[dict], ak: str, sk: str,
+                                     model_name: str, domain: str, coverage_rate: float, max_attempts: int) -> dict:
+        """Check coverage and regenerate more QAs if needed"""
+        try:
+            coverage_score = self._calculate_coverage_score(qa, nearby_qas)
+
+            if coverage_score < coverage_rate:
+                more_qas = self._generate_more_qas(qa, ak, sk, model_name, max_attempts)
+                if more_qas and len(more_qas) > 0:
+                    # Return the first generated QA or the best one
+                    return more_qas[0]
+
+        except Exception as e:
+            logger.error(f"Error checking coverage: {str(e)}")
+
+        return qa
 
     async def evaluate_and_optimize_qa(
             self,
             content: List[dict],
             filename: str,
-           
             SK: list,
             AK: list,
             parallel_num: int,
@@ -123,6 +374,7 @@ class QualityService:
                             "status": "processing",
                             "progress": 0,
                             "model_name": model_name,
+                            "source_text": json.dumps(content, ensure_ascii=False),
                             "start_time": datetime.now(timezone.utc),
                             "item_info": {
                                 "total_items": len(content),
@@ -134,20 +386,21 @@ class QualityService:
                 generation_id = existing_record["_id"]
                 logger.info(f"重新使用现有的质量评估记录，ID: {generation_id}")
             else:
-                # Create new record
-                generation = QualityControlGeneration(
-                    input_file=filename,
-                    model_name=model_name,
-                    status="processing",
-                    source_text=json.dumps(content, ensure_ascii=False),
-                    progress=0,  # Initialize progress to 0
-                    start_time=datetime.now(timezone.utc),
-                    item_info={
+                # Create new record using dictionary to avoid model validation issues
+                generation_data = {
+                    "input_file": filename,
+                    "model_name": model_name,
+                    "status": "processing",
+                    "source_text": json.dumps(content, ensure_ascii=False),
+                    "progress": 0,
+                    "start_time": datetime.now(timezone.utc),
+                    "created_at": datetime.now(timezone.utc),
+                    "item_info": {
                         "total_items": len(content),
                         "processed_items": 0
                     }
-                )
-                result = await self.quality_generations.insert_one(generation.dict(by_alias=True))
+                }
+                result = await self.quality_generations.insert_one(generation_data)
                 generation_id = result.inserted_id
                 logger.info(f"创建了新的质量评估记录，ID: {generation_id}")
 

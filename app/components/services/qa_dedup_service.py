@@ -2,7 +2,7 @@ from deduplication.qa_deduplication import QADeduplication, DedupRecord, KeptQAP
 from utils.hparams import DedupParams
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
-from typing import List
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import os
 import time
@@ -89,6 +89,17 @@ class QADedupService:
             if not record:
                 raise Exception(f"Deduplication record with ID {file_id} not found")
 
+            # If content is stored directly in the database
+            if record.get("content"):
+                return {
+                    "filename": f"dedup_result_{file_id}.json",
+                    "content": record["content"],
+                    "created_at": record["created_at"],
+                    "original_count": record["original_count"],
+                    "kept_count": record["kept_count"]
+                }
+            
+            # Otherwise, read from file
             if not record.get("output_file") or not os.path.exists(record["output_file"]):
                 raise Exception(f"File path does not exist: {record.get('output_file')}")
 
@@ -108,9 +119,17 @@ class QADedupService:
             raise Exception(f"Failed to get deduplicated file content: {str(e)}")
 
     async def get_quality_content_by_filename(self, filename: str):
-        """Get quality file content based on filename"""
+        """Get quality file content based on filename or ID"""
         try:
-            # Find quality record with specified filename
+            # First try to find by ID (for new frontend)
+            try:
+                # Check if filename is a valid ObjectId
+                if ObjectId.is_valid(filename):
+                    return await self.get_quality_content(filename)
+            except Exception:
+                pass
+                
+            # If not found or not valid ObjectId, try by filename (for backward compatibility)
             record = await self.quality_generations.find_one({"input_file": filename})
 
             if not record:
@@ -141,6 +160,17 @@ class QADedupService:
             if not record:
                 raise Exception(f"Deduplication record with filename {filename} not found")
 
+            # If content is stored directly in the database
+            if record.get("content"):
+                return {
+                    "filename": f"dedup_result_{record['_id']}.json",
+                    "content": record["content"],
+                    "created_at": record["created_at"],
+                    "original_count": record["original_count"],
+                    "kept_count": record["kept_count"]
+                }
+                
+            # Otherwise, read from file
             if not record.get("output_file") or not os.path.exists(record["output_file"]):
                 raise Exception(f"File path does not exist: {record.get('output_file')}")
 
@@ -166,6 +196,7 @@ class QADedupService:
             original_pairs = []
             source_texts = []
             input_filenames = []
+            record_id = None
 
             for filename in filenames:
                 quality_content = await self.get_quality_content_by_filename(filename)
@@ -327,7 +358,7 @@ class QADedupService:
                     if deleted_records:
                         await self.deleted_pairs.insert_many(deleted_records)
 
-                # Complete - 100%
+                # Store content directly in database for easier access
                 await self.dedup_records.update_one(
                     {"_id": record_id},
                     {
@@ -335,7 +366,8 @@ class QADedupService:
                             "status": "completed",
                             "original_count": len(original_pairs),
                             "kept_count": len(kept_pairs),
-                            "progress": 100
+                            "progress": 100,
+                            "content": kept_pairs  # Store content directly in database
                         }
                     }
                 )
@@ -397,14 +429,17 @@ class QADedupService:
             if not record:
                 return []
 
-            # Get kept QA pairs
-            qa_cursor = self.kept_pairs.find({"dedup_id": record["_id"]})
+            # Get kept QA pairs - either from content field or from kept_pairs collection
             kept_pairs = []
-            async for qa in qa_cursor:
-                kept_pairs.append({
-                    "question": qa["question"],
-                    "answer": qa["answer"]
-                })
+            if record.get("content"):
+                kept_pairs = record["content"]
+            else:
+                qa_cursor = self.kept_pairs.find({"dedup_id": record["_id"]})
+                async for qa in qa_cursor:
+                    kept_pairs.append({
+                        "question": qa["question"],
+                        "answer": qa["answer"]
+                    })
 
             # Get deleted QA pairs
             deleted_cursor = self.deleted_pairs.find({"dedup_id": record["_id"]})
@@ -421,14 +456,14 @@ class QADedupService:
             return [{
                 "dedup_id": str(record["_id"]),
                 "input_file": record["input_file"],
-                "output_file": record["output_file"],
-                "deleted_pairs_file": record["deleted_pairs_file"],
+                "output_file": record.get("output_file", ""),
+                "deleted_pairs_file": record.get("deleted_pairs_file", ""),
                 "status": record["status"],
                 "source_text": record["source_text"],
                 "original_count": record["original_count"],
                 "kept_count": record["kept_count"],
-                "kept_pairs": kept_pairs,
-                "deleted_pairs": deleted_pairs,
+                "kept_pairs": kept_pairs[:10],  # Only return first 10 pairs for preview
+                "deleted_pairs": deleted_pairs[:10],  # Only return first 10 pairs for preview
                 "created_at": record["created_at"]
             }]
         except Exception as e:

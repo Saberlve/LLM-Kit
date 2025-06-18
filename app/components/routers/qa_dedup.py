@@ -1,10 +1,12 @@
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.components.core.database import get_database
 from app.components.models.schemas import DedupRequest, APIResponse
 from app.components.services.qa_dedup_service import QADedupService
 from pydantic import BaseModel
+import json
+import os
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -114,4 +116,35 @@ async def get_dedup_content(
         )
     except Exception as e:
         logger.error(f"Failed to get deduplication file content: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/download/{dedup_id}")
+async def download_dedup_file(
+    dedup_id: str,
+    db: AsyncIOMotorClient = Depends(get_database)
+):
+    """Download deduplicated file"""
+    try:
+        service = QADedupService(db)
+        content = await service.get_dedup_content(dedup_id)
+        
+        if not content:
+            raise HTTPException(status_code=404, detail=f"Deduplication file with ID {dedup_id} not found")
+        
+        # Convert content to JSON string
+        json_content = json.dumps(content["content"], ensure_ascii=False, indent=2)
+        
+        # Set filename for download
+        filename = f"dedup_result_{dedup_id}.json"
+        
+        # Return file as download
+        return Response(
+            content=json_content,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Failed to download deduplication file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
