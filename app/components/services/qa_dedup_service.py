@@ -307,6 +307,9 @@ class QADedupService:
                     )
                 )
 
+                # Set priority order for file selection (use input filenames order)
+                deduplicator.set_priority_order(input_filenames)
+
                 # Execute deduplication operation in thread pool
                 loop = asyncio.get_event_loop()
                 kept_pairs, deleted_groups = await loop.run_in_executor(
@@ -659,6 +662,15 @@ class QADedupService:
                     progress_callback=sync_progress_callback
                 )
 
+                # Set priority order for file selection
+                priority_filenames = []
+                for f in sorted_files:
+                    if isinstance(f, dict):
+                        priority_filenames.append(f['filename'])
+                    else:
+                        priority_filenames.append(f.filename)
+                deduplicator.set_priority_order(priority_filenames)
+
                 # Execute deduplication operation in thread pool
                 loop = asyncio.get_event_loop()
                 kept_pairs, deleted_groups = await loop.run_in_executor(
@@ -770,7 +782,7 @@ class QADedupService:
                 )
             raise Exception(f"Deduplication failed: {str(e)}")
 
-    async def get_dedup_preview(self, dedup_id: str, page: int = 1, page_size: int = 10):
+    async def get_dedup_preview(self, dedup_id: str, page: int = 1, page_size: int = 10, deleted_preview_size: int = 10):
         """Get preview of deduplication results"""
         try:
             # Find deduplication record
@@ -800,7 +812,7 @@ class QADedupService:
             end_idx = start_idx + page_size
             paginated_kept_pairs = kept_pairs[start_idx:end_idx]
 
-            # Get deleted pairs
+            # Get deleted pairs (show more for preview)
             deleted_cursor = self.deleted_pairs.find({"dedup_id": ObjectId(dedup_id)})
             deleted_groups = []
             async for deleted in deleted_cursor:
@@ -810,7 +822,8 @@ class QADedupService:
                         "question": deleted["question"],
                         "answer": deleted["answer"]
                     },
-                    "similar_pairs": deleted["similar_pairs"]
+                    "similar_pairs": deleted["similar_pairs"],
+                    "group_size": len(deleted["similar_pairs"]) + 1
                 })
 
             return {
@@ -819,7 +832,8 @@ class QADedupService:
                 "kept_count": record["kept_count"],
                 "deleted_count": record["original_count"] - record["kept_count"],
                 "kept_pairs": paginated_kept_pairs,
-                "deleted_groups": deleted_groups[:5],  # Show first 5 deleted groups
+                "deleted_groups": deleted_groups[:deleted_preview_size],  # Show configurable number of deleted groups
+                "total_deleted_groups": len(deleted_groups),
                 "created_at": record["created_at"],
                 "status": record["status"],
                 "total_pages": (len(kept_pairs) + page_size - 1) // page_size,
@@ -868,3 +882,89 @@ class QADedupService:
         except Exception as e:
             await self._log_error(str(e), "download_dedup_result")
             raise Exception(f"Failed to get deduplication result for download: {str(e)}")
+
+    async def get_deleted_pairs(self, dedup_id: str, page: int = 1, page_size: int = 10):
+        """Get deleted QA pairs with pagination"""
+        try:
+            # Find deduplication record
+            record = await self.dedup_records.find_one({"_id": ObjectId(dedup_id)})
+
+            if not record:
+                raise Exception(f"Deduplication record with ID {dedup_id} not found")
+
+            if record["status"] != "completed":
+                raise Exception("Deduplication not completed yet")
+
+            # Get all deleted pairs
+            deleted_cursor = self.deleted_pairs.find({"dedup_id": ObjectId(dedup_id)})
+            all_deleted_groups = []
+            async for deleted in deleted_cursor:
+                all_deleted_groups.append({
+                    "main_pair": {
+                        "id": deleted["qa_id"],
+                        "question": deleted["question"],
+                        "answer": deleted["answer"]
+                    },
+                    "similar_pairs": deleted["similar_pairs"],
+                    "group_size": len(deleted["similar_pairs"]) + 1  # +1 for main pair
+                })
+
+            # Apply pagination
+            total_groups = len(all_deleted_groups)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paginated_deleted_groups = all_deleted_groups[start_idx:end_idx]
+
+            return {
+                "dedup_id": dedup_id,
+                "deleted_groups": paginated_deleted_groups,
+                "total_deleted_groups": total_groups,
+                "total_deleted_pairs": sum(group["group_size"] for group in all_deleted_groups),
+                "current_page": page,
+                "page_size": page_size,
+                "total_pages": (total_groups + page_size - 1) // page_size,
+                "created_at": record["created_at"],
+                "status": record["status"]
+            }
+
+        except Exception as e:
+            await self._log_error(str(e), "get_deleted_pairs")
+            raise Exception(f"Failed to get deleted pairs: {str(e)}")
+
+    async def download_deleted_pairs(self, dedup_id: str):
+        """Get all deleted QA pairs for download"""
+        try:
+            # Find deduplication record
+            record = await self.dedup_records.find_one({"_id": ObjectId(dedup_id)})
+
+            if not record:
+                raise Exception(f"Deduplication record with ID {dedup_id} not found")
+
+            if record["status"] != "completed":
+                raise Exception("Deduplication not completed yet")
+
+            # Get all deleted pairs
+            deleted_cursor = self.deleted_pairs.find({"dedup_id": ObjectId(dedup_id)})
+            deleted_groups = []
+            async for deleted in deleted_cursor:
+                deleted_groups.append({
+                    "main_pair": {
+                        "id": deleted["qa_id"],
+                        "question": deleted["question"],
+                        "answer": deleted["answer"]
+                    },
+                    "similar_pairs": deleted["similar_pairs"],
+                    "group_size": len(deleted["similar_pairs"]) + 1
+                })
+
+            return {
+                "filename": f"deleted_pairs_{dedup_id}.json",
+                "content": deleted_groups,
+                "total_deleted_groups": len(deleted_groups),
+                "total_deleted_pairs": sum(group["group_size"] for group in deleted_groups),
+                "created_at": record["created_at"]
+            }
+
+        except Exception as e:
+            await self._log_error(str(e), "download_deleted_pairs")
+            raise Exception(f"Failed to get deleted pairs for download: {str(e)}")

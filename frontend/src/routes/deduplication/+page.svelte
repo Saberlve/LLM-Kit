@@ -415,7 +415,7 @@
   {#if deduplicationing}
     <div class="processing-overlay">
       <div class="robot-icon">🤖</div>
-      <div class="text-white text-2xl font-bold mb-4">AI is Working Hard!</div>
+      <div class="text-white text-2xl font-bold mb-4">Working Hard!</div>
       <div class="text-white text-lg mb-6">Removing duplicate QA pairs...</div>
       <Spinner size="12" class="mb-4" color="white" />
       <div class="text-white text-sm">Please wait while we process your files</div>
@@ -864,37 +864,52 @@
 
         <TabItem title="🗑️ Deleted Groups">
           <div class="overflow-y-auto max-h-96 space-y-3">
-            {#each previewData.deleted_groups as group, index}
-              <Card class="card-hover bg-white/80 backdrop-blur-sm border-2 border-red-200">
-                <div class="p-4">
-                  <div class="flex items-center gap-2 mb-3">
-                    <Badge color="red" class="text-sm">Group #{index + 1}</Badge>
-                    <span class="text-lg">🗑️</span>
-                  </div>
-
-                  <div class="mb-4 bg-red-50 p-3 rounded-lg border-l-4 border-red-400">
-                    <p class="font-medium text-sm text-red-600 mb-2">🎯 Main Pair (Kept):</p>
-                    <div class="ml-2">
-                      <p class="text-sm mb-1"><strong>❓ Q:</strong> {group.main_pair.question}</p>
-                      <p class="text-sm"><strong>💡 A:</strong> {group.main_pair.answer}</p>
+            {#if previewData.deleted_groups && previewData.deleted_groups.length > 0}
+              {#each previewData.deleted_groups as group, index}
+                <Card class="card-hover bg-white/80 backdrop-blur-sm border-2 border-red-200">
+                  <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                      <Badge color="red" class="text-sm">Group #{index + 1}</Badge>
+                      <span class="text-lg">🗑️</span>
+                      {#if group.group_size}
+                        <Badge color="dark" class="text-xs">{group.group_size} pairs</Badge>
+                      {/if}
                     </div>
-                  </div>
 
-                  {#if group.similar_pairs && group.similar_pairs.length > 0}
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                      <p class="font-medium text-sm text-gray-600 mb-2">🔄 Similar Pairs (Deleted):</p>
-                      {#each group.similar_pairs as similar, simIndex}
-                        <div class="ml-2 mt-2 p-2 bg-white rounded border-l-2 border-gray-300">
-                          <Badge color="dark" class="text-xs mb-1">#{simIndex + 1}</Badge>
-                          <p class="text-xs text-gray-600"><strong>❓ Q:</strong> {similar.question}</p>
-                          <p class="text-xs text-gray-600"><strong>💡 A:</strong> {similar.answer}</p>
-                        </div>
-                      {/each}
+                    <div class="mb-4 bg-red-50 p-3 rounded-lg border-l-4 border-red-400">
+                      <p class="font-medium text-sm text-red-600 mb-2">🎯 Main Pair (Kept):</p>
+                      <div class="ml-2">
+                        <p class="text-sm mb-1"><strong>❓ Q:</strong> {group.main_pair?.question || 'N/A'}</p>
+                        <p class="text-sm"><strong>💡 A:</strong> {group.main_pair?.answer || 'N/A'}</p>
+                      </div>
                     </div>
-                  {/if}
-                </div>
-              </Card>
-            {/each}
+
+                    {#if group.similar_pairs && group.similar_pairs.length > 0}
+                      <div class="bg-gray-50 p-3 rounded-lg">
+                        <p class="font-medium text-sm text-gray-600 mb-2">🔄 Similar Pairs (Deleted):</p>
+                        {#each group.similar_pairs as similar, simIndex}
+                          <div class="ml-2 mt-2 p-2 bg-white rounded border-l-2 border-gray-300">
+                            <Badge color="dark" class="text-xs mb-1">#{simIndex + 1}</Badge>
+                            <p class="text-xs text-gray-600"><strong>❓ Q:</strong> {similar.question || 'N/A'}</p>
+                            <p class="text-xs text-gray-600"><strong>💡 A:</strong> {similar.answer || 'N/A'}</p>
+                          </div>
+                        {/each}
+                      </div>
+                    {:else}
+                      <div class="bg-gray-50 p-3 rounded-lg text-center">
+                        <p class="text-sm text-gray-500">No similar pairs found for this group</p>
+                      </div>
+                    {/if}
+                  </div>
+                </Card>
+              {/each}
+            {:else}
+              <div class="text-center py-16">
+                <div class="text-6xl mb-4">🤔</div>
+                <div class="text-xl text-gray-600 mb-2">No deleted groups found</div>
+                <div class="text-sm text-gray-500">All QA pairs were kept during deduplication</div>
+              </div>
+            {/if}
           </div>
         </TabItem>
       </Tabs>
